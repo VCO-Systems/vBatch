@@ -1,36 +1,60 @@
--- Since SQL Power architect doesn't support triggers,
+-- Since SQL Power architect doesn't generate triggers,
 -- after re-creating db from SPQ schema, apply this sql
 -- to add triggers for the auto-incrementing ids.
 
--- job_master.id 
-create trigger job_master_id
-before insert on job_master
+-- job_definition.id 
+create trigger job_definition_id_trg
+before insert on job_definition
 for each row
 begin
-select JOB_MASTER_ID_SEQ.nextval into :new.id from dual;
+select JOB_DEFINITION_ID_SEQ.nextval into :new.id from dual;
 end;
-
--- vbatch_log.id
-create trigger VBATCH_LOG_ID_SEQ
-before insert on vbatch_log
-for each row
-begin
-select VBATCH_LOG_ID_SEQ.nextval into :new.id from dual;
-end;
-
-
+/
 -- steps.id
-create trigger STEPS_ID_SEQ
+create trigger steps_id_trg
 before insert on steps
 for each row
 begin
 select STEPS_ID_SEQ.nextval into :new.id from dual;
 end;
-
+/
 -- job_steps_xref.id
-create trigger JOB_STEPS_XREF_ID_SEQ
+create trigger job_steps_xref_id_trg
 before insert on job_steps_xref
 for each row
 begin
 select JOB_STEPS_XREF_ID_SEQ.nextval into :new.id from dual;
 end;
+/
+-- batch_log.id
+create trigger batch_log_id_trg
+before insert on batch_log
+for each row
+begin
+select BATCH_LOG_ID_SEQ.nextval into :new.id from dual;
+end;
+/
+-- batch_log_dtl.id
+create trigger batch_log_dtl_id_trg
+before insert on batch_log_dtl
+for each row
+begin
+select BATCH_LOG_DTL_ID_SEQ.nextval into :new.id from dual;
+end;
+/
+-- batch_log_file_output.id
+create trigger batch_log_file_output_id_trg
+before insert on batch_log_file_output
+for each row
+begin
+select BATCH_LOG_FILE_OUTPUT_ID_SEQ.nextval into :new.id from dual;
+end;
+/
+-- batch_log_ok_dtl.id
+create trigger batch_log_ok_dtl_id_trg
+before insert on batch_log_ok_dtl
+for each row
+begin
+select BATCH_LOG_OK_DTL_ID_SEQ.nextval into :new.id from dual;
+end;
+/
