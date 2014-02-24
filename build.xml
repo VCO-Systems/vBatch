@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Rename project name for PROJECT_NAME. -->
+<project name="PROJECT_NAME" default="jar" basedir=".">
+	<description>Builds, tests, and runs PROJECT_NAME.</description>
+
+	<property name="dist.dir" location="dist"/>
+	<property name="lib.dir" location="bin/lib"/>
+	<property name="src.dir" value="src"/>
+
+	<path id="src.libs">
+	  <fileset dir="bin/lib/">
+	    <include name="**/*.jar" />
+	  </fileset>
+	</path>
+
+	<target name="build" description="build java source and output class files to build/classes" >
+		<mkdir dir="build/classes"/>
+		<javac srcdir="${src.dir}" destdir="build/classes" includeantruntime="false">
+			<classpath>
+			  <path refid="src.libs"/>
+				<pathelement path="${java.class.path}"/>
+			</classpath>
+		</javac>
+	</target>
+
+	<target name="jar" depends="build" description="create jar file">
+		<delete file="${dist.dir}/PROJECT_NAME.jar"/>
+		<mkdir dir="${dist.dir}"/>
+		<!-- Rename jar file to be your own project name. -->
+		<jar jarfile="${dist.dir}/PROJECT_NAME.jar">
+			<fileset dir="build/classes"/>
+			<zipgroupfileset dir="${lib.dir}" includes="**/*.jar" />
+			<manifest>
+			  <!-- Rename to your own package and main class names. -->
+			  <attribute name="Main-Class" value="PACKAGE_NAME.Main"/>
+			</manifest>
+		</jar>
+	</target>
+
+	<target name="clean" description="Remove unneccessary files.">
+		<delete dir="build"/>
+		<delete dir="dist"/>
+	</target>
+</project>
