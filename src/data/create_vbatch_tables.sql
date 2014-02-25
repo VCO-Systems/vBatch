@@ -71,7 +71,7 @@ CREATE TABLE vbatch.batch_log_dtl (
                 job_steps_xref_job_step_seq NUMBER,
                 steps_id NUMBER,
                 steps_short_desc VARCHAR2(20),
-                step_type VARCHAR2(150) NOT NULL,
+                step_type VARCHAR2(150),
                 num_records NUMBER ,
                 extract_sql VARCHAR2(4000),
                 extract_max_recs_per_file NUMBER,

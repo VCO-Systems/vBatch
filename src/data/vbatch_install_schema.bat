@@ -1,3 +1,5 @@
 sqlplus vbatch/vbatch @create_vbatch_tables.sql
 PAUSE
-sqlplus vbatch/vbatch @vbatch_add_triggers.sql
+sqlplus vbatch/vbatch @create_vbatch_triggers.sql
+PAUSE
+sqlplus vbatch/vbatch @insert_job_definitions.sql
