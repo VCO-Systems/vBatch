@@ -20,38 +20,41 @@ public class Step implements Serializable {
 	@Column(unique=true, nullable=false)
 	private long id;
 
-	@Column(nullable=false, length=100)
-	private String description;
+	@Column(name="CLASS_PATH", length=150)
+	private String classPath;
 
-	@Column(name="EXTRACT_COMMIT_FREQ", nullable=false)
+	@Column(name="EXTRACT_COMMIT_FREQ")
 	private BigDecimal extractCommitFreq;
 
-	@Column(name="EXTRACT_MAX_REC_PER_FILE", nullable=false)
+	@Column(name="EXTRACT_MAX_REC_PER_FILE")
 	private BigDecimal extractMaxRecPerFile;
 
 	@Column(name="EXTRACT_SQL", length=4000)
 	private String extractSql;
 
-	@Column(name="JAVA_BEAN_PATH", nullable=false, length=100)
-	private String javaBeanPath;
+	@Column(name="LONG_DESC", length=150)
+	private String longDesc;
 
-	@Column(name="OUTPUT_FILE_FORMAT", nullable=false, length=10)
+	@Column(name="OUTPUT_FILE_FORMAT", length=10)
 	private String outputFileFormat;
 
-	@Column(name="OUTPUT_FILENAME_POSTFIX", nullable=false, length=100)
+	@Column(name="OUTPUT_FILENAME_POSTFIX", length=100)
 	private String outputFilenamePostfix;
 
-	@Column(name="OUTPUT_FILENAME_PREFIX", nullable=false, length=100)
+	@Column(name="OUTPUT_FILENAME_PREFIX", length=100)
 	private String outputFilenamePrefix;
 
-	@Column(nullable=false, length=100)
+	@Column(length=100)
 	private String param1;
 
-	@Column(nullable=false, length=50)
+	@Column(length=50)
 	private String param2;
 
-	@Column(nullable=false, length=50)
+	@Column(length=50)
 	private String param3;
+
+	@Column(name="SHORT_DESC", length=20)
+	private String shortDesc;
 
 	@Column(name="\"TYPE\"", nullable=false, length=50)
 	private String type;
@@ -71,12 +74,12 @@ public class Step implements Serializable {
 		this.id = id;
 	}
 
-	public String getDescription() {
-		return this.description;
+	public String getClassPath() {
+		return this.classPath;
 	}
 
-	public void setDescription(String description) {
-		this.description = description;
+	public void setClassPath(String classPath) {
+		this.classPath = classPath;
 	}
 
 	public BigDecimal getExtractCommitFreq() {
@@ -103,12 +106,12 @@ public class Step implements Serializable {
 		this.extractSql = extractSql;
 	}
 
-	public String getJavaBeanPath() {
-		return this.javaBeanPath;
+	public String getLongDesc() {
+		return this.longDesc;
 	}
 
-	public void setJavaBeanPath(String javaBeanPath) {
-		this.javaBeanPath = javaBeanPath;
+	public void setLongDesc(String longDesc) {
+		this.longDesc = longDesc;
 	}
 
 	public String getOutputFileFormat() {
@@ -157,6 +160,14 @@ public class Step implements Serializable {
 
 	public void setParam3(String param3) {
 		this.param3 = param3;
+	}
+
+	public String getShortDesc() {
+		return this.shortDesc;
+	}
+
+	public void setShortDesc(String shortDesc) {
+		this.shortDesc = shortDesc;
 	}
 
 	public String getType() {

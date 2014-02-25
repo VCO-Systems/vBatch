@@ -207,10 +207,10 @@
     <column id="COL60" populated="true" UUID="d6049026-99fb-4260-b75b-c3a66ae14dc8" autoIncrement="false" autoIncrementSequenceName="batch_log_error_msg_seq" defaultValue="" name="error_msg" nullable="1" physicalName="error_msg" precision="4000" referenceCount="1" scale="0" sourceDataTypeName="UserDefinedSQLType" type="12" userDefinedTypeUUID="831ac2d4-0e65-47ec-a0b7-62b7f6b8760a" >
      <remarks></remarks>
     </column>
-    <column id="COL61" populated="true" UUID="3eb8ca5b-8eeb-41f4-b09e-247eafaabf87" autoIncrement="false" autoIncrementSequenceName="Vbatch_Log_End_Dt_seq" defaultValue="" name="end_dt" nullable="0" physicalName="end_dt" precision="0" referenceCount="1" scale="0" sourceDataTypeName="UserDefinedSQLType" type="91" userDefinedTypeUUID="ee349be3-6af2-46e1-b305-975f5354b009" >
+    <column id="COL61" populated="true" UUID="3eb8ca5b-8eeb-41f4-b09e-247eafaabf87" autoIncrement="false" autoIncrementSequenceName="Vbatch_Log_End_Dt_seq" defaultValue="" name="end_dt" nullable="1" physicalName="end_dt" precision="0" referenceCount="1" scale="0" sourceDataTypeName="UserDefinedSQLType" type="91" userDefinedTypeUUID="ee349be3-6af2-46e1-b305-975f5354b009" >
      <remarks></remarks>
     </column>
-    <column id="COL62" populated="true" UUID="32b4ace1-aef6-44f5-9a95-37724ebb3b3d" autoIncrement="false" autoIncrementSequenceName="Vbatch_Log_Start_Dt_seq" defaultValue="" name="start_dt" nullable="0" physicalName="start_dt" precision="0" referenceCount="1" scale="0" sourceDataTypeName="UserDefinedSQLType" type="91" userDefinedTypeUUID="ee349be3-6af2-46e1-b305-975f5354b009" >
+    <column id="COL62" populated="true" UUID="32b4ace1-aef6-44f5-9a95-37724ebb3b3d" autoIncrement="false" autoIncrementSequenceName="Vbatch_Log_Start_Dt_seq" defaultValue="" name="start_dt" nullable="1" physicalName="start_dt" precision="0" referenceCount="1" scale="0" sourceDataTypeName="UserDefinedSQLType" type="91" userDefinedTypeUUID="ee349be3-6af2-46e1-b305-975f5354b009" >
      <remarks></remarks>
     </column>
     </folder>
@@ -399,7 +399,7 @@
   <table-pane table-ref="TAB15" x="595" y="124" bgColor="0xc7d0df" fgColor="0x000000" rounded="false" dashed="false"/>
   <table-pane table-ref="TAB32" x="39" y="116" bgColor="0xeeeeee" fgColor="0x000000" rounded="false" dashed="false"/>
   <table-pane table-ref="TAB39" x="298" y="113" bgColor="0xeeeeee" fgColor="0x000000" rounded="false" dashed="false"/>
-  <table-pane table-ref="TAB51" x="43" y="412" bgColor="0xeeeeee" fgColor="0x000000" rounded="false" dashed="false"/>
+  <table-pane table-ref="TAB51" x="39" y="379" bgColor="0xeeeeee" fgColor="0x000000" rounded="false" dashed="false"/>
   <table-pane table-ref="TAB65" x="596" y="432" bgColor="0xeeeeee" fgColor="0x000000" rounded="false" dashed="false"/>
   <table-pane table-ref="TAB92" x="280" y="684" bgColor="0xeeeeee" fgColor="0x000000" rounded="false" dashed="false"/>
   <table-pane table-ref="TAB101" x="29" y="705" bgColor="0xeeeeee" fgColor="0x000000" rounded="false" dashed="false"/>

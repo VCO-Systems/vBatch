@@ -2,41 +2,39 @@ package model;
 
 import java.io.Serializable;
 import javax.persistence.*;
+import java.sql.Timestamp;
 import java.math.BigDecimal;
 
 
 /**
- * The persistent class for the VBATCH_LOG_OK_DTL database table.
+ * The persistent class for the BATCH_LOG_OK_DTL database table.
  * 
  */
 @Entity
-@Table(name="VBATCH_LOG_OK_DTL")
-@NamedQuery(name="VbatchLogOkDtl.findAll", query="SELECT v FROM VbatchLogOkDtl v")
-public class VbatchLogOkDtl implements Serializable {
+@Table(name="BATCH_LOG_OK_DTL")
+@NamedQuery(name="BatchLogOkDtl.findAll", query="SELECT b FROM BatchLogOkDtl b")
+public class BatchLogOkDtl implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Id
 	@Column(unique=true, nullable=false)
 	private long id;
 
-	@Column(nullable=false, length=150)
-	private String ok;
-
 	@Column(nullable=false)
+	private Timestamp ok1;
+
 	private BigDecimal pk1;
 
-	@Column(nullable=false)
 	private BigDecimal pk2;
 
-	@Column(nullable=false)
 	private BigDecimal pk3;
 
-	//bi-directional many-to-one association to VbatchLog
+	//bi-directional many-to-one association to BatchLog
 	@ManyToOne
-	@JoinColumn(name="VBATCH_LOG_ID", nullable=false)
-	private VbatchLog vbatchLog;
+	@JoinColumn(name="BATCH_LOG_ID", nullable=false)
+	private BatchLog batchLog;
 
-	public VbatchLogOkDtl() {
+	public BatchLogOkDtl() {
 	}
 
 	public long getId() {
@@ -47,12 +45,12 @@ public class VbatchLogOkDtl implements Serializable {
 		this.id = id;
 	}
 
-	public String getOk() {
-		return this.ok;
+	public Timestamp getOk1() {
+		return this.ok1;
 	}
 
-	public void setOk(String ok) {
-		this.ok = ok;
+	public void setOk1(Timestamp ok1) {
+		this.ok1 = ok1;
 	}
 
 	public BigDecimal getPk1() {
@@ -79,12 +77,12 @@ public class VbatchLogOkDtl implements Serializable {
 		this.pk3 = pk3;
 	}
 
-	public VbatchLog getVbatchLog() {
-		return this.vbatchLog;
+	public BatchLog getBatchLog() {
+		return this.batchLog;
 	}
 
-	public void setVbatchLog(VbatchLog vbatchLog) {
-		this.vbatchLog = vbatchLog;
+	public void setBatchLog(BatchLog batchLog) {
+		this.batchLog = batchLog;
 	}
 
 }

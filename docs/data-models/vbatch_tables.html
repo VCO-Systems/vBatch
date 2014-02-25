@@ -158,10 +158,10 @@
 <td class="tdTableDefinition">error_msg</td><td class="tdTableDefinition">error_msg</td><td class="tdTableDefinition">VARCHAR(4000)</td><td class="tdTableDefinition" nowrap></td><td class="tdTableDefinition" nowrap></td>
 </tr>
 <tr valign="top">
-<td class="tdTableDefinition">end_dt</td><td class="tdTableDefinition">end_dt</td><td class="tdTableDefinition">DATE</td><td class="tdTableDefinition" nowrap></td><td class="tdTableDefinition" nowrap>NOT NULL</td>
+<td class="tdTableDefinition">end_dt</td><td class="tdTableDefinition">end_dt</td><td class="tdTableDefinition">DATE</td><td class="tdTableDefinition" nowrap></td><td class="tdTableDefinition" nowrap></td>
 </tr>
 <tr valign="top">
-<td class="tdTableDefinition">start_dt</td><td class="tdTableDefinition">start_dt</td><td class="tdTableDefinition">DATE</td><td class="tdTableDefinition" nowrap></td><td class="tdTableDefinition" nowrap>NOT NULL</td>
+<td class="tdTableDefinition">start_dt</td><td class="tdTableDefinition">start_dt</td><td class="tdTableDefinition">DATE</td><td class="tdTableDefinition" nowrap></td><td class="tdTableDefinition" nowrap></td>
 </tr>
 </table>
 <div class="references">
@@ -206,9 +206,9 @@
 <td class="tdTableDefinition">end_dt</td><td class="tdTableDefinition">end_dt</td><td class="tdTableDefinition">DATE</td><td class="tdTableDefinition" nowrap></td><td class="tdTableDefinition" nowrap></td>
 </tr>
 <tr valign="top">
-<td class="tdTableDefinition">vbatch_log_Id
+<td class="tdTableDefinition">batch_log_Id
                 &nbsp;(<a href="#batch_log">FK</a>)
-              </td><td class="tdTableDefinition">vbatch_log_id</td><td class="tdTableDefinition">INTEGER</td><td class="tdTableDefinition" nowrap></td><td class="tdTableDefinition" nowrap>NOT NULL</td>
+              </td><td class="tdTableDefinition">batch_log_id</td><td class="tdTableDefinition">INTEGER</td><td class="tdTableDefinition" nowrap></td><td class="tdTableDefinition" nowrap>NOT NULL</td>
 </tr>
 <tr valign="top">
 <td class="tdTableDefinition">error_msg</td><td class="tdTableDefinition">error_msg</td><td class="tdTableDefinition">VARCHAR(150)</td><td class="tdTableDefinition" nowrap></td><td class="tdTableDefinition" nowrap></td>
@@ -272,7 +272,7 @@
 <p class="subTitle">References</p>
 <ul>
 <li>
-<a href="#batch_log">batch_log</a> through (vbatch_log_Id)</li>
+<a href="#batch_log">batch_log</a> through (batch_log_Id)</li>
 </ul>
 </div>
 </div>
@@ -292,9 +292,9 @@
 <td class="tdTableDefinition">id (PK)</td><td class="tdTableDefinition">id</td><td class="tdTableDefinition">INTEGER</td><td class="tdTableDefinition" nowrap>PK</td><td class="tdTableDefinition" nowrap>NOT NULL</td>
 </tr>
 <tr valign="top">
-<td class="tdTableDefinition">vbatch_log_id
+<td class="tdTableDefinition">batch_log_id
                 &nbsp;(<a href="#batch_log">FK</a>)
-              </td><td class="tdTableDefinition">vbatch_log_id</td><td class="tdTableDefinition">INTEGER</td><td class="tdTableDefinition" nowrap></td><td class="tdTableDefinition" nowrap>NOT NULL</td>
+              </td><td class="tdTableDefinition">batch_log_id</td><td class="tdTableDefinition">INTEGER</td><td class="tdTableDefinition" nowrap></td><td class="tdTableDefinition" nowrap>NOT NULL</td>
 </tr>
 <tr valign="top">
 <td class="tdTableDefinition">filename</td><td class="tdTableDefinition">filename</td><td class="tdTableDefinition">VARCHAR(150)</td><td class="tdTableDefinition" nowrap></td><td class="tdTableDefinition" nowrap></td>
@@ -310,7 +310,7 @@
 <p class="subTitle">References</p>
 <ul>
 <li>
-<a href="#batch_log">batch_log</a> through (vbatch_log_id)</li>
+<a href="#batch_log">batch_log</a> through (batch_log_id)</li>
 </ul>
 </div>
 </div>
@@ -333,9 +333,9 @@
 <td class="tdTableDefinition">pk1</td><td class="tdTableDefinition">pk1</td><td class="tdTableDefinition">NUMERIC(0,0)</td><td class="tdTableDefinition" nowrap></td><td class="tdTableDefinition" nowrap></td>
 </tr>
 <tr valign="top">
-<td class="tdTableDefinition">vbatch_log_id
+<td class="tdTableDefinition">batch_log_id
                 &nbsp;(<a href="#batch_log">FK</a>)
-              </td><td class="tdTableDefinition">vbatch_log_id</td><td class="tdTableDefinition">INTEGER</td><td class="tdTableDefinition" nowrap></td><td class="tdTableDefinition" nowrap>NOT NULL</td>
+              </td><td class="tdTableDefinition">batch_log_id</td><td class="tdTableDefinition">INTEGER</td><td class="tdTableDefinition" nowrap></td><td class="tdTableDefinition" nowrap>NOT NULL</td>
 </tr>
 <tr valign="top">
 <td class="tdTableDefinition">pk2</td><td class="tdTableDefinition">pk2</td><td class="tdTableDefinition">NUMERIC(0,0)</td><td class="tdTableDefinition" nowrap></td><td class="tdTableDefinition" nowrap></td>
@@ -351,7 +351,7 @@
 <p class="subTitle">References</p>
 <ul>
 <li>
-<a href="#batch_log">batch_log</a> through (vbatch_log_id)</li>
+<a href="#batch_log">batch_log</a> through (batch_log_id)</li>
 </ul>
 </div>
 </div>

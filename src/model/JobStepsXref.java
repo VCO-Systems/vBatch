@@ -19,21 +19,21 @@ public class JobStepsXref implements Serializable {
 	@Column(unique=true, nullable=false)
 	private long id;
 
-	@Column(nullable=false, length=100)
-	private String description;
-
 	@Column(name="JOB_STEP_SEQ", nullable=false)
 	private BigDecimal jobStepSeq;
 
-	//bi-directional many-to-one association to JobMaster
-	@ManyToOne
-	@JoinColumn(name="JOB_ID_ID", nullable=false)
-	private JobMaster jobMaster;
+	@Column(name="SPECIAL_MODE", length=25)
+	private String specialMode;
 
 	//bi-directional many-to-one association to Step
 	@ManyToOne
 	@JoinColumn(name="STEP_ID", nullable=false)
 	private Step step;
+
+	//bi-directional many-to-one association to JobDefinition
+	@ManyToOne
+	@JoinColumn(name="JOB_DEFINITION_ID", nullable=false)
+	private JobDefinition jobDefinition;
 
 	public JobStepsXref() {
 	}
@@ -46,14 +46,6 @@ public class JobStepsXref implements Serializable {
 		this.id = id;
 	}
 
-	public String getDescription() {
-		return this.description;
-	}
-
-	public void setDescription(String description) {
-		this.description = description;
-	}
-
 	public BigDecimal getJobStepSeq() {
 		return this.jobStepSeq;
 	}
@@ -62,12 +54,12 @@ public class JobStepsXref implements Serializable {
 		this.jobStepSeq = jobStepSeq;
 	}
 
-	public JobMaster getJobMaster() {
-		return this.jobMaster;
+	public String getSpecialMode() {
+		return this.specialMode;
 	}
 
-	public void setJobMaster(JobMaster jobMaster) {
-		this.jobMaster = jobMaster;
+	public void setSpecialMode(String specialMode) {
+		this.specialMode = specialMode;
 	}
 
 	public Step getStep() {
@@ -76,6 +68,14 @@ public class JobStepsXref implements Serializable {
 
 	public void setStep(Step step) {
 		this.step = step;
+	}
+
+	public JobDefinition getJobDefinition() {
+		return this.jobDefinition;
+	}
+
+	public void setJobDefinition(JobDefinition jobDefinition) {
+		this.jobDefinition = jobDefinition;
 	}
 
 }

@@ -7,13 +7,13 @@ import java.util.Date;
 
 
 /**
- * The persistent class for the VBATCH_LOG_FILE_OUTPUT database table.
+ * The persistent class for the BATCH_LOG_FILE_OUTPUT database table.
  * 
  */
 @Entity
-@Table(name="VBATCH_LOG_FILE_OUTPUT")
-@NamedQuery(name="VbatchLogFileOutput.findAll", query="SELECT v FROM VbatchLogFileOutput v")
-public class VbatchLogFileOutput implements Serializable {
+@Table(name="BATCH_LOG_FILE_OUTPUT")
+@NamedQuery(name="BatchLogFileOutput.findAll", query="SELECT b FROM BatchLogFileOutput b")
+public class BatchLogFileOutput implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Id
@@ -24,21 +24,18 @@ public class VbatchLogFileOutput implements Serializable {
 	@Column(name="CREATE_DT", nullable=false)
 	private Date createDt;
 
-	@Column(nullable=false, length=150)
+	@Column(length=150)
 	private String filename;
 
-	@Column(name="LOG_DTL_SEQ_NBR")
-	private BigDecimal logDtlSeqNbr;
-
-	@Column(name="NUM_RECORDS", nullable=false)
+	@Column(name="NUM_RECORDS")
 	private BigDecimal numRecords;
 
-	//bi-directional many-to-one association to VbatchLog
+	//bi-directional many-to-one association to BatchLog
 	@ManyToOne
-	@JoinColumn(name="VBATCH_LOG_ID", nullable=false)
-	private VbatchLog vbatchLog;
+	@JoinColumn(name="BATCH_LOG_ID", nullable=false)
+	private BatchLog batchLog;
 
-	public VbatchLogFileOutput() {
+	public BatchLogFileOutput() {
 	}
 
 	public long getId() {
@@ -65,14 +62,6 @@ public class VbatchLogFileOutput implements Serializable {
 		this.filename = filename;
 	}
 
-	public BigDecimal getLogDtlSeqNbr() {
-		return this.logDtlSeqNbr;
-	}
-
-	public void setLogDtlSeqNbr(BigDecimal logDtlSeqNbr) {
-		this.logDtlSeqNbr = logDtlSeqNbr;
-	}
-
 	public BigDecimal getNumRecords() {
 		return this.numRecords;
 	}
@@ -81,12 +70,12 @@ public class VbatchLogFileOutput implements Serializable {
 		this.numRecords = numRecords;
 	}
 
-	public VbatchLog getVbatchLog() {
-		return this.vbatchLog;
+	public BatchLog getBatchLog() {
+		return this.batchLog;
 	}
 
-	public void setVbatchLog(VbatchLog vbatchLog) {
-		this.vbatchLog = vbatchLog;
+	public void setBatchLog(BatchLog batchLog) {
+		this.batchLog = batchLog;
 	}
 
 }

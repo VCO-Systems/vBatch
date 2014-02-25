@@ -7,96 +7,93 @@ import java.util.Date;
 
 
 /**
- * The persistent class for the VBATCH_LOG_DTL database table.
+ * The persistent class for the BATCH_LOG_DTL database table.
  * 
  */
 @Entity
-@Table(name="VBATCH_LOG_DTL")
-@NamedQuery(name="VbatchLogDtl.findAll", query="SELECT v FROM VbatchLogDtl v")
-public class VbatchLogDtl implements Serializable {
+@Table(name="BATCH_LOG_DTL")
+@NamedQuery(name="BatchLogDtl.findAll", query="SELECT b FROM BatchLogDtl b")
+public class BatchLogDtl implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Id
 	@Column(unique=true, nullable=false)
 	private long id;
 
-	@Column(name="BATCH_NUM", nullable=false)
-	private BigDecimal batchNum;
+	@Column(name="CLASS_PATH", length=150)
+	private String classPath;
 
-	@Column(nullable=false, length=150)
-	private String description;
+	@Temporal(TemporalType.DATE)
+	@Column(name="END_DT")
+	private Date endDt;
 
-	@Column(name="ERROR_MSG", nullable=false, length=150)
+	@Column(name="ERROR_MSG", length=150)
 	private String errorMsg;
 
-	@Column(name="EXTRACT_COMMIT_FREQ", nullable=false)
+	@Column(name="EXTRACT_COMMIT_FREQ")
 	private BigDecimal extractCommitFreq;
 
-	@Column(name="EXTRACT_MAX_RECS_PER_FILE", nullable=false)
+	@Column(name="EXTRACT_MAX_RECS_PER_FILE")
 	private BigDecimal extractMaxRecsPerFile;
 
-	@Column(name="EXTRACT_SQL", nullable=false, length=4000)
+	@Column(name="EXTRACT_SQL", length=4000)
 	private String extractSql;
 
-	@Column(name="JAVA_BEAN_PATH", nullable=false, length=150)
-	private String javaBeanPath;
+	@Column(name="JOB_STEPS_XREF_JOB_STEP_SEQ")
+	private BigDecimal jobStepsXrefJobStepSeq;
 
-	@Column(name="JOB_SEQ")
-	private BigDecimal jobSeq;
+	@Column(name="LONG_DESC", length=150)
+	private String longDesc;
 
-	@Column(name="JOB_STEP_ID", nullable=false)
-	private BigDecimal jobStepId;
-
-	@Temporal(TemporalType.DATE)
-	@Column(name="LOG_DTL_END_DT")
-	private Date logDtlEndDt;
-
-	@Temporal(TemporalType.DATE)
-	@Column(name="LOG_DTL_START_DT")
-	private Date logDtlStartDt;
-
-	@Column(name="MAX_OK2", nullable=false, length=150)
+	@Column(name="MAX_OK2", length=150)
 	private String maxOk2;
 
-	@Column(name="MIN_OK1", nullable=false, length=150)
+	@Column(name="MIN_OK1", length=150)
 	private String minOk1;
 
 	@Column(name="NUM_RECORDS", nullable=false)
 	private BigDecimal numRecords;
 
-	@Column(name="OUTPUT_FILE_FORMAT", nullable=false, length=15)
+	@Column(name="OUTPUT_FILE_FORMAT", length=15)
 	private String outputFileFormat;
 
-	@Column(name="OUTPUT_FILENAME_PREFIX", nullable=false, length=150)
+	@Column(name="OUTPUT_FILENAME_PREFIX", length=150)
 	private String outputFilenamePrefix;
 
-	@Column(name="OUTPUT_FILENAME_SUFFIX", nullable=false, length=150)
+	@Column(name="OUTPUT_FILENAME_SUFFIX", length=150)
 	private String outputFilenameSuffix;
 
-	@Column(nullable=false, length=150)
+	@Column(length=150)
 	private String param1;
 
-	@Column(nullable=false, length=150)
+	@Column(length=150)
 	private String param2;
 
-	@Column(nullable=false, length=150)
+	@Column(length=150)
 	private String param3;
 
-	@Column(nullable=false, length=50)
-	private String status;
+	@Temporal(TemporalType.DATE)
+	@Column(name="START_DT")
+	private Date startDt;
 
-	@Column(name="STEP_NAME", nullable=false)
-	private BigDecimal stepName;
+	@Column(length=50)
+	private String status;
 
 	@Column(name="STEP_TYPE", nullable=false, length=150)
 	private String stepType;
 
-	//bi-directional many-to-one association to VbatchLog
-	@ManyToOne
-	@JoinColumn(name="VBATCH_LOG_ID", nullable=false)
-	private VbatchLog vbatchLog;
+	@Column(name="STEPS_ID")
+	private BigDecimal stepsId;
 
-	public VbatchLogDtl() {
+	@Column(name="STEPS_SHORT_DESC", nullable=false, length=20)
+	private String stepsShortDesc;
+
+	//bi-directional many-to-one association to BatchLog
+	@ManyToOne
+	@JoinColumn(name="BATCH_LOG_ID", nullable=false)
+	private BatchLog batchLog;
+
+	public BatchLogDtl() {
 	}
 
 	public long getId() {
@@ -107,20 +104,20 @@ public class VbatchLogDtl implements Serializable {
 		this.id = id;
 	}
 
-	public BigDecimal getBatchNum() {
-		return this.batchNum;
+	public String getClassPath() {
+		return this.classPath;
 	}
 
-	public void setBatchNum(BigDecimal batchNum) {
-		this.batchNum = batchNum;
+	public void setClassPath(String classPath) {
+		this.classPath = classPath;
 	}
 
-	public String getDescription() {
-		return this.description;
+	public Date getEndDt() {
+		return this.endDt;
 	}
 
-	public void setDescription(String description) {
-		this.description = description;
+	public void setEndDt(Date endDt) {
+		this.endDt = endDt;
 	}
 
 	public String getErrorMsg() {
@@ -155,44 +152,20 @@ public class VbatchLogDtl implements Serializable {
 		this.extractSql = extractSql;
 	}
 
-	public String getJavaBeanPath() {
-		return this.javaBeanPath;
+	public BigDecimal getJobStepsXrefJobStepSeq() {
+		return this.jobStepsXrefJobStepSeq;
 	}
 
-	public void setJavaBeanPath(String javaBeanPath) {
-		this.javaBeanPath = javaBeanPath;
+	public void setJobStepsXrefJobStepSeq(BigDecimal jobStepsXrefJobStepSeq) {
+		this.jobStepsXrefJobStepSeq = jobStepsXrefJobStepSeq;
 	}
 
-	public BigDecimal getJobSeq() {
-		return this.jobSeq;
+	public String getLongDesc() {
+		return this.longDesc;
 	}
 
-	public void setJobSeq(BigDecimal jobSeq) {
-		this.jobSeq = jobSeq;
-	}
-
-	public BigDecimal getJobStepId() {
-		return this.jobStepId;
-	}
-
-	public void setJobStepId(BigDecimal jobStepId) {
-		this.jobStepId = jobStepId;
-	}
-
-	public Date getLogDtlEndDt() {
-		return this.logDtlEndDt;
-	}
-
-	public void setLogDtlEndDt(Date logDtlEndDt) {
-		this.logDtlEndDt = logDtlEndDt;
-	}
-
-	public Date getLogDtlStartDt() {
-		return this.logDtlStartDt;
-	}
-
-	public void setLogDtlStartDt(Date logDtlStartDt) {
-		this.logDtlStartDt = logDtlStartDt;
+	public void setLongDesc(String longDesc) {
+		this.longDesc = longDesc;
 	}
 
 	public String getMaxOk2() {
@@ -267,20 +240,20 @@ public class VbatchLogDtl implements Serializable {
 		this.param3 = param3;
 	}
 
+	public Date getStartDt() {
+		return this.startDt;
+	}
+
+	public void setStartDt(Date startDt) {
+		this.startDt = startDt;
+	}
+
 	public String getStatus() {
 		return this.status;
 	}
 
 	public void setStatus(String status) {
 		this.status = status;
-	}
-
-	public BigDecimal getStepName() {
-		return this.stepName;
-	}
-
-	public void setStepName(BigDecimal stepName) {
-		this.stepName = stepName;
 	}
 
 	public String getStepType() {
@@ -291,12 +264,28 @@ public class VbatchLogDtl implements Serializable {
 		this.stepType = stepType;
 	}
 
-	public VbatchLog getVbatchLog() {
-		return this.vbatchLog;
+	public BigDecimal getStepsId() {
+		return this.stepsId;
 	}
 
-	public void setVbatchLog(VbatchLog vbatchLog) {
-		this.vbatchLog = vbatchLog;
+	public void setStepsId(BigDecimal stepsId) {
+		this.stepsId = stepsId;
+	}
+
+	public String getStepsShortDesc() {
+		return this.stepsShortDesc;
+	}
+
+	public void setStepsShortDesc(String stepsShortDesc) {
+		this.stepsShortDesc = stepsShortDesc;
+	}
+
+	public BatchLog getBatchLog() {
+		return this.batchLog;
+	}
+
+	public void setBatchLog(BatchLog batchLog) {
+		this.batchLog = batchLog;
 	}
 
 }

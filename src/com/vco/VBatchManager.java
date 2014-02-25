@@ -6,7 +6,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 
-import model.JobMaster;
+import model.JobDefinition;
 
 public class VBatchManager {
 
@@ -26,9 +26,9 @@ public class VBatchManager {
 		this.em = factory.createEntityManager();
 		this.em.getTransaction().begin();
 		// Create new job_master record
-		JobMaster job = new JobMaster();
-		job.setName("Dummy Job");
-		job.setDescription("Simple test job.");
+		JobDefinition job = new JobDefinition();
+		job.setShortDesc("Dummy Job");
+		job.setLongDesc("Simple test job.");
 		this.em.persist(job);
 		this.em.getTransaction().commit();
 		this.em.close();
@@ -47,6 +47,7 @@ public class VBatchManager {
 		for (Integer job_id : job_ids) {
 			JobManager job_manager = new JobManager(this, job_id);
 			job_manager.init();
+			//job_manager.run();
 		}
 	}
 	

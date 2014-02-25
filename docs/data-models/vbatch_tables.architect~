@@ -146,7 +146,7 @@
   <table id="TAB39" populated="true" UUID="d3c03798-30e5-4ab8-a5ee-1f6339956fb0" name="job_steps_xref" objectType="TABLE" physicalName="job_steps_xref" >
    <remarks></remarks>
    <folder id="FOLTAB391" populated="true" name="Columns" physicalName="Columns" type="1">
-    <column id="COL40" populated="true" UUID="bff5948d-6218-4e3d-813e-464a212d7c03" autoIncrement="true" autoIncrementSequenceName="JOB_STEPS_XREF_ID_XREF" defaultValue="" name="id" nullable="0" physicalName="id" precision="0" primaryKeySeq="0" referenceCount="3" scale="0" sourceDataTypeName="UserDefinedSQLType" type="4" userDefinedTypeUUID="63b011c7-c81f-4c75-8271-632b3c87f727" >
+    <column id="COL40" populated="true" UUID="bff5948d-6218-4e3d-813e-464a212d7c03" autoIncrement="true" autoIncrementSequenceName="JOB_STEPS_XREF_ID_SEQ" defaultValue="" name="id" nullable="0" physicalName="id" precision="0" primaryKeySeq="0" referenceCount="3" scale="0" sourceDataTypeName="UserDefinedSQLType" type="4" userDefinedTypeUUID="63b011c7-c81f-4c75-8271-632b3c87f727" >
      <remarks></remarks>
     </column>
     <column id="COL41" populated="true" UUID="2236a272-c789-4852-8a10-c96c2c4ab34e" autoIncrement="false" autoIncrementSequenceName="job_steps_job_id_id_seq" defaultValue="" name="job_definition_id" nullable="0" physicalName="job_definition_id" precision="0" referenceCount="1" scale="0" sourceDataTypeName="UserDefinedSQLType" type="4" userDefinedTypeUUID="63b011c7-c81f-4c75-8271-632b3c87f727" >

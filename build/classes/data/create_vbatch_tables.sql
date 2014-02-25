@@ -22,8 +22,8 @@ CREATE TABLE vbatch.batch_log (
                 long_desc VARCHAR2(150),
                 vbatch_log_status VARCHAR2(50),
                 error_msg VARCHAR2(4000),
-                end_dt DATE NOT NULL,
-                start_dt DATE NOT NULL,
+                end_dt DATE,
+                start_dt DATE,
                 CONSTRAINT BATCH_LOG_PK PRIMARY KEY (id)
 );
 
