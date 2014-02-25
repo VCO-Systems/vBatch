@@ -15,3 +15,4 @@ INSERT INTO JOB_STEPS_XREF (job_definition_id, step_id, job_step_seq)
 VALUES (1,1,1);
 INSERT INTO JOB_STEPS_XREF (job_definition_id, step_id, job_step_seq)
 VALUES (1,2,2);
+COMMIT;
