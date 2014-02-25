@@ -1,7 +1,9 @@
 package model;
 
 import java.io.Serializable;
+
 import javax.persistence.*;
+
 import java.math.BigDecimal;
 import java.util.Date;
 
@@ -17,6 +19,8 @@ public class BatchLogDtl implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Id
+	@GeneratedValue(generator="BatchLogDtlGen")
+	@SequenceGenerator(name="BatchLogDtlGen", sequenceName="BATCH_LOG_DTL_ID_SEQ", allocationSize=1)
 	@Column(unique=true, nullable=false)
 	private long id;
 
@@ -51,7 +55,7 @@ public class BatchLogDtl implements Serializable {
 	@Column(name="MIN_OK1", length=150)
 	private String minOk1;
 
-	@Column(name="NUM_RECORDS", nullable=false)
+	@Column(name="NUM_RECORDS")
 	private BigDecimal numRecords;
 
 	@Column(name="OUTPUT_FILE_FORMAT", length=15)
@@ -79,13 +83,13 @@ public class BatchLogDtl implements Serializable {
 	@Column(length=50)
 	private String status;
 
-	@Column(name="STEP_TYPE", nullable=false, length=150)
+	@Column(name="STEP_TYPE", length=150)
 	private String stepType;
 
 	@Column(name="STEPS_ID")
 	private BigDecimal stepsId;
 
-	@Column(name="STEPS_SHORT_DESC", nullable=false, length=20)
+	@Column(name="STEPS_SHORT_DESC", length=20)
 	private String stepsShortDesc;
 
 	//bi-directional many-to-one association to BatchLog

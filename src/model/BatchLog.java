@@ -18,6 +18,8 @@ public class BatchLog implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Id
+	@GeneratedValue(generator="BatchLogGen")
+	@SequenceGenerator(name="BatchLogGen", sequenceName="BATCH_LOG_ID_SEQ", allocationSize=1)
 	@Column(unique=true, nullable=false)
 	private long id;
 
@@ -27,7 +29,7 @@ public class BatchLog implements Serializable {
 	@Column(name="BATCH_SEQ_NBR", nullable=false)
 	private BigDecimal batchSeqNbr;
 
-	@Temporal(TemporalType.DATE)
+	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name="END_DT")
 	private Date endDt;
 
@@ -43,7 +45,7 @@ public class BatchLog implements Serializable {
 	@Column(name="SHORT_DESC", length=20)
 	private String shortDesc;
 
-	@Temporal(TemporalType.DATE)
+	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name="START_DT")
 	private Date startDt;
 
