@@ -8,5 +8,7 @@ package com.vco;
  *
  */
 public class StepManager {
+	
+	public String specialMode;
 
 }

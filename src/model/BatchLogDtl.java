@@ -23,13 +23,16 @@ public class BatchLogDtl implements Serializable {
 	@SequenceGenerator(name="BatchLogDtlGen", sequenceName="BATCH_LOG_DTL_ID_SEQ", allocationSize=1)
 	@Column(unique=true, nullable=false)
 	private long id;
+	
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="END_DT")
+	private Date endDt;
+
+	@Column(length=50)
+	private String status;
 
 	@Column(name="CLASS_PATH", length=150)
 	private String classPath;
-
-	@Temporal(TemporalType.DATE)
-	@Column(name="END_DT")
-	private Date endDt;
 
 	@Column(name="ERROR_MSG", length=150)
 	private String errorMsg;
@@ -76,12 +79,10 @@ public class BatchLogDtl implements Serializable {
 	@Column(length=150)
 	private String param3;
 
-	@Temporal(TemporalType.DATE)
+	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name="START_DT")
 	private Date startDt;
-
-	@Column(length=50)
-	private String status;
+	
 
 	@Column(name="STEP_TYPE", length=150)
 	private String stepType;

@@ -20,7 +20,7 @@ public class BatchLogFileOutput implements Serializable {
 	@Column(unique=true, nullable=false)
 	private long id;
 
-	@Temporal(TemporalType.DATE)
+	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name="CREATE_DT", nullable=false)
 	private Date createDt;
 

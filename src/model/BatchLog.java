@@ -49,8 +49,8 @@ public class BatchLog implements Serializable {
 	@Column(name="START_DT")
 	private Date startDt;
 
-	@Column(name="VBATCH_LOG_STATUS", length=50)
-	private String vbatchLogStatus;
+	@Column(name="STATUS", length=50)
+	private String status;
 
 	//bi-directional many-to-one association to JobDefinition
 	@ManyToOne
@@ -144,12 +144,12 @@ public class BatchLog implements Serializable {
 		this.startDt = startDt;
 	}
 
-	public String getVbatchLogStatus() {
-		return this.vbatchLogStatus;
+	public String getStatus() {
+		return this.status;
 	}
 
-	public void setVbatchLogStatus(String vbatchLogStatus) {
-		this.vbatchLogStatus = vbatchLogStatus;
+	public void setStatus(String status) {
+		this.status = status;
 	}
 
 	public JobDefinition getJobDefinition() {
