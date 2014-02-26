@@ -3,10 +3,16 @@ package com.vco;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.StringTokenizer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.supercsv.cellprocessor.ift.CellProcessor;
 import org.supercsv.io.CsvListWriter;
@@ -20,6 +26,15 @@ import model.Step;
 
 public class GenerateCSVStep extends StepManager {
 
+	// Keep track of multiple CSVs generated
+	private int totalFilesGenerated = 0;
+	private int totalRowsGenerated = 0;
+	private String startingDateTime;
+	
+	// private vars
+	private String defaultCSVFilename = "vbatch_{dt}_W914_{seq}.csv";
+	
+	// CSV generation
 	ICsvListWriter listWriter = null;
 	private int pageCount=0;
 	private static final CsvPreference ALWAYS_QUOTE = 
@@ -29,6 +44,9 @@ public class GenerateCSVStep extends StepManager {
 	public GenerateCSVStep(JobManager jm, Step step_record) {
 		this.job_manager = jm;
 		this.step_record = step_record;
+		if (this.step_record.getOutputFilenamePrefix() != "") {
+			this.defaultCSVFilename = this.step_record.getOutputFilenamePrefix();
+		}
 	}
 	
 	/**
@@ -42,7 +60,23 @@ public class GenerateCSVStep extends StepManager {
 //					ALWAYS_QUOTE);
 			
 			// Configure csv writer to always quote every field
-			writer = new FileWriter("output/vbatch.csv",true);
+			
+			
+			// Set up the CSV filenaming
+			DateFormat df = new SimpleDateFormat("MM-dd-yyyy_HH-mm-ss");
+			Date today = Calendar.getInstance().getTime();
+			this.startingDateTime = df.format(today);
+			//this.defaultCSVFilename += "_" + this.startingDateTime;
+			
+			// Create the first CSV file
+			this.totalFilesGenerated++;
+//			writer = new FileWriter("output/" + this.defaultCSVFilename + "_" + this.totalFilesGenerated + ".csv",true);
+			String strFilename = this.defaultCSVFilename;
+			strFilename = strFilename.replace("{dt}", this.startingDateTime);
+			strFilename = strFilename.replace("{seq}", Integer.toString(this.totalFilesGenerated));
+			strFilename = strFilename.replace("{batch_num}",  this.job_manager.batch_log.getBatchNum().toString());
+			System.out.println("\t[CSV] filename: " + strFilename);
+			writer = new FileWriter("output/" + strFilename,true);
 		}
 		catch(IOException e) {
 			System.out.println(e);
@@ -85,7 +119,6 @@ public class GenerateCSVStep extends StepManager {
 	@Override
 	public boolean processPageOfData(List<Object> pageOfData) {
 		this.pageCount++;
-		System.out.println("\t[CSV] PageCount: " + this.pageCount);
 		/*
 		Iterator<Object> data = pageOfData.iterator();
 		while (data.hasNext()) {
@@ -117,18 +150,12 @@ public class GenerateCSVStep extends StepManager {
 				String rowStr = this.generateCSVRow(row);
 				this.writer.append(rowStr);
 				this.writer.flush();
-				if (this.rowOutputCounter >  8000) {
-					System.out.println("[CSV] col0: " + pageOfData.get(0));
-				}
 				
 			}
-			System.out.println("\t[CSV] rows outputed: " + rowcount);
-			System.out.println("\t[CSV] rowOutputCount: " + this.rowOutputCounter);
 			
 		}
 		catch( Exception e) {
 			e.printStackTrace();
-			System.out.println("err");
 		}
 		finally {
 			
@@ -137,10 +164,10 @@ public class GenerateCSVStep extends StepManager {
 		return true;
 	}
 	
-	private int rowOutputCounter = 0;
+	
 	
 	private String generateCSVRow(List row) {
-		rowOutputCounter++;
+		this.totalRowsGenerated++;
 		String retval = "";
 		for (int i=0; i < row.size(); i++) {
 			String fieldVal = (String) row.get(i);

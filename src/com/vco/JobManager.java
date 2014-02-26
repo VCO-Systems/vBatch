@@ -24,7 +24,7 @@ import model.Step;
 public class JobManager {
 	
 	public VBatchManager batch_manager;
-	private JobDefinition job_definition;
+	public JobDefinition job_definition;
 	public EntityManager db;
 	private long job_id;
 	public BatchLog batch_log;
@@ -47,6 +47,7 @@ public class JobManager {
 		Query query = this.db.createQuery(queryString);
 		query.setParameter("jid", this.job_definition);
 		List<JobStepsXref> step_xrefs = query.getResultList();
+		this.logStart();
 		// Load the actual steps into this.steps
 		if (step_xrefs.size() > 0) {
 			for (JobStepsXref step_xref: step_xrefs) {
@@ -85,7 +86,7 @@ public class JobManager {
 	
 		if (job_definition != null && this.steps.size() > 0) {
 			// Write log entries showing this job has started
-			this.logStart(); 
+			 
 			// Kick off the first step
 			StepManager firstStep = (StepManager) this.stepManagers.get(0);
 			firstStep.start();
