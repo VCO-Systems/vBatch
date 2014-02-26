@@ -31,7 +31,7 @@ public class GenerateCSVStep extends StepManager {
 	@Override
 	public boolean init() {
 		try {
-			listWriter = new CsvListWriter(new FileWriter("output/partialWriteWithCsvListWriter.csv"),
+			listWriter = new CsvListWriter(new FileWriter("output/vbatch_sample_out.csv"),
                     CsvPreference.STANDARD_PREFERENCE);
 		}
 		catch(IOException e) {
@@ -87,7 +87,7 @@ public class GenerateCSVStep extends StepManager {
 			Iterator<Object> rows = pageOfData.iterator();
 			while (rows.hasNext()) {
 				Object row = rows.next();
-				System.out.println(row);
+				//System.out.println(row);
 				listWriter.write(row);
 				// GENERATE
 			}

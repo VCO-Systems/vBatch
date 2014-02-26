@@ -1,5 +1,6 @@
 package com.vco;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import model.Step;
@@ -17,7 +18,7 @@ public class StepManager implements IStepManager {
 	protected int records_processed = 0;
 	
 	// Data
-	protected List<Object> dataPageOut;
+	protected List<Object> dataPageOut = new ArrayList<Object>();
 	protected List<Object> dataPageIn;
 	protected List<Object> stepData;
 	protected List<Object> dataAlternate;

@@ -183,63 +183,7 @@ public class JobManager {
 //		
 	}
 	
-	private  void selectRecordsFromDbUserTable() throws SQLException {
-		 
-		Connection dbConnection = null;
-		Statement statement = null;
- 
-		String selectTableSQL = "SELECT * from JOB_DEFINITION ";
- 
-		try {
-			dbConnection = getDBConnection();
-			statement = dbConnection.createStatement();
- 
-			System.out.println(selectTableSQL);
- 
-			// execute select SQL stetement
-			ResultSet rs = statement.executeQuery(selectTableSQL);
-			
-			while (rs.next()) {
- 
-				String long_Desc = rs.getString("LONG_DESC");
-				System.out.println(long_Desc);
- 
-			}
- 
-		} catch (SQLException e) {
- 
-			System.out.println(e.getMessage());
- 
-		} finally {
- 
-			if (statement != null) {
-				statement.close();
-			}
- 
-			if (dbConnection != null) {
-				dbConnection.close();
-			}
- 
-		}
- 
-	}
 	
-	private Connection getDBConnection() {
-		 
-		Connection dbConnection = null;
- 
-		try {
-			Class.forName("oracle.jdbc.driver.OracleDriver");
-		} catch (ClassNotFoundException e) {
-			System.out.println(e.getMessage());
-		}
-		try {
-			dbConnection = DriverManager.getConnection("jdbc:oracle:thin:@192.168.56.1:1522:xe", "vbatch",
-					"vbatch");
-			return dbConnection;
-		} catch (SQLException e) {
-			System.out.println(e.getMessage());
-		}
-		return dbConnection;
-	}
+	
+	
 }
