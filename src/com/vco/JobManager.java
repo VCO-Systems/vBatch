@@ -23,12 +23,13 @@ import model.Step;
 
 public class JobManager {
 	
-	private VBatchManager batch_manager;
+	public VBatchManager batch_manager;
 	private JobDefinition job_definition;
-	private EntityManager db;
+	public EntityManager db;
 	private long job_id;
-	private BatchLog batch_log;
+	public BatchLog batch_log;
 	private List steps = new ArrayList<>();
+	private List stepManagers = new ArrayList<>();
 	
 	public  JobManager(VBatchManager batch_manager, Integer job_id) {
 		this.batch_manager = batch_manager;
@@ -55,17 +56,19 @@ public class JobManager {
 					// Get the classpath from the step table
 					// and create it.
 					Class<?> c = Class.forName(s.getClassPath());
-					Constructor<?> cons = c.getConstructor(JobManager.class);
-					Object step_manager = cons.newInstance(this);
+					Constructor<?> cons = c.getConstructor(JobManager.class, Step.class);
+					StepManager step_manager = (StepManager) cons.newInstance(this, s);
+					// Add the step_manager to this.stepManagers
+					this.stepManagers.add(step_manager);
+					// Initialize the step
+					step_manager.init();
 				}
 				catch (ClassNotFoundException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
 					System.out.println(e);
 				}
 				
 				
-				System.out.println(s);
 				this.steps.add(s);
-				System.out.println(s.getLongDesc());
 			}
 				
 		}
@@ -75,7 +78,7 @@ public class JobManager {
 		}
 		
 		/**
-		 *  Start the job if:
+		 *  Run the job here, as long as:
 		 *    - the job definition is found
 		 *    - at least one steps is configured for the job
 		 */
@@ -83,7 +86,9 @@ public class JobManager {
 		if (job_definition != null && this.steps.size() > 0) {
 			// Write log entries showing this job has started
 			this.logStart(); 
-			
+			// Kick off the first step
+			StepManager firstStep = (StepManager) this.stepManagers.get(0);
+			firstStep.start();
 		}
 		else {
 			// TODO: Log: Error loading this job (job or steps missing)
@@ -96,6 +101,20 @@ public class JobManager {
 		this.logComplete();
 		
 	}
+	
+	/**
+	 * Receive a page of data from a step, pass it on to the next step.
+	 */
+	
+	public void submitPageOfData(List pageOfData, StepManager originatingStep) {
+		// Find the next step, since that's where the data needs to be sent
+		int nextStepId = this.stepManagers.indexOf(originatingStep) + 1;
+		StepManager targetStep = (StepManager) this.stepManagers.get(nextStepId);
+		System.out.println("\t[JobManager] Sending page of data to step: " + targetStep.step_record.getLongDesc());
+		targetStep.processPageOfData(pageOfData);
+		
+	}
+	
 	
 	/**
 	 * Log the start of this job to the batchLogDtl table
@@ -133,7 +152,7 @@ public class JobManager {
 		msg += ": " + this.job_definition.getLongDesc();
 		log_dtl.setLongDesc(msg);
 		log_dtl.setStartDt(new Date());
-		System.out.println("Job " + this.batch_log.getId() + " started.");
+		System.out.println("Batch " + this.batch_log.getBatchNum() + " started.");
 		
 		// Commit the batch_log_dtl entry
 		this.db.persist(log_dtl);
