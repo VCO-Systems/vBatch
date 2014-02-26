@@ -9,6 +9,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -96,20 +97,27 @@ public class ExtractDBStep extends StepManager {
 				// TODO: add the data from this row into the output object
 				List<Object> rowdata = new ArrayList<Object>();
 				for (int ci = 1; ci <= col_count; ci++) {
-					rowdata.add(rs.getObject(ci));
+					rowdata.add(rs.getString(ci));
 					
 				}
 				this.dataPageOut.add(rowdata);
-				if (rownum == commit_freq-1) {  // send this page of data to next step
-					System.out.println("\t[DB step] Sending page of data");
+				
+				
+				if (rownum % commit_freq == 0) {  // send this page of data to next step
 					this.job_manager.submitPageOfData(this.dataPageOut, this);
 					// Reset page data
 					this.dataPageOut = new ArrayList<Object>();
 					
 				}
 				
-				
 			}
+			// Send any remaining records to the next step
+			if (this.dataPageOut.size() > 0) {
+				this.job_manager.submitPageOfData(this.dataPageOut, this);
+				// Reset page data
+				this.dataPageOut = new ArrayList<Object>();
+			}
+			
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
