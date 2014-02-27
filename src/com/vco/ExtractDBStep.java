@@ -228,9 +228,9 @@ public class ExtractDBStep extends StepManager {
 		try {
 			dbConnection = getDBConnection();
 			statement = dbConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
-			
-			dbConnection.setAutoCommit(false);
-			statement.setFetchSize(num_records);
+			//statement = dbConnection.createStatement();
+			//dbConnection.setAutoCommit(false);
+			//statement.setFetchSize(num_records);
 			//System.out.println(selectTableSQL);
  
 			// execute select SQL stetement
@@ -267,7 +267,7 @@ public class ExtractDBStep extends StepManager {
 			System.out.println(e.getMessage());
 		}
 		try {
-			dbConnection = DriverManager.getConnection("jdbc:oracle:thin:@192.168.56.1:1522:xe", "vbatch",
+			dbConnection = DriverManager.getConnection("jdbc:oracle:thin:@192.168.56.1:1521:xe", "vbatch",
 					"vbatch");
 			return dbConnection;
 		} catch (SQLException e) {
