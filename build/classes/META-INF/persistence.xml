@@ -10,10 +10,10 @@
 		<class>model.Step</class>
 		<properties>
 			<property name="eclipselink.jdbc.batch-writing" value="JDBC"/>
-			<property name="javax.persistence.jdbc.url" value="jdbc:oracle:thin:@192.168.56.1:1521:xe"/>
+			<property name="javax.persistence.jdbc.url" value="jdbc:oracle:thin:@192.168.56.1:1522:xe"/>
 			<property name="javax.persistence.jdbc.user" value="vbatch"/>
 			<property name="javax.persistence.jdbc.password" value="vbatch"/>
-			<property name="javax.persistence.jdbc.driver" value="oracle.jdbc.driver.OracleDriver"/>
+			<property name="javax.persistence.jdbc.driver" value="oracle.jdbc.OracleDriver"/>
 		</properties>
 	</persistence-unit>
 </persistence>

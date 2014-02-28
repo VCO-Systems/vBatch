@@ -52,8 +52,8 @@ public class BatchLogDtl implements Serializable {
 	@Column(name="LONG_DESC", length=150)
 	private String longDesc;
 
-	@Column(name="MAX_OK2", length=150)
-	private String maxOk2;
+	@Column(name="MAX_OK1", length=150)
+	private String maxOk1;
 
 	@Column(name="MIN_OK1", length=150)
 	private String minOk1;
@@ -173,12 +173,12 @@ public class BatchLogDtl implements Serializable {
 		this.longDesc = longDesc;
 	}
 
-	public String getMaxOk2() {
-		return this.maxOk2;
+	public String getMaxOk1() {
+		return this.maxOk1;
 	}
 
-	public void setMaxOk2(String maxOk2) {
-		this.maxOk2 = maxOk2;
+	public void setMaxOk1(String maxOk1) {
+		this.maxOk1 = maxOk1;
 	}
 
 	public String getMinOk1() {

@@ -296,7 +296,7 @@
     <column id="COL88" populated="true" UUID="5a4150b9-4dce-4760-a598-a9b4c6390526" autoIncrement="false" autoIncrementSequenceName="batch_log_dtl_min_ok1_seq" defaultValue="" name="min_ok1" nullable="1" physicalName="min_ok1" precision="150" referenceCount="1" scale="0" sourceDataTypeName="UserDefinedSQLType" type="12" userDefinedTypeUUID="831ac2d4-0e65-47ec-a0b7-62b7f6b8760a" >
      <remarks></remarks>
     </column>
-    <column id="COL89" populated="true" UUID="906166d0-c36a-4dc0-a80c-92c1f7ec4390" autoIncrement="false" autoIncrementSequenceName="batch_log_dtl_max_ok2_seq" defaultValue="" name="max_ok1" nullable="1" physicalName="max_ok2" precision="150" referenceCount="1" scale="0" sourceDataTypeName="UserDefinedSQLType" type="12" userDefinedTypeUUID="831ac2d4-0e65-47ec-a0b7-62b7f6b8760a" >
+    <column id="COL89" populated="true" UUID="906166d0-c36a-4dc0-a80c-92c1f7ec4390" autoIncrement="false" autoIncrementSequenceName="batch_log_dtl_max_ok1_seq" defaultValue="" name="max_ok1" nullable="1" physicalName="max_ok1" precision="150" referenceCount="1" scale="0" sourceDataTypeName="UserDefinedSQLType" type="12" userDefinedTypeUUID="831ac2d4-0e65-47ec-a0b7-62b7f6b8760a" >
      <remarks></remarks>
     </column>
     </folder>

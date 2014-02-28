@@ -71,7 +71,8 @@ public class JobManager {
 				
 				this.steps.add(s);
 			}
-				
+			// This job is done.  Make appropriate log entries
+			this.logComplete();
 		}
 		else {
 			// TODO:  Log that no steps were found, end job
