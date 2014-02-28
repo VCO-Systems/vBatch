@@ -22,6 +22,7 @@ import org.supercsv.quote.AlwaysQuoteMode;
 import org.supercsv.quote.QuoteMode;
 
 import model.BatchLogDtl;
+import model.BatchLogFileOutput;
 import model.Step;
 
 public class GenerateCSVStep extends StepManager {
@@ -39,7 +40,8 @@ public class GenerateCSVStep extends StepManager {
 	private String defaultCSVFilename = "vbatch_{dt}_W914_{seq}.csv";
 	
 	// private vars
-	private String startingDateTime;
+	private String startingDateTimeStr;
+	private Date startingDateTime;
 	
 	// CSV generation
 	ICsvListWriter listWriter = null;
@@ -80,8 +82,8 @@ public class GenerateCSVStep extends StepManager {
 			// The startingDateTime should be the same for every file 
 			// this step generates, so we create it during init.
 			DateFormat df = new SimpleDateFormat("MM-dd-yyyy_HH-mm-ss");
-			Date today = Calendar.getInstance().getTime();
-			this.startingDateTime = df.format(today);
+			this.startingDateTime = Calendar.getInstance().getTime();
+			this.startingDateTimeStr = df.format(this.startingDateTime);
 			
 			// Create the first CSV file
 //			this.generateNextCSVFile();
@@ -159,11 +161,8 @@ public class GenerateCSVStep extends StepManager {
 				
 				// See if we need to close out this file
 				if (this.totalRowsThisFile + 1 > this.max_rec_per_file) {
-					// TODO: close out the file
-					this.currentOutputFile.flush();
-					this.currentOutputFile.close();
-					this.currentOutputFile = null;
-					this.totalRowsThisFile=0;
+					// Close out the file
+					closeCurrentOutputFile();
 				}
 				else {
 					
@@ -200,6 +199,33 @@ public class GenerateCSVStep extends StepManager {
 		
 		return true;
 	}
+
+	/**
+	 * @throws IOException
+	 */
+	private void closeCurrentOutputFile() throws IOException {
+		// rows
+		int rows = this.totalRowsThisFile;
+		
+		// Close the output file
+		this.currentOutputFile.flush();
+		this.currentOutputFile.close();
+		this.currentOutputFile = null;
+		
+		// Update counters
+		this.totalRowsThisFile=0;
+		
+		// Add entry to batch_log_file_output table
+		this.job_manager.db.getTransaction().begin();
+		BatchLogFileOutput log_entry = new BatchLogFileOutput();
+		log_entry.setBatchLog(this.job_manager.batch_log);
+		log_entry.setFilename(this.generatedFilenames.get(this.generatedFilenames.size()-1));
+		log_entry.setNumRecords(new BigDecimal(rows));
+		log_entry.setCreateDt(this.startingDateTime);
+		this.job_manager.db.persist(log_entry);
+		this.job_manager.db.getTransaction().commit();
+		
+	}
 	
 	/**
 	 * Generate the next CSV file.
@@ -213,7 +239,7 @@ public class GenerateCSVStep extends StepManager {
 			
 			// Construct the filename for this output file
 			String newFileName = this.defaultCSVFilename;
-			newFileName = newFileName.replace("{dt}", this.startingDateTime);
+			newFileName = newFileName.replace("{dt}", this.startingDateTimeStr);
 			newFileName = newFileName.replace("{seq}", Integer.toString(this.totalFilesGenerated));
 			newFileName = newFileName.replace("{batch_num}",  this.job_manager.batch_log.getBatchNum().toString());
 			
@@ -230,6 +256,8 @@ public class GenerateCSVStep extends StepManager {
 		}
 		
 	}
+	
+	
 	
 	/**
 	 * Converts a row of data (list of strings) into a CSV-formatted String.

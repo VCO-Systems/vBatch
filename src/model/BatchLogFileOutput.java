@@ -1,7 +1,9 @@
 package model;
 
 import java.io.Serializable;
+
 import javax.persistence.*;
+
 import java.math.BigDecimal;
 import java.util.Date;
 
@@ -17,6 +19,8 @@ public class BatchLogFileOutput implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Id
+	@GeneratedValue(generator="BatchLogFileOutputGen")
+	@SequenceGenerator(name="BatchLogFileOutputGen", sequenceName="BATCH_LOG_FILE_OUTPUT_ID_SEQ", allocationSize=1)
 	@Column(unique=true, nullable=false)
 	private long id;
 

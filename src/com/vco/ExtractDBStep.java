@@ -26,6 +26,9 @@ public class ExtractDBStep extends StepManager {
 	private int record_pointer = 0;
 	private BatchLogDtl log_dtl = null;
 	
+	// vars specific to this type of step
+	
+	
 	public ExtractDBStep(JobManager jm, Step step_record) {
 		this.job_manager = jm;
 		this.step_record = step_record;

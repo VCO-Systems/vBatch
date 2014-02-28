@@ -140,9 +140,9 @@ public class JobManager {
 		// This means we have to write this record out twice, would
 		// but don't know a better way currently.
 		this.batch_log.setBatchNum(new BigDecimal(this.batch_log.getId()));
-		this.batch_log.setLongDesc("Starting batch " + this.batch_log.getBatchNum() 
-				+ ": (" + this.job_definition.getId() + ") " 
-				+ " " + this.job_definition.getLongDesc());
+		this.batch_log.setLongDesc("Batch " + this.batch_log.getBatchNum() 
+				//+ ", Job " + this.job_definition.getId() 
+				+ ", " + this.job_definition.getLongDesc());
 		
 		this.db.persist(this.batch_log);
 		this.db.getTransaction().commit();
