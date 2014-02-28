@@ -58,6 +58,7 @@ public class JobManager {
 					// and create it.
 					Class<?> c = Class.forName(s.getClassPath());
 					Constructor<?> cons = c.getConstructor(JobManager.class, Step.class);
+					// Create new step manager, passing in this job manager, and the step record
 					StepManager step_manager = (StepManager) cons.newInstance(this, s);
 					// Add the step_manager to this.stepManagers
 					this.stepManagers.add(step_manager);
@@ -70,9 +71,9 @@ public class JobManager {
 				
 				
 				this.steps.add(s);
-			}
+			} // end: looping over step_xref records for this job
 			// This job is done.  Make appropriate log entries
-			this.logComplete();
+			//this.logComplete();
 		}
 		else {
 			// TODO:  Log that no steps were found, end job
