@@ -26,27 +26,43 @@ import model.Step;
 
 public class GenerateCSVStep extends StepManager {
 
-	// Keep track of multiple CSVs generated
-	private int totalFilesGenerated = 0;
+	// Keep track of rows and paging
 	private int totalRowsGenerated = 0;
-	private String startingDateTime;
+	private int totalRowsThisFile = 0;
+	private int max_rec_per_file = 0;
+	private int pageCount=0; // Pages of data sent in from another step (not necessarily db or CSV pages)
+	
+	// Track the generated CSV Files
+	private int totalFilesGenerated = 0;
+	private List<String> generatedFilenames;
+	FileWriter currentOutputFile = null;
+	private String defaultCSVFilename = "vbatch_{dt}_W914_{seq}.csv";
 	
 	// private vars
-	private String defaultCSVFilename = "vbatch_{dt}_W914_{seq}.csv";
+	private String startingDateTime;
 	
 	// CSV generation
 	ICsvListWriter listWriter = null;
-	private int pageCount=0;
 	private static final CsvPreference ALWAYS_QUOTE = 
 		    new CsvPreference.Builder(CsvPreference.STANDARD_PREFERENCE).useQuoteMode(new AlwaysQuoteMode()).build();
-	FileWriter writer = null;
+	
 	
 	public GenerateCSVStep(JobManager jm, Step step_record) {
 		this.job_manager = jm;
 		this.step_record = step_record;
+		
+		// If this step has a filename prefix defined, use that.  Otherwise use the default.
 		if (this.step_record.getOutputFilenamePrefix() != "") {
 			this.defaultCSVFilename = this.step_record.getOutputFilenamePrefix();
 		}
+		this.generatedFilenames = new ArrayList<String>();
+		
+		// Get extract_max_rec_per_file from the step config
+		if (this.step_record.getExtractMaxRecPerFile() != null) {
+			this.max_rec_per_file = this.step_record.getExtractMaxRecPerFile().intValue();
+		}
+			
+		System.out.println("maxrec: " + this.max_rec_per_file);
 	}
 	
 		/**
@@ -61,25 +77,14 @@ public class GenerateCSVStep extends StepManager {
 			
 			// Configure csv writer to always quote every field
 			
-			
-			// Set up the CSV filenaming
+			// The startingDateTime should be the same for every file 
+			// this step generates, so we create it during init.
 			DateFormat df = new SimpleDateFormat("MM-dd-yyyy_HH-mm-ss");
 			Date today = Calendar.getInstance().getTime();
 			this.startingDateTime = df.format(today);
-			//this.defaultCSVFilename += "_" + this.startingDateTime;
 			
 			// Create the first CSV file
-			this.totalFilesGenerated++;
-//			writer = new FileWriter("output/" + this.defaultCSVFilename + "_" + this.totalFilesGenerated + ".csv",true);
-			String strFilename = this.defaultCSVFilename;
-			strFilename = strFilename.replace("{dt}", this.startingDateTime);
-			strFilename = strFilename.replace("{seq}", Integer.toString(this.totalFilesGenerated));
-			strFilename = strFilename.replace("{batch_num}",  this.job_manager.batch_log.getBatchNum().toString());
-			System.out.println("\t[CSV] filename: " + strFilename);
-			writer = new FileWriter("output/" + strFilename,true);
-		}
-		catch(IOException e) {
-			System.out.println(e);
+//			this.generateNextCSVFile();
 		}
 		finally {
 			/**
@@ -118,7 +123,10 @@ public class GenerateCSVStep extends StepManager {
 	
 	@Override
 	public boolean processPageOfData(List<Object> pageOfData) {
+
+		// Prepare to process this page of data
 		this.pageCount++;
+		
 		/*
 		Iterator<Object> data = pageOfData.iterator();
 		while (data.hasNext()) {
@@ -127,7 +135,9 @@ public class GenerateCSVStep extends StepManager {
 			// GENERATE
 		}
 		*/
+		
 		System.out.println("\t[CSV] rows to process: " + pageOfData.size());
+		
 		try {
 			/*
 			Iterator<Object> rows = pageOfData.iterator();
@@ -142,14 +152,41 @@ public class GenerateCSVStep extends StepManager {
 			System.out.println("\t[CSV] row count: " + rowcount);
 			//listWriter.write(pageOfData);
 			 */
-			int rowcount=0;
+			
+			// Loop over the rows of data in this page
 			for (int i = 0; i < pageOfData.size(); i++) {
-				rowcount++;
+				
+				
+				// See if we need to close out this file
+				if (this.totalRowsThisFile + 1 > this.max_rec_per_file) {
+					// TODO: close out the file
+					this.currentOutputFile.flush();
+					this.currentOutputFile.close();
+					this.currentOutputFile = null;
+					this.totalRowsThisFile=0;
+				}
+				else {
+					
+					// TODO: Update the counters
+				}
+				
+				// See if a new file needs to be created
+				// this.currentOutputFile will be null if this is the first record for
+				// the job, or if the previous file was closed out after writing the last row.
+				if (this.currentOutputFile == null) {
+					this.generateNextCSVFile();
+				}
+				
+				// Write this row to the CSV
 				List row = (List)pageOfData.get(i);
 				//listWriter.write(row);
 				String rowStr = this.generateCSVRow(row);
-				this.writer.append(rowStr);
-				this.writer.flush();
+				this.currentOutputFile.append(rowStr);
+				this.currentOutputFile.flush();
+				
+				// Update the counters
+				this.totalRowsThisFile++;
+				this.totalRowsGenerated++;
 				
 			}
 			
@@ -164,10 +201,44 @@ public class GenerateCSVStep extends StepManager {
 		return true;
 	}
 	
+	/**
+	 * Generate the next CSV file.
+	 */
 	
+	private void generateNextCSVFile() {
+		
+		try {
+			// Increment the counters
+			this.totalFilesGenerated++;
+			
+			// Construct the filename for this output file
+			String newFileName = this.defaultCSVFilename;
+			newFileName = newFileName.replace("{dt}", this.startingDateTime);
+			newFileName = newFileName.replace("{seq}", Integer.toString(this.totalFilesGenerated));
+			newFileName = newFileName.replace("{batch_num}",  this.job_manager.batch_log.getBatchNum().toString());
+			
+			// Create the file
+			this.currentOutputFile = new FileWriter("output/" + newFileName,true);
+			this.generatedFilenames.add("output/" + newFileName);
+			
+			// Reset counters
+			this.totalRowsThisFile=0;
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	
+	/**
+	 * Converts a row of data (list of strings) into a CSV-formatted String.
+	 * @param row
+	 * @return String
+	 */
 	
 	private String generateCSVRow(List row) {
-		this.totalRowsGenerated++;
+		//this.totalRowsGenerated++;
 		String retval = "";
 		for (int i=0; i < row.size(); i++) {
 			String fieldVal = (String) row.get(i);
@@ -190,9 +261,13 @@ public class GenerateCSVStep extends StepManager {
 		return true;
 	}
 	
-	/**
+	/************************
 	 * Logging
 	 * 
+	 ************************/
+	
+	/**
+	 * This Step is starting.  Make the appropriate log entries.
 	 */
 	
 	private void logStart() {
