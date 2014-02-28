@@ -85,8 +85,6 @@ public class GenerateCSVStep extends StepManager {
 			this.startingDateTime = Calendar.getInstance().getTime();
 			this.startingDateTimeStr = df.format(this.startingDateTime);
 			
-			// Create the first CSV file
-//			this.generateNextCSVFile();
 		}
 		finally {
 			/**
@@ -108,8 +106,24 @@ public class GenerateCSVStep extends StepManager {
 	
 	@Override
 	public boolean start() {
-		// Set this step to running
-		this.running = true;
+		// Previous steps have already passed in data,
+		// even though start() is just now being called.
+		if (this.running) {
+			// This means the CSV's have been generated, except
+			// perhaps the last one.
+			
+			// Write out the last CSV
+			try {
+				this.closeCurrentOutputFile();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			// Mark this step as complete
+			this.completed=true;
+			
+			
+		}
 		// Log the start of this step
 		this.logStart();
 		
@@ -117,15 +131,18 @@ public class GenerateCSVStep extends StepManager {
 		// STUB: Fake a page of data
 		List<Object> lst = new ArrayList<>();
 		
-		// TODO: Send each page of data to JobManager
-		//this.job_manager.submitPageOfData(lst, this);
+		// Return execution to JobManager
 		return true;
 		
 	}
 	
 	@Override
 	public boolean processPageOfData(List<Object> pageOfData) {
-
+		// Set this.running = true to indicate later when 
+		// that data has been passed into this step prior
+		// to this.start() being called.
+		this.running=true;
+		
 		// Prepare to process this page of data
 		this.pageCount++;
 		
@@ -305,7 +322,9 @@ public class GenerateCSVStep extends StepManager {
 		BatchLogDtl log_dtl = new BatchLogDtl();
 		log_dtl.setBatchLog(this.job_manager.batch_log);
 		
-		String msg = "[StepManager] Step started: " + this.step_record.getLongDesc();
+		String msg = "Step [" 
+				+ this.step_record.getType() + " : " + this.step_record.getLongDesc() 
+				+ "]";
 		log_dtl.setLongDesc(msg);
 		log_dtl.setStepsId(new BigDecimal(this.step_record.getId()));
 		log_dtl.setStepsShortDesc(this.step_record.getShortDesc());

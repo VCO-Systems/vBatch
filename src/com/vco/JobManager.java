@@ -89,9 +89,16 @@ public class JobManager {
 		if (job_definition != null && this.steps.size() > 0) {
 			// Write log entries showing this job has started
 			 
-			// Kick off the first step
-			StepManager firstStep = (StepManager) this.stepManagers.get(0);
-			firstStep.start();
+			// Call start() on each step, in order
+			for (int stepNum = 0; stepNum < this.stepManagers.size(); stepNum++) {
+				// Get the step manager to start
+				StepManager stepToStart = (StepManager) this.stepManagers.get(stepNum);
+				System.out.println("Starting step: " + stepNum);
+				stepToStart.start();
+				
+			}
+			
+			
 		}
 		else {
 			// TODO: Log: Error loading this job (job or steps missing)
@@ -113,7 +120,7 @@ public class JobManager {
 		// Find the next step, since that's where the data needs to be sent
 		int nextStepId = this.stepManagers.indexOf(originatingStep) + 1;
 		StepManager targetStep = (StepManager) this.stepManagers.get(nextStepId);
-		System.out.println("\t[JobManager] Sending page of data to step: " + targetStep.step_record.getLongDesc());
+//		System.out.println("\t[JobManager] Sending page of data to step: " + targetStep.step_record.getLongDesc());
 		targetStep.processPageOfData(pageOfData);
 		
 	}
@@ -126,7 +133,10 @@ public class JobManager {
 		
 		this.db.getTransaction().begin();
 		
-		// Write "
+		// Create the main BatchLog entry
+		// Note: we keep this in an object var because we'll
+		// come back and update this record during and after the
+		// job completes.
 		this.batch_log = new BatchLog();;
 		this.batch_log.setJobDefinition(this.job_definition);
 		this.batch_log.setBatchSeqNbr(new BigDecimal(this.job_id));

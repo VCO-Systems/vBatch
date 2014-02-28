@@ -94,7 +94,7 @@ public class ExtractDBStep extends StepManager {
 			
 			// Iterate over all the rows of the ResultSet
 			while (rs.next()) {
-				rownum++;  // Note: First rownum is 1
+				rownum++;  // Note: rownum starts at 1
 				
 				// add the data from this row into the output object
 				List<Object> rowdata = new ArrayList<Object>();
@@ -119,6 +119,7 @@ public class ExtractDBStep extends StepManager {
 				}
 				
 				if (rownum % commit_freq == 0) {  // send this page of data to next step
+					
 					this.job_manager.submitPageOfData(this.dataPageOut, this);
 					// Reset page data
 					this.dataPageOut = new ArrayList<Object>();
@@ -132,7 +133,6 @@ public class ExtractDBStep extends StepManager {
 					
 					// Get the current OK1 value
 					String lastRowOK1Value = this.convertDateFieldToString(rs, "OK1");
-					System.out.println("\t{}: " + lastRowOK1Value);
 					// Write maxOK1 to the log_dtl record for this extraction step
 					this.job_manager.db.getTransaction().begin();
 					this.log_dtl.setMaxOk1(lastRowOK1Value);
@@ -142,6 +142,8 @@ public class ExtractDBStep extends StepManager {
 			}
 			// Send any remaining records to the next step
 			if (this.dataPageOut.size() > 0) {
+				// Mark this step as complete
+				this.completed = true;
 				this.job_manager.submitPageOfData(this.dataPageOut, this);
 				// Reset page data
 				this.dataPageOut = new ArrayList<Object>();
@@ -228,9 +230,9 @@ public class ExtractDBStep extends StepManager {
 		this.log_dtl = new BatchLogDtl();
 		this.log_dtl.setBatchLog(this.job_manager.batch_log);
 		
-		String msg = "[Step " + this.step_record.getType() 
-				+ ":" + this.step_record.getShortDesc()
-				+ "] " +  " Started";
+		String msg = "Step [" + this.step_record.getType() 
+				+ " : " + this.step_record.getShortDesc()
+				+ "]";
 		this.log_dtl.setLongDesc(msg);
 		this.log_dtl.setStepsId(new BigDecimal(this.step_record.getId()));
 		this.log_dtl.setStepsShortDesc(this.step_record.getShortDesc());
