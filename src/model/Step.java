@@ -26,6 +26,9 @@ public class Step implements Serializable {
 	@Column(name="EXTRACT_COMMIT_FREQ")
 	private BigDecimal extractCommitFreq;
 
+	@Column(name="EXTRACT_MAX_REC")
+	private BigDecimal extractMaxRec;
+	
 	@Column(name="EXTRACT_MAX_REC_PER_FILE")
 	private BigDecimal extractMaxRecPerFile;
 
@@ -90,6 +93,14 @@ public class Step implements Serializable {
 		this.extractCommitFreq = extractCommitFreq;
 	}
 
+	public BigDecimal getExtractMaxRec() {
+		return this.extractMaxRec;
+	}
+
+	public void setExtractMaxRec(BigDecimal extractMaxRec) {
+		this.extractMaxRec = extractMaxRec;
+	}
+	
 	public BigDecimal getExtractMaxRecPerFile() {
 		return this.extractMaxRecPerFile;
 	}

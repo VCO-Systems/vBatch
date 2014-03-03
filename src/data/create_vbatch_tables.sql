@@ -20,6 +20,7 @@ CREATE TABLE vbatch.steps (
                 param1 VARCHAR2(100),
                 param2 VARCHAR2(50),
                 param3 VARCHAR2(50),
+                extract_max_rec NUMBER,
                 extract_max_rec_per_file NUMBER,
                 extract_commit_freq NUMBER,
                 extract_sql VARCHAR2(4000),

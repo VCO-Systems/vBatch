@@ -4,8 +4,8 @@
  <print-settings numCopies="1" zoom="1.0" pageNumbersPrinted="true" orientation="1" paperWidth="612.0" paperHeight="792.0" leftBorder="50.0" rightBorder="50.0" topBorder="50.0" bottomBorder="50.0" />
  <project-data-sources>
   <data-source id="DS0">
-   <property key="Logical" value="vbatch_dev_windows (192.168.56.1:1522)" />
    <property key="Connection Type" value="Oracle 11g" />
+   <property key="Logical" value="PlayPen Database" />
    <property key="JDBC URL" value="jdbc:oracle:thin:@192.168.56.1:1522:xe" />
    <property key="UID" value="vbatch" />
    <property key="PWD" value="vbatch" />
@@ -15,9 +15,9 @@
    <property key="ca.sqlpower.architect.etl.kettle.repos.login" value="" />
    <property key="ca.sqlpower.architect.etl.kettle.repos.password" value="" />
   </data-source>
-  <data-source id="DS2">
-   <property key="Logical" value="PlayPen Database" />
+  <data-source id="DS0">
    <property key="Connection Type" value="Oracle 11g" />
+   <property key="Logical" value="PlayPen Database" />
    <property key="JDBC URL" value="jdbc:oracle:thin:@192.168.56.1:1522:xe" />
    <property key="UID" value="vbatch" />
    <property key="PWD" value="vbatch" />
@@ -29,7 +29,7 @@
   </data-source>
  </project-data-sources>
  <source-databases>
-  <database id="DB0" populated="true" UUID="41aea663-51f1-4643-bc3e-935e4394c273" dbcs-ref="DS2" name="PlayPen Database" physicalName="vbatch_dev_windows (192.168.56.1:1522)" >
+  <database id="DB0" populated="true" UUID="41aea663-51f1-4643-bc3e-935e4394c273" dbcs-ref="DS0" name="PlayPen Database" physicalName="vbatch_dev_windows (192.168.56.1:1522)" >
    <schema id="SCH1" populated="false" UUID="b6b4dac9-a058-47e9-8bca-7c0897582db5" name="ANONYMOUS" nativeTerm="schema" physicalName="ANONYMOUS" >
    </schema>
    <schema id="SCH2" populated="false" UUID="35fd32df-222f-47e5-9957-65525e84fafe" name="APEX_040000" nativeTerm="schema" physicalName="APEX_040000" >
@@ -251,13 +251,13 @@
     <column id="COL73" populated="true" UUID="1a8e32cd-3e64-4203-a59b-1a25eed37beb" autoIncrement="false" autoIncrementSequenceName="Vbatch_Log_Dtl_Step_Id_seq" defaultValue="" name="steps_id" nullable="1" physicalName="steps_id" precision="0" referenceCount="1" scale="0" sourceDataTypeName="UserDefinedSQLType" type="4" userDefinedTypeUUID="63b011c7-c81f-4c75-8271-632b3c87f727" >
      <remarks></remarks>
     </column>
-    <column id="COL74" populated="true" UUID="5010ea72-deb5-48f0-80c1-3be2f1df602e" autoIncrement="false" autoIncrementSequenceName="batch_log_dtl_steps_short_desc_seq" defaultValue="" name="steps_short_desc" nullable="0" physicalName="steps_short_desc" precision="20" referenceCount="1" scale="0" sourceDataTypeName="UserDefinedSQLType" type="12" userDefinedTypeUUID="831ac2d4-0e65-47ec-a0b7-62b7f6b8760a" >
+    <column id="COL74" populated="true" UUID="5010ea72-deb5-48f0-80c1-3be2f1df602e" autoIncrement="false" autoIncrementSequenceName="batch_log_dtl_steps_short_desc_seq" defaultValue="" name="steps_short_desc" nullable="1" physicalName="steps_short_desc" precision="20" referenceCount="1" scale="0" sourceDataTypeName="UserDefinedSQLType" type="12" userDefinedTypeUUID="831ac2d4-0e65-47ec-a0b7-62b7f6b8760a" >
      <remarks></remarks>
     </column>
-    <column id="COL75" populated="true" UUID="750f6feb-5957-40db-a2a8-5cf7183be5c4" autoIncrement="false" autoIncrementSequenceName="Vbatch_Log_Dtl_Step_Type_seq" defaultValue="" name="step_type" nullable="0" physicalName="step_type" precision="150" referenceCount="1" scale="0" sourceDataTypeName="UserDefinedSQLType" type="12" userDefinedTypeUUID="831ac2d4-0e65-47ec-a0b7-62b7f6b8760a" >
+    <column id="COL75" populated="true" UUID="750f6feb-5957-40db-a2a8-5cf7183be5c4" autoIncrement="false" autoIncrementSequenceName="Vbatch_Log_Dtl_Step_Type_seq" defaultValue="" name="step_type" nullable="1" physicalName="step_type" precision="150" referenceCount="1" scale="0" sourceDataTypeName="UserDefinedSQLType" type="12" userDefinedTypeUUID="831ac2d4-0e65-47ec-a0b7-62b7f6b8760a" >
      <remarks></remarks>
     </column>
-    <column id="COL76" populated="true" UUID="096e69bd-92a6-4def-8456-0db186b590f0" autoIncrement="false" autoIncrementSequenceName="Vbatch_Log_Dtl_Num_Records_seq" defaultValue="" name="num_records" nullable="0" physicalName="num_records" precision="0" referenceCount="1" scale="0" sourceDataTypeName="UserDefinedSQLType" type="4" userDefinedTypeUUID="63b011c7-c81f-4c75-8271-632b3c87f727" >
+    <column id="COL76" populated="true" UUID="096e69bd-92a6-4def-8456-0db186b590f0" autoIncrement="false" autoIncrementSequenceName="Vbatch_Log_Dtl_Num_Records_seq" defaultValue="" name="num_records" nullable="1" physicalName="num_records" precision="0" referenceCount="1" scale="0" sourceDataTypeName="UserDefinedSQLType" type="4" userDefinedTypeUUID="63b011c7-c81f-4c75-8271-632b3c87f727" >
      <remarks></remarks>
     </column>
     <column id="COL77" populated="true" UUID="f0eff85c-1990-4195-8c40-9de19a533c54" autoIncrement="false" autoIncrementSequenceName="Vbatch_Log_Dtl_Extract_Sql_seq" defaultValue="" name="extract_sql" nullable="1" physicalName="extract_sql" precision="4000" referenceCount="1" scale="0" sourceDataTypeName="UserDefinedSQLType" type="12" userDefinedTypeUUID="831ac2d4-0e65-47ec-a0b7-62b7f6b8760a" >
@@ -392,7 +392,7 @@
    </relationship>
   </relationships>
  </target-database>
- <ddl-generator type="ca.sqlpower.architect.ddl.Oracle9PlusDDLGenerator" allow-connection="false" target-schema="vbatch"> </ddl-generator>
+ <ddl-generator type="ca.sqlpower.architect.ddl.Oracle9PlusDDLGenerator" allow-connection="true" target-schema="vbatch"> </ddl-generator>
  <liquibase-settings useSeparateChangeSets="false" generateId="false" idStart="1"/>
  <create-kettle-job-settings filePath="" jobName="" schemaName="" kettleJoinType="0" savingToFile="true" />
  <play-pen zoom="1.0" viewportX="0" viewportY="0" relationship-style="rectilinear" names-displayLogicalNames="true" showPrimaryTag="true" showForeignTag="true" showAlternateTag="true" columnVisibility="ALL" relationshipLabelVisibility="true">
