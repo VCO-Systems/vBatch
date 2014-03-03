@@ -15,8 +15,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.persistence.Query;
+import javax.persistence.TypedQuery;
 
 import model.BatchLogDtl;
 import model.Step;
@@ -62,11 +65,60 @@ public class ExtractDBStep extends StepManager {
 		// Log the start of this step
 		this.logStart();
 		
-		// TODO: Loop over pages of data
-
+		/*  
+		 * TODO: Make sure at least one previous log_dtl entry exists
+		 * for this step_id, and use its max_ok1 value to determine
+		 * where to start off this query.
+		 */
+		
+		// This steps' step_id
+		int my_step_id = (int) this.step_record.getId();
+		
+		// Find the last time this job ran, so we can get its max_ok1
+		System.out.println("\t[Extract] About to look up the last create_date_time matching job_id: " + my_step_id);
+		
+		TypedQuery<BatchLogDtl> query = this.job_manager.db.createQuery(
+		        "SELECT dtl FROM BatchLogDtl dtl WHERE dtl.stepType = :stepType  and dtl.stepsId = :stepId "  // must match this step's type and id
+				+ " and dtl.minOk1 is not null "  // must have  min_ok1 and max_ok1 value
+		        + "order by dtl.id desc", BatchLogDtl.class);  // most recent match comes first
+		    List<BatchLogDtl> dtls = query
+		    		.setParameter("stepType", "Extract")
+		    		.setParameter("stepId", my_step_id)
+		    		.getResultList();
+		System.out.println("\t[Extract] Found matches in log_dtl table: " + dtls.size());
+		
 		// Get the raw sql to run
 		String raw_sql = this.step_record.getExtractSql();
-		// System.out.println(raw_sql);
+		
+		// If there's at least one previous run with valid min/maxOK1
+		if (dtls.size() > 0) {
+			BatchLogDtl lastRun = dtls.get(0);  // Most recent successful run of the same type
+			String lastOk1 = lastRun.getMaxOk1();  // Oracle date in string format
+			
+			// Create a WHERE clause that starts after lastOk1
+			String startClause = " p.create_date_time > to_date('" + lastOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
+			
+			// replace the /* where */ token with our dynamic where clause
+			// however, make sure that if there isn't a WHERE clause that
+			// we add that as well
+			Pattern p = Pattern.compile("where");
+			Matcher m = p.matcher(raw_sql);
+			int whereMatches = 0;
+			while (m.find()) {
+				whereMatches += 1;
+			}
+			if (whereMatches <=1 ) {
+				raw_sql = raw_sql.replace("/* where */", " WHERE " + startClause);
+			}
+			else {
+				raw_sql = raw_sql.replace("/* where */", startClause);
+			}
+		}
+		
+		
+		
+		
+		System.out.println(raw_sql);
 		
 		// Do we need to break this into pages?
 		int commit_freq = this.step_record.getExtractCommitFreq().intValue();
@@ -139,6 +191,11 @@ public class ExtractDBStep extends StepManager {
 				}
 				
 				if (rownum % commit_freq == 0) {  // send this page of data to next step
+					// add these rows to log_dtl.num_records
+					this.job_manager.db.getTransaction().begin();
+					this.log_dtl.setNumRecords(new BigDecimal(rownum));
+					this.job_manager.db.persist(this.log_dtl);
+					this.job_manager.db.getTransaction().commit();
 					
 					this.job_manager.submitPageOfData(this.dataPageOut, this);
 					// Reset page data
@@ -218,8 +275,8 @@ public class ExtractDBStep extends StepManager {
 	 */
 	private String convertDateFieldToString(ResultSet rs, String columnName) throws SQLException,
 			ParseException {
-		SimpleDateFormat incomingDateFormat  = new SimpleDateFormat("y-M-d HH:mm:ss.S");
-		SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("M/d/y HH:mm:ss a");
+		SimpleDateFormat incomingDateFormat  = new SimpleDateFormat("y-MM-d HH:mm:ss.S");
+		SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y k:mm:ss");
 		String ds = rs.getString(columnName);
 		//System.out.println("\t[Extract] Original String dt: " + ds);
 		Date dt = incomingDateFormat.parse(ds);
@@ -298,19 +355,15 @@ public class ExtractDBStep extends StepManager {
 		try {
 			dbConnection = getDBConnection();
 			statement = dbConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
-			//statement = dbConnection.createStatement();
-			//dbConnection.setAutoCommit(false);
-			//statement.setFetchSize(num_records);
-			//System.out.println(selectTableSQL);
  
-			// execute select SQL stetement
+			// execute select SQL statement
 			rs = statement.executeQuery(sql);
 			
 			
  
 		} catch (SQLException e) {
- 
-			System.out.println(e.getMessage());
+			e.printStackTrace(System.out);
+			//System.out.println(e.getMessage());
  
 		} finally {
  
