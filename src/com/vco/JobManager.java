@@ -20,6 +20,7 @@ import model.BatchLogDtl;
 import model.JobDefinition;
 import model.JobStepsXref;
 import model.Step;
+import com.vco.*;
 
 public class JobManager {
 	
@@ -144,15 +145,20 @@ public class JobManager {
 		this.batch_log.setStartDt(new Date());
 		
 		
+		
+		
 		this.db.persist(this.batch_log);
 		// batch_num must = batch_log.id, but we have to wait until 
 		// db.persist is called so ID is populated from sequence.
 		// This means we have to write this record out twice, would
 		// but don't know a better way currently.
 		this.batch_log.setBatchNum(new BigDecimal(this.batch_log.getId()));
-		this.batch_log.setLongDesc("Batch " + this.batch_log.getBatchNum() 
-				//+ ", Job " + this.job_definition.getId() 
-				+ ", " + this.job_definition.getLongDesc());
+		
+		String logMsg = "";
+		logMsg += "Batch " + this.batch_log.getBatchNum();
+		logMsg += ", Job " + this.job_definition.getId();
+		logMsg += " (" + this.job_definition.getLongDesc() + ")";
+		this.batch_log.setLongDesc(logMsg);
 		
 		this.db.persist(this.batch_log);
 		this.db.getTransaction().commit();
@@ -163,7 +169,7 @@ public class JobManager {
 		log_dtl.setBatchLog(this.batch_log);
 		String msg = "Starting batch " + this.batch_log.getBatchNum();
 		msg += ": " + this.job_definition.getLongDesc();
-		log_dtl.setLongDesc(msg);
+		log_dtl.setLongDesc(logMsg);
 		log_dtl.setStartDt(new Date());
 		System.out.println("Batch " + this.batch_log.getBatchNum() + " started.");
 		

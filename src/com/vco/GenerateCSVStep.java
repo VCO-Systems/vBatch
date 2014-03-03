@@ -177,7 +177,7 @@ public class GenerateCSVStep extends StepManager {
 				
 				
 				// See if we need to close out this file
-				if (this.totalRowsThisFile + 1 > this.max_rec_per_file) {
+				if (this.max_rec_per_file > 0 && this.totalRowsThisFile + 1 > this.max_rec_per_file) {
 					// Close out the file
 					closeCurrentOutputFile();
 				}

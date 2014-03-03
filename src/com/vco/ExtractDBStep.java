@@ -27,11 +27,19 @@ public class ExtractDBStep extends StepManager {
 	private BatchLogDtl log_dtl = null;
 	
 	// vars specific to this type of step
-	
+	private int max_rec = 0;  // default max_records for extraction, if none specified
 	
 	public ExtractDBStep(JobManager jm, Step step_record) {
 		this.job_manager = jm;
 		this.step_record = step_record;
+		
+		// Use hard-coded default for max_rec, unless one is defined in the step config table
+		int max_rec = this.step_record.getExtractMaxRec().intValue();
+		if (max_rec > 0 ) {
+			this.max_rec = this.step_record.getExtractMaxRec().intValue();
+		}
+		System.out.println("\t[Extract] max_rec: " + max_rec);
+		
 	}
 	
 	/**
@@ -96,11 +104,23 @@ public class ExtractDBStep extends StepManager {
 			while (rs.next()) {
 				rownum++;  // Note: rownum starts at 1
 				
+				// If this row would exceed step.max_rec,
+				// stop processing records here.
+				if (rownum > this.max_rec) {
+					// Get the current OK1 value
+					String lastRowOK1Value = this.convertDateFieldToString(rs, "OK1");
+					// Write maxOK1 to the log_dtl record for this extraction step
+					this.job_manager.db.getTransaction().begin();
+					this.log_dtl.setMaxOk1(lastRowOK1Value);
+					this.job_manager.db.persist(this.log_dtl);
+					this.job_manager.db.getTransaction().commit();
+					break;
+				}
+				
 				// add the data from this row into the output object
 				List<Object> rowdata = new ArrayList<Object>();
 				for (int ci = 1; ci <= col_count; ci++) {
 					rowdata.add(rs.getString(ci));
-					
 				}
 				// Add this row to dataPageOut, to be sent to the next step
 				this.dataPageOut.add(rowdata);
@@ -139,7 +159,8 @@ public class ExtractDBStep extends StepManager {
 					this.job_manager.db.persist(this.log_dtl);
 					this.job_manager.db.getTransaction().commit();
 				}
-			}
+			} // end: looping over rows of data
+			
 			// Send any remaining records to the next step
 			if (this.dataPageOut.size() > 0) {
 				// Mark this step as complete
