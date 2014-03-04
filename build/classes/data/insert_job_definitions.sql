@@ -1,19 +1,16 @@
 -- with empty vbatch database, insert all the job_master, steps, and job_steps_xref entries
 
 -- job_master
-INSERT INTO JOB_DEFINITION (short_desc,long_desc,order_num) VALUES ('Replenishment', 'Gather all replenishment data.',1);
-INSERT INTO JOB_DEFINITION (short_desc,long_desc,order_num) VALUES ('Putaway', 'Gather all Putaway data',2);
+Insert into VBATCH.JOB_DEFINITION (ID,ORDER_NUM,SHORT_DESC,LONG_DESC) values (1,1,'Replenishment (Test)','replenishment transactions');
+Insert into VBATCH.JOB_DEFINITION (ID,ORDER_NUM,SHORT_DESC,LONG_DESC) values (2,2,'Putaway (Test)','Putaway transactions');
 
 -- Steps
-INSERT INTO STEPS (type, extract_max_rec_per_file, extract_commit_freq,extract_sql, long_desc)
-    VALUES ('Extract', 1000, 1000, 'SELECT * FROM PROD_TRKG_TRAN;', 'Extract replenishment.');
-INSERT INTO STEPS (type, long_desc, output_file_format)
-    VALUES ('Transform', 'Generate CSV','csv');
+Insert into VBATCH.STEPS (ID,TYPE,SHORT_DESC,LONG_DESC,CLASS_PATH,PARAM1,PARAM2,PARAM3,EXTRACT_MAX_REC,EXTRACT_MAX_REC_PER_FILE,EXTRACT_COMMIT_FREQ,EXTRACT_SQL,OUTPUT_FILE_FORMAT,OUTPUT_FILENAME_PREFIX,OUTPUT_FILENAME_POSTFIX) values (1,'Extract','Replenishment','Extract replenishment.','com.vco.ExtractDBStep',null,null,null,1000,null,1000,'select p.tran_type, p.tran_code, p.tran_nbr, p.seq_nbr, p.whse, p.sku_id, p.cntr_nbr, p.wave_nbr, p.pkt_ctrl_nbr, p.pkt_seq_nbr, p.create_date_time ok1 from prod_trkg_tran p /* where */  order by p.create_date_time',null,null,null);
+Insert into VBATCH.STEPS (ID,TYPE,SHORT_DESC,LONG_DESC,CLASS_PATH,PARAM1,PARAM2,PARAM3,EXTRACT_MAX_REC,EXTRACT_MAX_REC_PER_FILE,EXTRACT_COMMIT_FREQ,EXTRACT_SQL,OUTPUT_FILE_FORMAT,OUTPUT_FILENAME_PREFIX,OUTPUT_FILENAME_POSTFIX) values (2,'Transform','Replenishment','Generate CSV','com.vco.GenerateCSVStep',null,null,null,null,500,null,null,'csv','repl_{dt}_W001_{seq}.csv',null);
     
 -- job_steps_xref
-INSERT INTO JOB_STEPS_XREF (job_definition_id, step_id, job_step_seq)
-VALUES (1,1,1);
-INSERT INTO JOB_STEPS_XREF (job_definition_id, step_id, job_step_seq)
-VALUES (1,2,2);
+Insert into VBATCH.JOB_STEPS_XREF (ID,JOB_DEFINITION_ID,STEP_ID,JOB_STEP_SEQ,SPECIAL_MODE) values (1,1,1,1,null);
+Insert into VBATCH.JOB_STEPS_XREF (ID,JOB_DEFINITION_ID,STEP_ID,JOB_STEP_SEQ,SPECIAL_MODE) values (2,1,2,2,null);
+
 COMMIT;
 EXIT;

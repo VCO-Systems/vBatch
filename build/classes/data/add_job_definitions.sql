@@ -1,20 +1,15 @@
 -- with empty vbatch database, insert all the job_master, steps, and job_steps_xref entries
 
 -- job_master
-INSERT INTO JOB_DEFINITION (short_desc,long_desc,order_num) VALUES ('Replenishment', 'Gather all replenishment data.',1);
-INSERT INTO JOB_DEFINITION (short_desc,long_desc,order_num) VALUES ('Putaway', 'Gather all Putaway data',2);
+Insert into VBATCH.JOB_DEFINITION (ID,ORDER_NUM,SHORT_DESC,LONG_DESC) values (1,1,'Replenishment','Gather all replenishment data.');
+Insert into VBATCH.JOB_DEFINITION (ID,ORDER_NUM,SHORT_DESC,LONG_DESC) values (2,2,'Putaway','Gather all Putaway data');
 
 -- Steps
-INSERT INTO STEPS (type,  extract_commit_freq,extract_sql, short_desc,long_desc,class_path)
-    VALUES ('Extract',  1000, 
-    'select tran_nbr  pk1, seq_nbr pk2, CREATE_DATE_TIME as ok1,sku_id, cntr_nbr,wave_nbr,pkt_ctrl_nbr,pkt_seq_nbr,work_type,NBR_OF_CASES, nbr_Units, nbr_of_piks,nbr_scan,from_locn,to_locn from prod_trkg_tran ORDER BY ok1',
-    'Replenishment','Extract replenishment.', 'com.vco.ExtractDBStep');
-INSERT INTO STEPS (type, short_desc, long_desc, output_file_format, extract_max_rec_per_file, class_path, output_filename_prefix)
-    VALUES ('Transform', 'Replenishment','Generate CSV','csv', 2500, 'com.vco.GenerateCSVStep','REPL_b{batch_num}_{dt}_{seq}.csv');
+Insert into VBATCH.STEPS (ID,TYPE,SHORT_DESC,LONG_DESC,CLASS_PATH,PARAM1,PARAM2,PARAM3,EXTRACT_MAX_REC,EXTRACT_MAX_REC_PER_FILE,EXTRACT_COMMIT_FREQ,EXTRACT_SQL,OUTPUT_FILE_FORMAT,OUTPUT_FILENAME_PREFIX,OUTPUT_FILENAME_POSTFIX) values (1,'Extract','Replenishment','Extract replenishment.','com.vco.ExtractDBStep',null,null,null,1000,null,1000,'select p.tran_type, p.tran_code, p.tran_nbr, p.seq_nbr, p.whse, p.sku_id, p.cntr_nbr, p.wave_nbr, p.pkt_ctrl_nbr, p.pkt_seq_nbr, p.create_date_time ok1 from prod_trkg_tran p',null,null,null);
+Insert into VBATCH.STEPS (ID,TYPE,SHORT_DESC,LONG_DESC,CLASS_PATH,PARAM1,PARAM2,PARAM3,EXTRACT_MAX_REC,EXTRACT_MAX_REC_PER_FILE,EXTRACT_COMMIT_FREQ,EXTRACT_SQL,OUTPUT_FILE_FORMAT,OUTPUT_FILENAME_PREFIX,OUTPUT_FILENAME_POSTFIX) values (2,'Transform','Replenishment','Generate CSV','com.vco.GenerateCSVStep',null,null,null,null,500,null,null,'csv','repl_{dt}_W001_{seq}.csv',null);
     
 -- job_steps_xref
-INSERT INTO JOB_STEPS_XREF (job_definition_id, step_id, job_step_seq)
-VALUES (1,1,1);
-INSERT INTO JOB_STEPS_XREF (job_definition_id, step_id, job_step_seq)
-VALUES (1,2,2);
+Insert into VBATCH.JOB_STEPS_XREF (ID,JOB_DEFINITION_ID,STEP_ID,JOB_STEP_SEQ,SPECIAL_MODE) values (1,1,1,1,null);
+Insert into VBATCH.JOB_STEPS_XREF (ID,JOB_DEFINITION_ID,STEP_ID,JOB_STEP_SEQ,SPECIAL_MODE) values (2,1,2,2,null);
+/
 COMMIT;

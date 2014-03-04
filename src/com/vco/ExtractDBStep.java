@@ -66,9 +66,10 @@ public class ExtractDBStep extends StepManager {
 		this.logStart();
 		
 		/*  
-		 * TODO: Make sure at least one previous log_dtl entry exists
-		 * for this step_id with a non-empty max_ok1
+		 * TODO: Lookup the maxOk1 from the last time this job ran
 		 */
+		
+		String lastOk1;
 		
 		// This steps' step_id
 		int my_step_id = (int) this.step_record.getId();
@@ -92,7 +93,7 @@ public class ExtractDBStep extends StepManager {
 		// If there's at least one previous run with valid maxOK1
 		if (dtls.size() > 0) {
 			BatchLogDtl lastRun = dtls.get(0);  // Most recent successful run of the same type
-			String lastOk1 = lastRun.getMaxOk1();  // Oracle date in string format
+			lastOk1 = lastRun.getMaxOk1();  // Oracle date in string format
 			
 			// Create a WHERE clause that starts after lastOk1
 			String startClause = " p.create_date_time > to_date('" + lastOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
@@ -149,6 +150,13 @@ public class ExtractDBStep extends StepManager {
 		int commit_freq = this.step_record.getExtractCommitFreq().intValue();
 		
 		ResultSet rs;
+		
+		/*
+		 * Before performing the data extraction, move the ending point backwards
+		 * until both the ok1 value and the create_date_time have changed.
+		 */
+		
+		
 		try {
 			rs = this.sqlQuery(raw_sql, commit_freq);
 			

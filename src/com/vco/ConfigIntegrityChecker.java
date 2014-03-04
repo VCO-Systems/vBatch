@@ -7,5 +7,6 @@ public class ConfigIntegrityChecker {
 	 * 
 	 * 	  - required fields for a DB Extraction step: 
 	 *    - raw sql missing \* where *\ clause
+	 *    - no max_rec or max_rec_per_file set for extraction or CSVGeneration step
 	 */
 }

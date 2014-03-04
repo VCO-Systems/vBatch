@@ -32,6 +32,7 @@ public class GenerateCSVStep extends StepManager {
 	private int totalRowsThisFile = 0;
 	private int max_rec_per_file = 0;
 	private int pageCount=0; // Pages of data sent in from another step (not necessarily db or CSV pages)
+	private BatchLogDtl log_dtl;
 	
 	// Track the generated CSV Files
 	private int totalFilesGenerated = 0;
@@ -174,7 +175,6 @@ public class GenerateCSVStep extends StepManager {
 			
 			// Loop over the rows of data in this page
 			for (int i = 0; i < pageOfData.size(); i++) {
-				
 				
 				// See if we need to close out this file
 				if (this.max_rec_per_file > 0 && this.totalRowsThisFile + 1 > this.max_rec_per_file) {
@@ -319,20 +319,21 @@ public class GenerateCSVStep extends StepManager {
 		
 		this.job_manager.db.getTransaction().begin();
 		// Create entry in batch_log_dtl
-		BatchLogDtl log_dtl = new BatchLogDtl();
-		log_dtl.setBatchLog(this.job_manager.batch_log);
+		this.log_dtl = new BatchLogDtl();
+		this.log_dtl.setBatchLog(this.job_manager.batch_log);
 		
 		String msg = "Step [" 
 				+ this.step_record.getType() + " : " + this.step_record.getLongDesc() 
 				+ "]";
-		log_dtl.setLongDesc(msg);
-		log_dtl.setStepsId(new BigDecimal(this.step_record.getId()));
-		log_dtl.setStepsShortDesc(this.step_record.getShortDesc());
-		log_dtl.setStepType(this.step_record.getType());
-		log_dtl.setStartDt(new Date());
+		this.log_dtl.setLongDesc(msg);
+		this.log_dtl.setStepsId(new BigDecimal(this.step_record.getId()));
+		this.log_dtl.setStepsShortDesc(this.step_record.getShortDesc());
+		this.log_dtl.setStepType(this.step_record.getType());
+		this.log_dtl.setStartDt(new Date());
+		this.log_dtl.setStatus("Started");
 		
 		// Commit log entry
-		this.job_manager.db.persist(log_dtl);
+		this.job_manager.db.persist(this.log_dtl);
 		this.job_manager.db.getTransaction().commit();
 		
 		System.out.println("\t" + msg);
