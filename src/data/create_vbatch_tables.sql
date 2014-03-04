@@ -29,7 +29,6 @@ CREATE TABLE vbatch.steps (
                 param3 VARCHAR2(50),
                 CONSTRAINT ID PRIMARY KEY (id)
 );
-COMMENT ON COLUMN vbatch.steps.type IS 'Type of step (Extract, Transform, etc)';
 
 
 CREATE SEQUENCE JOB_STEPS_XREF_ID_SEQ;
@@ -72,7 +71,7 @@ CREATE TABLE vbatch.batch_log_dtl (
                 error_msg VARCHAR2(150),
                 num_records NUMBER ,
                 min_ok1 VARCHAR2(150),
-                max_ok2 VARCHAR2(150),
+                max_ok1 VARCHAR2(150),
                 job_steps_xref_job_step_seq NUMBER,
                 steps_id NUMBER,
                 steps_short_desc VARCHAR2(20),
@@ -87,7 +86,6 @@ CREATE TABLE vbatch.batch_log_dtl (
                 param1 VARCHAR2(150),
                 param2 VARCHAR2(150),
                 param3 VARCHAR2(150),
-               
                 CONSTRAINT BATCH_LOG_DTL_PK PRIMARY KEY (id)
 );
 
@@ -116,16 +114,12 @@ CREATE TABLE vbatch.batch_log_file_output (
 );
 
 
-CREATE UNIQUE INDEX vbatch.job_steps_xref_idx
- ON vbatch.job_steps_xref
- ( job_definition_id, step_id, job_step_seq );
-
-ALTER TABLE vbatch.job_steps_xref ADD CONSTRAINT JOB_STEPS_XREF_JOB_MASTER_FK
+ALTER TABLE vbatch.job_steps_xref ADD CONSTRAINT JOB_STEPS_XREF_JOB_DEF_FK
 FOREIGN KEY (job_definition_id)
 REFERENCES vbatch.job_definition (id)
 NOT DEFERRABLE;
 
-ALTER TABLE vbatch.batch_log ADD CONSTRAINT JOB_MASTER_VBATCH_LOG_FK
+ALTER TABLE vbatch.batch_log ADD CONSTRAINT JOB_DEFINITION_VBATCH_LOG_FK
 FOREIGN KEY (job_definition_id)
 REFERENCES vbatch.job_definition (id)
 NOT DEFERRABLE;
