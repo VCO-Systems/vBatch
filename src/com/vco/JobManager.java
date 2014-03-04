@@ -29,6 +29,7 @@ public class JobManager {
 	public EntityManager db;
 	private long job_id;
 	public BatchLog batch_log;
+	private BatchLogDtl log_dtl;
 	private List steps = new ArrayList<>();
 	private List stepManagers = new ArrayList<>();
 	
@@ -165,16 +166,17 @@ public class JobManager {
 		
 		// Create the batch_log_dtl entry showing this job started
 		this.db.getTransaction().begin();
-		BatchLogDtl log_dtl = new BatchLogDtl();
-		log_dtl.setBatchLog(this.batch_log);
+		this.log_dtl = new BatchLogDtl();
+		this.log_dtl.setBatchLog(this.batch_log);
 		String msg = "Starting batch " + this.batch_log.getBatchNum();
 		msg += ": " + this.job_definition.getLongDesc();
-		log_dtl.setLongDesc(logMsg);
-		log_dtl.setStartDt(new Date());
+		this.log_dtl.setLongDesc(logMsg);
+		this.log_dtl.setStartDt(new Date());
+		this.log_dtl.setStatus("Started");
 		System.out.println("Batch " + this.batch_log.getBatchNum() + " started.");
 		
 		// Commit the batch_log_dtl entry
-		this.db.persist(log_dtl);
+		this.db.persist(this.log_dtl);
 		this.db.getTransaction().commit();
 	}
 	
@@ -190,13 +192,11 @@ public class JobManager {
 		
 		// Show this job complete in the log_dtl table
 		// Create the batch_log_dtl entry showing this job started
-		BatchLogDtl log_dtl = new BatchLogDtl();
-		log_dtl.setBatchLog(this.batch_log);
-		String msg = "Completed batch " + this.batch_log.getBatchNum();
-		msg += ", " + this.job_definition.getLongDesc();
-		log_dtl.setLongDesc(msg);
-		log_dtl.setEndDt(new Date());
-		this.db.persist(log_dtl);
+		//this.log_dtl = new BatchLogDtl();
+		this.log_dtl.setBatchLog(this.batch_log);
+		this.log_dtl.setEndDt(new Date());
+		this.log_dtl.setStatus("Completed");
+		this.db.persist(this.log_dtl);
 		
 		this.db.getTransaction().commit();
 //		

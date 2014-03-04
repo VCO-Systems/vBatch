@@ -17,9 +17,6 @@ CREATE TABLE vbatch.steps (
                 short_desc VARCHAR2(20),
                 long_desc VARCHAR2(150),
                 class_path VARCHAR2(150),
-                param1 VARCHAR2(100),
-                param2 VARCHAR2(50),
-                param3 VARCHAR2(50),
                 extract_max_rec NUMBER,
                 extract_max_rec_per_file NUMBER,
                 extract_commit_freq NUMBER,
@@ -27,6 +24,9 @@ CREATE TABLE vbatch.steps (
                 output_file_format VARCHAR2(10),
                 output_filename_prefix VARCHAR2(100),
                 output_filename_postfix VARCHAR2(100),
+                param1 VARCHAR2(100),
+                param2 VARCHAR2(50),
+                param3 VARCHAR2(50),
                 CONSTRAINT ID PRIMARY KEY (id)
 );
 COMMENT ON COLUMN vbatch.steps.type IS 'Type of step (Extract, Transform, etc)';
@@ -64,12 +64,15 @@ CREATE SEQUENCE BATCH_LOG_DTL_ID_SEQ;
 
 CREATE TABLE vbatch.batch_log_dtl (
                 id NUMBER NOT NULL,
-                status VARCHAR2(50),
+                batch_log_id NUMBER NOT NULL,
                 start_dt TIMESTAMP,
                 end_dt TIMESTAMP,
-                batch_log_id NUMBER NOT NULL,
+                status VARCHAR2(50),
                 long_desc VARCHAR2(150),
                 error_msg VARCHAR2(150),
+                num_records NUMBER ,
+                min_ok1 VARCHAR2(150),
+                max_ok2 VARCHAR2(150),
                 job_steps_xref_job_step_seq NUMBER,
                 steps_id NUMBER,
                 steps_short_desc VARCHAR2(20),
@@ -80,13 +83,11 @@ CREATE TABLE vbatch.batch_log_dtl (
                 output_file_format VARCHAR2(15),
                 output_filename_prefix VARCHAR2(150),
                 output_filename_suffix VARCHAR2(150),
-                num_records NUMBER ,
                 class_path VARCHAR2(150),
                 param1 VARCHAR2(150),
                 param2 VARCHAR2(150),
                 param3 VARCHAR2(150),
-                min_ok1 VARCHAR2(150),
-                max_ok2 VARCHAR2(150),
+               
                 CONSTRAINT BATCH_LOG_DTL_PK PRIMARY KEY (id)
 );
 

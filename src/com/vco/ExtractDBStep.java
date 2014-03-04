@@ -67,8 +67,7 @@ public class ExtractDBStep extends StepManager {
 		
 		/*  
 		 * TODO: Make sure at least one previous log_dtl entry exists
-		 * for this step_id, and use its max_ok1 value to determine
-		 * where to start off this query.
+		 * for this step_id with a non-empty max_ok1
 		 */
 		
 		// This steps' step_id
@@ -79,7 +78,7 @@ public class ExtractDBStep extends StepManager {
 		
 		TypedQuery<BatchLogDtl> query = this.job_manager.db.createQuery(
 		        "SELECT dtl FROM BatchLogDtl dtl WHERE dtl.stepType = :stepType  and dtl.stepsId = :stepId "  // must match this step's type and id
-				+ " and dtl.minOk1 is not null "  // must have  min_ok1 and max_ok1 value
+				+ " and dtl.maxOk1 is not null "  // must have  min_ok1 and max_ok1 value
 		        + "order by dtl.id desc", BatchLogDtl.class);  // most recent match comes first
 		    List<BatchLogDtl> dtls = query
 		    		.setParameter("stepType", "Extract")
@@ -89,8 +88,8 @@ public class ExtractDBStep extends StepManager {
 		
 		// Get the raw sql to run
 		String raw_sql = this.step_record.getExtractSql();
-		
-		// If there's at least one previous run with valid min/maxOK1
+				
+		// If there's at least one previous run with valid maxOK1
 		if (dtls.size() > 0) {
 			BatchLogDtl lastRun = dtls.get(0);  // Most recent successful run of the same type
 			String lastOk1 = lastRun.getMaxOk1();  // Oracle date in string format
@@ -101,17 +100,43 @@ public class ExtractDBStep extends StepManager {
 			// replace the /* where */ token with our dynamic where clause
 			// however, make sure that if there isn't a WHERE clause that
 			// we add that as well
-			Pattern p = Pattern.compile("where");
-			Matcher m = p.matcher(raw_sql);
-			int whereMatches = 0;
+			
+			// Count instances of /* where */ token
+			Pattern p = Pattern.compile("\\/\\* where \\*\\/");
+			Matcher m = p.matcher(raw_sql.toLowerCase());
+			int whereTokenCount = 0;
 			while (m.find()) {
-				whereMatches += 1;
+				whereTokenCount += 1;
 			}
-			if (whereMatches <=1 ) {
-				raw_sql = raw_sql.replace("/* where */", " WHERE " + startClause);
+			// Count instances of WHERE clause
+			Pattern wherePattern = Pattern.compile(" where ");
+			Matcher whereMatcher = wherePattern.matcher(raw_sql.toLowerCase());
+			int whereCount = 0;
+			while (whereMatcher.find()) {
+				whereCount += 1;
+			}
+			
+			System.out.println("\t[Extract] Where token " + whereTokenCount + ", where clause count " + whereCount);
+			
+			if (whereTokenCount == 1 ) {
+				if (whereCount > 1) { // There is an existing where clause
+					raw_sql = raw_sql.replace("/* where */", " " + startClause);
+				}
+				else {  // No WHERE clause, add it
+					raw_sql = raw_sql.replace("/* where */", " WHERE " + startClause);
+				}
 			}
 			else {
-				raw_sql = raw_sql.replace("/* where */", startClause);
+				// TODO:  fail this job, and log the fact that the /* where */ token was missing
+				this.job_manager.db.getTransaction().begin();
+				this.log_dtl.setStatus("Failed");
+				this.log_dtl.setErrorMsg("Missing /* where */ token in SQL statement.");
+				this.job_manager.db.persist(this.log_dtl);
+				this.job_manager.db.getTransaction().commit();
+				this.running=false;
+				this.completed=true;
+				this.failed=true;
+				return false;  // abort this step
 			}
 		}
 		
@@ -164,6 +189,7 @@ public class ExtractDBStep extends StepManager {
 					// Write maxOK1 to the log_dtl record for this extraction step
 					this.job_manager.db.getTransaction().begin();
 					this.log_dtl.setMaxOk1(lastRowOK1Value);
+					this.log_dtl.setStatus("Completed");
 					this.job_manager.db.persist(this.log_dtl);
 					this.job_manager.db.getTransaction().commit();
 					break;
@@ -213,6 +239,8 @@ public class ExtractDBStep extends StepManager {
 					// Write maxOK1 to the log_dtl record for this extraction step
 					this.job_manager.db.getTransaction().begin();
 					this.log_dtl.setMaxOk1(lastRowOK1Value);
+					this.log_dtl.setEndDt(new Date());
+					this.log_dtl.setStatus("Completed");
 					this.job_manager.db.persist(this.log_dtl);
 					this.job_manager.db.getTransaction().commit();
 				}
@@ -316,6 +344,7 @@ public class ExtractDBStep extends StepManager {
 		this.log_dtl.setStepsShortDesc(this.step_record.getShortDesc());
 		this.log_dtl.setStepType(this.step_record.getType());
 		this.log_dtl.setStartDt(new Date());
+		this.log_dtl.setStatus("Started");
 		
 		// Commit log entry
 		this.job_manager.db.persist(this.log_dtl);
