@@ -260,8 +260,8 @@ public class GenerateCSVStep extends StepManager {
 			newFileName = newFileName.replace("{batch_num}",  this.job_manager.batch_log.getBatchNum().toString());
 			
 			// Create the file
-			this.currentOutputFile = new FileWriter("output/" + newFileName,true);
-			this.generatedFilenames.add("output/" + newFileName);
+			this.currentOutputFile = new FileWriter("../output/" + newFileName,true);
+			this.generatedFilenames.add("../output/" + newFileName);
 			
 			// Reset counters
 			this.totalRowsThisFile=0;

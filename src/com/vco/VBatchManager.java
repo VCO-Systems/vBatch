@@ -1,10 +1,24 @@
 package com.vco;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Properties;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
+
+import org.apache.commons.cli.BasicParser;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 
 import model.JobDefinition;
 
@@ -53,5 +67,95 @@ public class VBatchManager {
 	
 	public void getRequestedJobs() {
 		
+	}
+	
+	public static void main(String[] args) {
+		Options options = new Options();
+		options.addOption("h", false, "Display list of vBatch commands.");
+		options.addOption("db", false, "Source db connection string filepath");
+		//options.addOption("test_create", false, "Create a sample WMOS source database.");
+		options.addOption("j", true, "Specify one or more jobs to start.");
+
+		CommandLineParser parser = new BasicParser();
+		
+		try {
+			
+			// main vBatch variable
+			VBatchManager man = null;
+			
+			// Read config options from vbatch.config file
+			System.out.println(new File(".").getAbsolutePath());
+//			config_file_input = new FileInputStream("vbatch.properties");
+//	    	
+//	    	config_properties.load(config_file_input);
+//	    	testing_db_name = config_properties.getProperty("testing_db_name");
+//	    	System.out.println(testing_db_name);
+	    	
+			CommandLine cmd = parser.parse(options, args);
+			
+			if (cmd.hasOption("h")) {
+			    HelpFormatter help = new HelpFormatter();
+			    help.printHelp("vBatch v0.1", options );
+			}
+			
+			// -test_create option
+			if (cmd.hasOption("test_create")) {
+			    VBatchManager batch_manager = new VBatchManager();
+			    //batch_manager.init();
+			    
+			}
+			
+			// -j xx[,xx,xx]
+			// runs one more more jobs with specified job id
+			if (cmd.hasOption("j")) {
+				// System.out.println("in the -t block");
+				String[] requested_jobs_ids = cmd.getOptionValue("j").split(",");
+				ArrayList<Integer> job_ids = new ArrayList<Integer>();
+				// For each requested job, create and start a batch manager
+				for (String job_id_str : requested_jobs_ids) {
+					// Cast the job_id as int
+					job_ids.add(Integer.parseInt(job_id_str));
+				}
+				// TODO: Verify that each requested job_id exists
+				// TODO: If any do not exist, report it
+				
+				// Start a new VBatchManger
+				if (man == null)
+					man = new VBatchManager();
+				
+				man.init(job_ids);
+			}
+			
+			if (cmd.hasOption("db")) {
+				String db_connect_string_file_path = cmd.getOptionValue("db");
+				String db_connect_string_absolute_path = (new File(db_connect_string_file_path)).getAbsolutePath();
+				FileReader filereader = new FileReader (db_connect_string_absolute_path);
+				BufferedReader buffReader = new BufferedReader (filereader);
+				
+				String connect_string = "";
+				String line = null;
+				while ((line=buffReader.readLine()) != null){
+					connect_string += line;
+				}
+		    	buffReader.close();
+		    	
+		    	if (man == null)
+					man = new VBatchManager();
+		    	// VAN 
+		    	// Need to integrate/pass the connect_string with Step Class
+			
+			}
+		}
+		catch (ParseException e) {
+
+		    System.err.println(e);
+		    System.out.println();
+		    HelpFormatter formatter = new HelpFormatter();
+		    formatter.printHelp("PROJECT_NAME", options );
+		} 
+		catch (IOException ex) {
+			System.out.println("*******Canonical path****** "+ ex.getClass().getCanonicalName());
+			ex.printStackTrace();
+		}
 	}
 }
