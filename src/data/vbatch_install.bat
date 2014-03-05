@@ -1,4 +1,4 @@
-call sqlplus vbatch/vbatch @sql_scripts/vbatch_all.ddl
+call sqlplus vbatch/vbatch @ddl/vbatch.ddl
 if %ERRORLEVEL% == 0 goto :triggers
 echo "Errors encountered during execution.  Exited with status: %errorlevel%"
 goto :endofscript
@@ -16,7 +16,7 @@ echo "Errors encountered during execution.  Exited with status: %errorlevel%"
 goto :endofscript
 
 :prod_trkg
-if "%1" == "prod" ( call sqlplus vbatch/vbatch @sample_data/vbatch.prod_trkg_tran__create_and_insert.sql )
+if "%1" == "prod" ( call "vbatch.prod_trkg_tran.install.bat" )
 if %ERRORLEVEL% == 0 goto :endofscript
 echo "Errors encountered during execution.  Exited with status: %errorlevel%"
 goto :endofscript
