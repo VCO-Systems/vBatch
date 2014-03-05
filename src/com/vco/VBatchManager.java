@@ -3,10 +3,12 @@ package com.vco;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Properties;
 
 import javax.persistence.EntityManager;
@@ -27,6 +29,8 @@ public class VBatchManager {
 	private static final String PERSISTENCE_UNIT_NAME = "vbatch";
 	private static EntityManagerFactory factory;
 	protected EntityManager em;
+	
+	public static HashMap<String, String> source_db_connection = new HashMap<>(1);
 	
 	public VBatchManager() {
 		// Set up db connection
@@ -70,11 +74,19 @@ public class VBatchManager {
 	}
 	
 	public static void main(String[] args) {
+		
+		// If required directories don't exist, create them
+		File outputDir = new File("output");
+		outputDir.mkdir();
+		File configDir = new File("config");
+		configDir.mkdir();
+		
 		Options options = new Options();
 		options.addOption("h", false, "Display list of vBatch commands.");
-		options.addOption("db", false, "Source db connection string filepath");
+		options.addOption("db", true, "Source db connection string filepath");
 		//options.addOption("test_create", false, "Create a sample WMOS source database.");
 		options.addOption("j", true, "Specify one or more jobs to start.");
+		
 
 		CommandLineParser parser = new BasicParser();
 		
@@ -84,7 +96,6 @@ public class VBatchManager {
 			VBatchManager man = null;
 			
 			// Read config options from vbatch.config file
-			System.out.println(new File(".").getAbsolutePath());
 //			config_file_input = new FileInputStream("vbatch.properties");
 //	    	
 //	    	config_properties.load(config_file_input);
@@ -105,51 +116,74 @@ public class VBatchManager {
 			    
 			}
 			
+			if (cmd.hasOption("db")) {
+				// Load properties file
+				String db_connect_string_file_path = cmd.getOptionValue("db");
+				InputStream inp = null;
+				try {
+					inp = new FileInputStream(db_connect_string_file_path);
+				}
+				catch (FileNotFoundException e) {
+					System.out.println("ERROR: DB settings file not found: " + db_connect_string_file_path);
+					System.exit(1);
+				}
+				
+				Properties prop = new Properties();
+				prop.load(inp);
+		    	
+				// Load individual properties
+				source_db_connection.put("db", prop.getProperty("db"));
+				source_db_connection.put("user", prop.getProperty("user"));
+				source_db_connection.put("password", prop.getProperty("password"));
+				
+				
+		    	if (man == null) {
+		    		
+		    	}
+		    	// VAN 
+		    	// Need to integrate/pass the connect_string with Step Class
+			
+			}
+			else {
+				System.out.println("ERROR:  Did not find all required settings in db connection file");
+				return;
+			}
 			// -j xx[,xx,xx]
 			// runs one more more jobs with specified job id
 			if (cmd.hasOption("j")) {
 				// System.out.println("in the -t block");
 				String[] requested_jobs_ids = cmd.getOptionValue("j").split(",");
 				ArrayList<Integer> job_ids = new ArrayList<Integer>();
+				
 				// For each requested job, create and start a batch manager
 				for (String job_id_str : requested_jobs_ids) {
 					// Cast the job_id as int
 					job_ids.add(Integer.parseInt(job_id_str));
 				}
+				
+				// If no jobs are specified, exit with a polite error msg
+				if (job_ids.size() == 0) {
+					System.out.println("ERROR: must specify at least one job id (example: vbatch -j 12)");
+					System.exit(1);
+				}
+				
 				// TODO: Verify that each requested job_id exists
 				// TODO: If any do not exist, report it
 				
 				// Start a new VBatchManger
 				if (man == null)
 					man = new VBatchManager();
-				
-				man.init(job_ids);
+					man.init(job_ids);
+			}
+			else {
+				System.out.println("ERROR: must specify at least one job id (example: vbatch -j 12)");
+				System.exit(1);
 			}
 			
-			if (cmd.hasOption("db")) {
-				String db_connect_string_file_path = cmd.getOptionValue("db");
-				String db_connect_string_absolute_path = (new File(db_connect_string_file_path)).getAbsolutePath();
-				FileReader filereader = new FileReader (db_connect_string_absolute_path);
-				BufferedReader buffReader = new BufferedReader (filereader);
-				
-				String connect_string = "";
-				String line = null;
-				while ((line=buffReader.readLine()) != null){
-					connect_string += line;
-				}
-		    	buffReader.close();
-		    	
-		    	if (man == null)
-					man = new VBatchManager();
-		    	// VAN 
-		    	// Need to integrate/pass the connect_string with Step Class
-			
-			}
 		}
 		catch (ParseException e) {
 
 		    System.err.println(e);
-		    System.out.println();
 		    HelpFormatter formatter = new HelpFormatter();
 		    formatter.printHelp("PROJECT_NAME", options );
 		} 

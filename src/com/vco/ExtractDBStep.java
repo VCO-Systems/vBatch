@@ -468,6 +468,10 @@ public class ExtractDBStep extends StepManager {
  
 		try {
 			dbConnection = getDBConnection();
+			if (dbConnection == null) {
+				System.out.println("ERROR: Could not connect to source database");
+				System.exit(1);
+			}
 			statement = dbConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
 			
 			// 
@@ -509,8 +513,9 @@ public class ExtractDBStep extends StepManager {
 			System.out.println(e.getMessage());
 		}
 		try {
-			dbConnection = DriverManager.getConnection("jdbc:oracle:thin:@192.168.56.1:1521:xe", "vbatch",
-					"vbatch");
+			dbConnection = DriverManager.getConnection(VBatchManager.source_db_connection.get("db")
+					, VBatchManager.source_db_connection.get("user"),
+					VBatchManager.source_db_connection.get("password"));
 			return dbConnection;
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());

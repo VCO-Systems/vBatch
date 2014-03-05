@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project default="create_run_jar" name="Create Runnable Jar for Project vBatch">
+    <!--this file was created by Eclipse Runnable JAR Export Wizard-->
+    <!--ANT 1.7 is required                                        -->
+    <target name="create_run_jar">
+        <jar destfile="/home/vco/dev/workspaces/eclipse_workspace/vBatch/deploy/vbatch.jar" filesetmanifest="mergewithoutmain">
+            <manifest>
+                <attribute name="Main-Class" value="com.vco.VBatchManager"/>
+                <attribute name="Class-Path" value="."/>
+            </manifest>
+            <fileset dir="/home/vco/dev/workspaces/eclipse_workspace/vBatch/build/classes"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/vco/dev/workspaces/eclipse_workspace/vBatch/lib/eclipselink.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/vco/dev/workspaces/eclipse_workspace/vBatch/lib/javax.persistence_2.1.0.v201304241213.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/vco/dev/workspaces/eclipse_workspace/vBatch/lib/commons-cli-1.2.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/vco/dev/workspaces/eclipse_workspace/vBatch/lib/ojdbc6.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/vco/dev/workspaces/eclipse_workspace/vBatch/lib/commons-lang-2.6.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/vco/dev/workspaces/eclipse_workspace/vBatch/lib/super-csv-2.1.0.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/vco/dev/workspaces/eclipse_workspace/vBatch/lib/super-csv-2.1.0-javadoc.jar"/>
+        </jar>
+    </target>
+</project>
