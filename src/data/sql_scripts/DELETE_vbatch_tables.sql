@@ -7,4 +7,5 @@ BEGIN
 
 END;
 /
-EXIT
+COMMIT;
+EXIT;
