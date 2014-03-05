@@ -65,7 +65,6 @@ public class GenerateCSVStep extends StepManager {
 			this.max_rec_per_file = this.step_record.getExtractMaxRecPerFile().intValue();
 		}
 			
-		System.out.println("maxrec: " + this.max_rec_per_file);
 	}
 	
 		/**

@@ -30,7 +30,7 @@ public class ExtractDBStep extends StepManager {
 	private BatchLogDtl log_dtl = null;
 	
 	// vars specific to this type of step
-	private int max_rec = 0;  // default max_records for extraction, if none specified
+	private int max_rec = 5000;  // default max_records for extraction, if none specified
 	
 	public ExtractDBStep(JobManager jm, Step step_record) {
 		this.job_manager = jm;
@@ -64,12 +64,13 @@ public class ExtractDBStep extends StepManager {
 		this.running = true;
 		// Log the start of this step
 		this.logStart();
+		int commit_freq = this.step_record.getExtractCommitFreq().intValue();
 		
 		/*  
 		 * TODO: Lookup the maxOk1 from the last time this job ran
 		 */
 		
-		String lastOk1;
+		String previousRunOK1;
 		
 		// This steps' step_id
 		int my_step_id = (int) this.step_record.getId();
@@ -93,10 +94,10 @@ public class ExtractDBStep extends StepManager {
 		// If there's at least one previous run with valid maxOK1
 		if (dtls.size() > 0) {
 			BatchLogDtl lastRun = dtls.get(0);  // Most recent successful run of the same type
-			lastOk1 = lastRun.getMaxOk1();  // Oracle date in string format
+			previousRunOK1 = lastRun.getMaxOk1();  // Oracle date in string format
 			
 			// Create a WHERE clause that starts after lastOk1
-			String startClause = " p.create_date_time > to_date('" + lastOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
+			String startClause = " p.create_date_time > to_date('" + previousRunOK1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
 			
 			// replace the /* where */ token with our dynamic where clause
 			// however, make sure that if there isn't a WHERE clause that
@@ -117,8 +118,7 @@ public class ExtractDBStep extends StepManager {
 				whereCount += 1;
 			}
 			
-			System.out.println("\t[Extract] Where token " + whereTokenCount + ", where clause count " + whereCount);
-			
+			// Replace the where token (and add a WHERE clause, if missing)
 			if (whereTokenCount == 1 ) {
 				if (whereCount > 1) { // There is an existing where clause
 					raw_sql = raw_sql.replace("/* where */", " " + startClause);
@@ -139,17 +139,92 @@ public class ExtractDBStep extends StepManager {
 				this.failed=true;
 				return false;  // abort this step
 			}
+			
+			
+			
+		}
+		
+		// Limit this query to the first [max_rec] rows
+//		if (this.max_rec > 0) {
+//			String new_query = "SELECT * FROM ( "
+//					+ raw_sql
+//					+ " ) WHERE ROWNUM <= "
+//					+ this.max_rec;
+//			raw_sql = new_query;
+//			System.out.println(raw_sql);
+//		}
+		
+		/**
+		 * To find
+		 */
+		// Work backwards from the last row, looking for the first row whose
+		// create_date_time and pk1 (tran_nbr) are different from last row
+		// lastOk1 = '07-May-2013 07:15:21'
+		int endRowsToSkip = 0;
+		int rowCount = 0;
+		
+		ResultSet rs = null;
+		System.out.println("STUB");
+		// go to end of recordset
+		int finalRowNum = 0;  // this will be the final row # for this job
+		try {
+			System.out.println("\tABout to query " + this.max_rec + " records");
+			rs = this.sqlQuery(raw_sql, commit_freq, this.max_rec);  // limit query to max_rec rows
+			
+			
+			rs.last();
+			
+			int startingRowNum = rs.getRow();
+			
+			System.out.println("\tLast row #: " + startingRowNum);
+			String lastRowOK1, lastRowPK1;
+			try {
+				lastRowOK1 = this.convertDateFieldToString(rs, "OK1");
+				lastRowPK1 = rs.getString("tran_nbr");
+				
+				String currentRowOK1, currentRowPK1;
+				// STUB:  comparison here should match
+				currentRowOK1 = this.convertDateFieldToString(rs, "OK1");
+				currentRowPK1 = rs.getString("tran_nbr");
+				System.out.println("\tLast row: " + currentRowOK1 + " / " + currentRowPK1);
+				// Go backwards until pk1 and ok1 are different from last row
+				while (rs.previous()) {
+					endRowsToSkip++;
+					currentRowOK1 = this.convertDateFieldToString(rs, "OK1");
+					currentRowPK1 = rs.getString("tran_nbr");
+					if (!currentRowOK1.equals(lastRowOK1) && !currentRowPK1.equals(lastRowPK1)) {
+						
+						finalRowNum = startingRowNum - endRowsToSkip;
+						System.out.println("\tSkipped : " + endRowsToSkip + " rows.  Final rownum: " + finalRowNum);
+						System.out.println("\tKeeping row: " + currentRowOK1 + " / " + currentRowPK1);
+						break;
+					}
+					else {
+						System.out.println("\tSkipping row: " + currentRowOK1 + " / " + currentRowPK1);
+					}
+					
+				}
+				
+			} catch (ParseException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			//System.out.println(rowOK1);
+			
+		}
+		catch (SQLException e) {
+			e.printStackTrace(System.out);
 		}
 		
 		
 		
 		
-		System.out.println(raw_sql);
+		// System.out.println(raw_sql);
 		
 		// Do we need to break this into pages?
-		int commit_freq = this.step_record.getExtractCommitFreq().intValue();
 		
-		ResultSet rs;
+		
+		
 		
 		/*
 		 * Before performing the data extraction, move the ending point backwards
@@ -158,7 +233,11 @@ public class ExtractDBStep extends StepManager {
 		
 		
 		try {
-			rs = this.sqlQuery(raw_sql, commit_freq);
+			// rs = this.sqlQuery(raw_sql, commit_freq, -1);
+			
+			// go back to beginning of recordset 
+			rs.first();
+			
 			
 			int rownum = 0;
 			
@@ -191,7 +270,7 @@ public class ExtractDBStep extends StepManager {
 				
 				// If this row would exceed step.max_rec,
 				// stop processing records here.
-				if (rownum > this.max_rec) {
+				if (rownum > finalRowNum) {
 					// Get the current OK1 value
 					String lastRowOK1Value = this.convertDateFieldToString(rs, "OK1");
 					// Write maxOK1 to the log_dtl record for this extraction step
@@ -240,7 +319,6 @@ public class ExtractDBStep extends StepManager {
 				// Any special processing for the last row goes here
 				if (rs.isLast()) {
 					// rownum = (the last row number)
-					
 					
 					// Get the current OK1 value
 					String lastRowOK1Value = this.convertDateFieldToString(rs, "OK1");
@@ -338,7 +416,6 @@ public class ExtractDBStep extends StepManager {
 	 */
 	
 	private void logStart() {
-		
 		this.job_manager.db.getTransaction().begin();
 		// Create entry in batch_log_dtl
 		this.log_dtl = new BatchLogDtl();
@@ -374,7 +451,7 @@ public class ExtractDBStep extends StepManager {
 	private ResultSet sqlQuery(String sql) {
 		ResultSet rs = null;
 		try {
-			rs = this.sqlQuery(sql, 0);
+			rs = this.sqlQuery(sql, 0, -1);
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -382,7 +459,7 @@ public class ExtractDBStep extends StepManager {
 		return rs;
 	}
 	
-	private ResultSet sqlQuery(String sql, int num_records) throws SQLException {
+	private ResultSet sqlQuery(String sql, int num_records, int maxRecords) throws SQLException {
 		 
 		Connection dbConnection = null;
 		Statement statement = null;
@@ -392,7 +469,12 @@ public class ExtractDBStep extends StepManager {
 		try {
 			dbConnection = getDBConnection();
 			statement = dbConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
- 
+			
+			// 
+			if (maxRecords > 0) {
+				statement.setMaxRows(maxRecords);
+			}
+			
 			// execute select SQL statement
 			rs = statement.executeQuery(sql);
 			
@@ -427,7 +509,7 @@ public class ExtractDBStep extends StepManager {
 			System.out.println(e.getMessage());
 		}
 		try {
-			dbConnection = DriverManager.getConnection("jdbc:oracle:thin:@192.168.56.1:1522:xe", "vbatch",
+			dbConnection = DriverManager.getConnection("jdbc:oracle:thin:@192.168.56.1:1521:xe", "vbatch",
 					"vbatch");
 			return dbConnection;
 		} catch (SQLException e) {
