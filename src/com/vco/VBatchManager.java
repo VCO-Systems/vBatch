@@ -69,9 +69,20 @@ public class VBatchManager {
     	
 		// Load individual properties
 		db_connect_string = prop.getProperty("vbatch.db");
+		if (db_connect_string == "") {
+			System.out.println("ERROR: could not read parameter from config/vbatch.ini : vbatch.db");
+			System.exit(1);
+		}
 		user = prop.getProperty("vbatch.user");
+		if (user == "") {
+			System.out.println("ERROR: could not read parameter from config/vbatch.ini : vbatch.user");
+			System.exit(1);
+		}
 		password = prop.getProperty("vbatch.password");
-		
+		if (password == "") {
+			System.out.println("ERROR: could not read parameter from config/vbatch.ini : vbatch.password");
+			System.exit(1);
+		}
 		Properties properties = new Properties();
 		//properties.put("eclipselink.jdbc.batch-writing", "JDBC");
 		properties.put("javax.persistence.jdbc.url", db_connect_string);
