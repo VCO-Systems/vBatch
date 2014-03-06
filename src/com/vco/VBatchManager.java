@@ -30,7 +30,7 @@ public class VBatchManager {
 	private static EntityManagerFactory factory;
 	protected EntityManager em;
 	
-	public static HashMap<String, String> source_db_connection = new HashMap<>(1);
+	public static HashMap<String, String> source_db_connection = new HashMap<String,String>(1);
 	
 	public VBatchManager() {
 		// Set up db connection

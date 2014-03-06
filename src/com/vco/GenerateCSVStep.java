@@ -129,7 +129,7 @@ public class GenerateCSVStep extends StepManager {
 		
 		// TODO: Loop over pages of data
 		// STUB: Fake a page of data
-		List<Object> lst = new ArrayList<>();
+		List<Object> lst = new ArrayList<Object>();
 		
 		// Return execution to JobManager
 		return true;

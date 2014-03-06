@@ -30,8 +30,8 @@ public class JobManager {
 	private long job_id;
 	public BatchLog batch_log;
 	private BatchLogDtl log_dtl;
-	private List steps = new ArrayList<>();
-	private List stepManagers = new ArrayList<>();
+	private List steps = new ArrayList<Step>();
+	private List stepManagers = new ArrayList<StepManager>();
 	
 	public  JobManager(VBatchManager batch_manager, Integer job_id) {
 		this.batch_manager = batch_manager;
@@ -67,7 +67,22 @@ public class JobManager {
 					// Initialize the step
 					step_manager.init();
 				}
-				catch (ClassNotFoundException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
+				catch ( SecurityException e) {
+					System.out.println(e);
+				}
+				catch ( ClassNotFoundException e) {
+					System.out.println(e);
+				}
+				catch ( IllegalAccessException e) {
+					System.out.println(e);
+				}
+				catch ( InstantiationException e) {
+					System.out.println(e);
+				}
+				catch ( InvocationTargetException e) {
+					System.out.println(e);
+				}
+				catch ( NoSuchMethodException e) {
 					System.out.println(e);
 				}
 				

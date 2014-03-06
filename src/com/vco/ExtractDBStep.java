@@ -341,7 +341,11 @@ public class ExtractDBStep extends StepManager {
 				this.dataPageOut = new ArrayList<Object>();
 			}
 			
-		} catch (SQLException | ParseException e) {
+		} catch (SQLException  e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		catch ( ParseException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -513,9 +517,11 @@ public class ExtractDBStep extends StepManager {
 			System.out.println(e.getMessage());
 		}
 		try {
-			dbConnection = DriverManager.getConnection(VBatchManager.source_db_connection.get("db")
-					, VBatchManager.source_db_connection.get("user"),
-					VBatchManager.source_db_connection.get("password"));
+//			dbConnection = DriverManager.getConnection(VBatchManager.source_db_connection.get("db")
+//					, VBatchManager.source_db_connection.get("user"),
+//					VBatchManager.source_db_connection.get("password"));
+			System.out.println("\t[Extract] Connecting to oracle server: " + VBatchManager.source_db_connection.get("db"));
+			dbConnection = DriverManager.getConnection(VBatchManager.source_db_connection.get("db"));
 			return dbConnection;
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
