@@ -27,6 +27,25 @@ import model.Step;
 
 public class GenerateCSVStep extends StepManager {
 
+	/**
+	 * This step uses the optional mode_special flag
+	 * to indicate that it does not output data for
+	 * each page to the next step.  Instead, this step
+	 * adds data to alternateOutputData during processing,
+	 * and once this step completes, later steps may
+	 * request the resulting data from that variable.
+	 */
+	
+	Boolean outputsAlternateData = true;
+	
+	public List<String> alternateOutputData;
+	
+	/**
+	 * This step waits until completed, and then makes available
+	 * a custom List of values.  In this case, it's a list of
+	 * filenames for generated CSVs.
+	 */
+	
 	// Keep track of rows and paging
 	private int totalRowsGenerated = 0;
 	private int totalRowsThisFile = 0;
@@ -36,7 +55,7 @@ public class GenerateCSVStep extends StepManager {
 	
 	// Track the generated CSV Files
 	private int totalFilesGenerated = 0;
-	private List<String> generatedFilenames;
+	
 	FileWriter currentOutputFile = null;
 	private String defaultCSVFilename = "vbatch_{dt}_W914_{seq}.csv";
 	
@@ -58,7 +77,7 @@ public class GenerateCSVStep extends StepManager {
 		if (this.step_record.getOutputFilenamePrefix() != "") {
 			this.defaultCSVFilename = this.step_record.getOutputFilenamePrefix();
 		}
-		this.generatedFilenames = new ArrayList<String>();
+		this.alternateOutputData = new ArrayList<String>();
 		
 		// Get extract_max_rec_per_file from the step config
 		if (this.step_record.getExtractMaxRecPerFile() != null) {
@@ -235,7 +254,7 @@ public class GenerateCSVStep extends StepManager {
 		this.job_manager.db.getTransaction().begin();
 		BatchLogFileOutput log_entry = new BatchLogFileOutput();
 		log_entry.setBatchLog(this.job_manager.batch_log);
-		log_entry.setFilename(this.generatedFilenames.get(this.generatedFilenames.size()-1));
+		log_entry.setFilename(this.alternateOutputData.get(this.alternateOutputData.size()-1));
 		log_entry.setNumRecords(new BigDecimal(rows));
 		log_entry.setCreateDt(this.startingDateTime);
 		this.job_manager.db.persist(log_entry);
@@ -261,7 +280,7 @@ public class GenerateCSVStep extends StepManager {
 			
 			// Create the file
 			this.currentOutputFile = new FileWriter("output/" + newFileName,true);
-			this.generatedFilenames.add("output/" + newFileName);
+			this.alternateOutputData.add("output/" + newFileName);
 			
 			// Reset counters
 			this.totalRowsThisFile=0;

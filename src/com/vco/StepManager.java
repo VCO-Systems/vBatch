@@ -21,7 +21,10 @@ public class StepManager implements IStepManager {
 	protected List<Object> dataPageOut = new ArrayList<Object>();
 	protected List<Object> dataPageIn;
 	protected List<Object> stepData;
-	protected List<Object> dataAlternate;
+	public List<Object> alternateOutputData;
+	
+	// Flags
+	public Boolean outputsAlternateData = false;
 	
 	@Override
 	public boolean init() {
