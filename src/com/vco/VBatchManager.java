@@ -34,8 +34,60 @@ public class VBatchManager {
 	
 	public VBatchManager() {
 		// Set up db connection
-		factory = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT_NAME);
-		this.em = factory.createEntityManager();
+		//factory = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT_NAME);
+		
+		this.em = this.createEntityManager();
+	}
+
+	/**
+	 * Create a JPA entity manager, overriding the db_connection, user, and password
+	 * with settings from the config/vbatch.ini file
+	 */
+	private EntityManager createEntityManager() {
+		// Settings to read from ini file
+		String db_connect_string, user, password;
+		
+		// Load JPA connection settings from ini file
+		String db_connect_string_file_path = "config/vbatch.ini";
+		InputStream inp = null;
+		try {
+			inp = new FileInputStream(db_connect_string_file_path);
+		}
+		catch (FileNotFoundException e) {
+			System.out.println("ERROR: JPA DB settings file not found: " + db_connect_string_file_path);
+			System.exit(1);
+		}
+		
+		Properties prop = new Properties();
+		try {
+			
+			prop.load(inp);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	
+		// Load individual properties
+		db_connect_string = prop.getProperty("vbatch.db");
+		user = prop.getProperty("vbatch.user");
+		password = prop.getProperty("vbatch.password");
+		
+		Properties properties = new Properties();
+		//properties.put("eclipselink.jdbc.batch-writing", "JDBC");
+		properties.put("javax.persistence.jdbc.url", db_connect_string);
+		properties.put("javax.persistence.jdbc.user", user);
+		properties.put("javax.persistence.jdbc.password", password);
+		//properties.put("javax.persistence.jdbc.driver", "oracle.jdbc.OracleDriver");
+		
+		
+		this.factory = Persistence.createEntityManagerFactory("vbatch", properties);
+		EntityManager em = this.factory.createEntityManager();
+		
+		
+		
+//		this.factory = Persistence.createEntityManagerFactory(db_connect_string);
+//		EntityManager emf = factory.createEntityManager();
+		return em;
 	}
 	
 	public void init_old() {
