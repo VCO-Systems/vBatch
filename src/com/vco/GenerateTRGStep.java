@@ -2,7 +2,9 @@ package com.vco;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import javax.persistence.TypedQuery;
@@ -25,6 +27,9 @@ public class GenerateTRGStep extends StepManager {
 	// Keep track of generated TRG files
 	private List<String> csvFilenames;
 	
+	// Logging
+	private BatchLogDtl log_dtl;
+	
 	public GenerateTRGStep(JobManager jm, Step step_record) {
 		System.out.println("\t[TRG] constructor");
 		this.job_manager = jm;
@@ -36,6 +41,7 @@ public class GenerateTRGStep extends StepManager {
 	}
 	
 	public boolean start() {
+		this.logStart();
 		// Get the batch_log entry for this job
 		BatchLog batchLogEntry = this.job_manager.batch_log;
 		
@@ -57,9 +63,18 @@ public class GenerateTRGStep extends StepManager {
 				
 				// Make sure filename ends in .csv
 				if (csvFilename.toLowerCase().endsWith(".csv")) {
+					// Replace .csv and the end of file with .trg
+					int cnt = 0;
+					int idx = csvFilename.toLowerCase().indexOf(".csv");
+					while (idx >= 0) {
+						cnt++;
+						idx = csvFilename.toLowerCase().indexOf(".csv", idx+1);
+					}
+					if (cnt > 0) {  // we found .csv at least once
+						// replace the last occurence with .trg
+						csvFilename = csvFilename.substring(0, csvFilename.length() - 4 ).concat(".trg");
+					}
 					
-					csvFilename = csvFilename.toLowerCase().replace(".csv", ".trg");
-					System.out.println("\t[TRG] filename: " + csvFilename);
 					// Generate the .trg file
 					File newFile = new File(csvFilename);
 					try {
@@ -79,5 +94,28 @@ public class GenerateTRGStep extends StepManager {
 			
 		}
 		return true;  // tell JobManager we finished successfully
+	}
+	
+	private void logStart() {
+		this.job_manager.db.getTransaction().begin();
+		// Create entry in batch_log_dtl
+		this.log_dtl = new BatchLogDtl();
+		this.log_dtl.setBatchLog(this.job_manager.batch_log);
+		
+		String msg = "Step [" + this.step_record.getType() 
+				+ " : " + this.step_record.getShortDesc()
+				+ "]";
+		this.log_dtl.setLongDesc(msg);
+		this.log_dtl.setStepsId(new BigDecimal(this.step_record.getId()));
+		this.log_dtl.setStepsShortDesc(this.step_record.getShortDesc());
+		this.log_dtl.setStepType(this.step_record.getType());
+		this.log_dtl.setStartDt(new Date());
+		this.log_dtl.setStatus("Started");
+		
+		// Commit log entry
+		this.job_manager.db.persist(this.log_dtl);
+		this.job_manager.db.getTransaction().commit();
+		
+		System.out.println("\t" + msg);
 	}
 }
