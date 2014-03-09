@@ -140,7 +140,7 @@ public class GenerateCSVStep extends StepManager {
 			}
 			// Mark this step as complete
 			this.completed=true;
-			
+			this.failed=false;
 			
 		}
 		// Log the start of this step
@@ -236,6 +236,8 @@ public class GenerateCSVStep extends StepManager {
 	}
 
 	/**
+	 * Close an existing CSV file and log it
+	 * in batch_log_file_output table.
 	 * @throws IOException
 	 */
 	private void closeCurrentOutputFile() throws IOException {
@@ -250,7 +252,7 @@ public class GenerateCSVStep extends StepManager {
 		// Update counters
 		this.totalRowsThisFile=0;
 		
-		// Add entry to batch_log_file_output table
+		// Create new entry in batch_log_file_output log table for this file
 		this.job_manager.db.getTransaction().begin();
 		BatchLogFileOutput log_entry = new BatchLogFileOutput();
 		log_entry.setBatchLog(this.job_manager.batch_log);

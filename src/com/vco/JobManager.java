@@ -32,6 +32,7 @@ public class JobManager {
 	private BatchLogDtl log_dtl;
 	private List steps = new ArrayList<Step>();
 	private List stepManagers = new ArrayList<StepManager>();
+	private boolean atLeastOneStepFailed = false;
 	
 	public  JobManager(VBatchManager batch_manager, Integer job_id) {
 		this.batch_manager = batch_manager;
