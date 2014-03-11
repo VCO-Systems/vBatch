@@ -14,7 +14,9 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -96,8 +98,13 @@ public class ExtractDBStep extends StepManager {
 			BatchLogDtl lastRun = dtls.get(0);  // Most recent successful run of the same type
 			previousRunOK1 = lastRun.getMaxOk1();  // Oracle date in string format
 			
+			// Since we're relying on JDBC to convert a date object to a string,
+			// force it into the specific date format that Oracle will be able to use in
+			// a query (for instance, forcing the year from 2-digit to 4-digit)
+			previousRunOK1 = this.convertDateStringToAnotherDateString(previousRunOK1, "MM/d/yy k:mm:ss", "MM/dd/yyyy k:mm:ss");
+			
 			// Create a WHERE clause that starts after lastOk1
-			String startClause = " p.create_date_time > to_date('" + previousRunOK1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
+			String startClause = " ptt.create_date_time > to_date('" + previousRunOK1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
 			
 			// replace the /* where */ token with our dynamic where clause
 			// however, make sure that if there isn't a WHERE clause that
@@ -117,11 +124,11 @@ public class ExtractDBStep extends StepManager {
 			while (whereMatcher.find()) {
 				whereCount += 1;
 			}
-			
+			System.out.println("WhereToken: " + whereTokenCount + ", WhereCount: " + whereCount);
 			// Replace the where token (and add a WHERE clause, if missing)
 			if (whereTokenCount == 1 ) {
 				if (whereCount > 1) { // There is an existing where clause
-					raw_sql = raw_sql.replace("/* where */", " " + startClause);
+					raw_sql = raw_sql.replace("/* where */", " AND " + startClause);
 				}
 				else {  // No WHERE clause, add it
 					raw_sql = raw_sql.replace("/* where */", " WHERE " + startClause);
@@ -164,11 +171,12 @@ public class ExtractDBStep extends StepManager {
 		int rowCount = 0;
 		
 		ResultSet rs = null;
-		System.out.println("STUB");
+		
 		// go to end of recordset
 		int finalRowNum = 0;  // this will be the final row # for this job
 		try {
 			System.out.println("\tABout to query " + this.max_rec + " records");
+			System.out.println("REWRITTEN QUERY: " + raw_sql);
 			rs = this.sqlQuery(raw_sql, commit_freq, this.max_rec);  // limit query to max_rec rows
 			
 			
@@ -242,23 +250,28 @@ public class ExtractDBStep extends StepManager {
 			int rownum = 0;
 			
 			// Columns to skip
-			List<String> skipColNames = new ArrayList<String>();
-			skipColNames.add("pk1");
-			skipColNames.add("pk2");
-			skipColNames.add("pk3");
-			skipColNames.add("ok1");
+			List<String> namesOfColumnsToSkip = new ArrayList<String>();
+			namesOfColumnsToSkip.add("pk1");
+			namesOfColumnsToSkip.add("pk2");
+			namesOfColumnsToSkip.add("pk3");
+			namesOfColumnsToSkip.add("ok1");
 			
 			// Get column names
 			ResultSetMetaData meta = rs.getMetaData();
 			int col_count = meta.getColumnCount();
 			String colType, colName;
-			List<String> colNames = new ArrayList<String>();
+			Map<Integer, String> columnsToSkip = new HashMap<Integer, String>();
 			for (int colIdx = 1; colIdx <= col_count; colIdx++) {
 				colType = "";
 				colName = "";
 				colType  = meta.getColumnTypeName(colIdx);
 				colName = meta.getColumnName(colIdx);
-				colNames.add(colName);
+				String j = meta.getColumnLabel(colIdx);
+				if (namesOfColumnsToSkip.contains(colName.toLowerCase())) {
+					columnsToSkip.put(colIdx,colName);
+				}
+					
+				
 			}
 			
 			// TODO:  Make sure our required columns are in the query:
@@ -285,7 +298,16 @@ public class ExtractDBStep extends StepManager {
 				// add the data from this row into the output object
 				List<Object> rowdata = new ArrayList<Object>();
 				for (int ci = 1; ci <= col_count; ci++) {
-					rowdata.add(rs.getString(ci));
+					if (columnsToSkip.containsKey(ci)) {
+						// Do not export this column
+						//System.out.println("Skipping column:" + ci);
+					}
+					else {
+						
+						// Add this column to the output data
+						rowdata.add(rs.getString(ci));
+					}
+					
 				}
 				// Add this row to dataPageOut, to be sent to the next step
 				this.dataPageOut.add(rowdata);
@@ -400,6 +422,32 @@ public class ExtractDBStep extends StepManager {
 		Date dt = incomingDateFormat.parse(ds);
 		String newDs = outgoingDateFormat.format(dt);
 		return newDs;
+	}
+	
+	/** 
+	 * Converts a date string into a new datestring, applying the newDateFormat to it
+	 * @param originalDateString
+	 * @param newDateFormat
+	 * @return
+	 */
+	
+	private String convertDateStringToAnotherDateString(String originalDateString, String incomingDateFormat, String outgoingDateFormat) {
+		String newlyFormattedDateString = new String();
+		SimpleDateFormat incomingDateFormatter  = new SimpleDateFormat(incomingDateFormat);
+		SimpleDateFormat outgoingDateFormatter = new SimpleDateFormat(outgoingDateFormat);
+		try {
+			// create a new Date object from the original date string
+			Date tempDateObject = incomingDateFormatter.parse(originalDateString);
+			// convert that date to a string, formatted with outgoingDateFormat
+			newlyFormattedDateString = outgoingDateFormatter.format(tempDateObject);
+			
+		} catch (ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return newlyFormattedDateString;
+		
 	}
 	
 	@Override
