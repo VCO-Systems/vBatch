@@ -276,9 +276,10 @@ public class ExtractDBStep extends StepManager {
 			
 			// TODO:  Make sure our required columns are in the query:
 			// ok1, pk1 [pk2-pk3]
-			
+			String previousRowOK1Value = new String();
 			// Iterate over all the rows of the ResultSet
-			while (rs.next()) {
+			boolean endOfRecordset=false;
+			while (!endOfRecordset) {
 				rownum++;  // Note: rownum starts at 1
 				
 				// If this row would exceed step.max_rec,
@@ -288,7 +289,7 @@ public class ExtractDBStep extends StepManager {
 					String lastRowOK1Value = this.convertDateFieldToString(rs, "OK1");
 					// Write maxOK1 to the log_dtl record for this extraction step
 					this.job_manager.db.getTransaction().begin();
-					this.log_dtl.setMaxOk1(lastRowOK1Value);
+					this.log_dtl.setMaxOk1(previousRowOK1Value);
 					this.log_dtl.setStatus("Completed");
 					this.job_manager.db.persist(this.log_dtl);
 					this.job_manager.db.getTransaction().commit();
@@ -298,12 +299,10 @@ public class ExtractDBStep extends StepManager {
 				// add the data from this row into the output object
 				List<Object> rowdata = new ArrayList<Object>();
 				for (int ci = 1; ci <= col_count; ci++) {
-					if (columnsToSkip.containsKey(ci)) {
+					if (columnsToSkip.containsKey(ci)) {  // is this column in columnsToSkip?
 						// Do not export this column
-						//System.out.println("Skipping column:" + ci);
 					}
 					else {
-						
 						// Add this column to the output data
 						rowdata.add(rs.getString(ci));
 					}
@@ -351,6 +350,13 @@ public class ExtractDBStep extends StepManager {
 					this.log_dtl.setStatus("Completed");
 					this.job_manager.db.persist(this.log_dtl);
 					this.job_manager.db.getTransaction().commit();
+				}
+				
+				previousRowOK1Value = this.convertDateFieldToString(rs, "OK1");
+				
+				// Move to the next record (or abort if we're past the last row
+				if (rs.next() == false) {  // moved past the last record
+					endOfRecordset=true;
 				}
 			} // end: looping over rows of data
 			
