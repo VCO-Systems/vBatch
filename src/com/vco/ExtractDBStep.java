@@ -179,8 +179,8 @@ public class ExtractDBStep extends StepManager {
 		// go to end of recordset
 		int finalRowNum = 0;  // this will be the final row # for this job
 		try {
-			System.out.println("\tAbout to query " + this.max_rec + " records");
-			System.out.println("REWRITTEN QUERY: " + raw_sql);
+			//System.out.println("\tAbout to query " + this.max_rec + " records");
+			System.out.println("[Extract] REWRITTEN QUERY: " + raw_sql);
 			rs = this.sqlQuery(raw_sql, commit_freq, this.max_rec);  // limit query to max_rec rows
 			
 			
@@ -198,7 +198,7 @@ public class ExtractDBStep extends StepManager {
 				// STUB:  comparison here should match
 				currentRowOK1 = this.convertDateFieldToString(rs, "OK1");
 				currentRowPK1 = rs.getString("tran_nbr");
-				System.out.println("\tLast row: " + currentRowOK1 + " / " + currentRowPK1);
+				//System.out.println("\tLast row: " + currentRowOK1 + " / " + currentRowPK1);
 				// Go backwards until pk1 and ok1 are different from last row
 				while (rs.previous()) {
 					endRowsToSkip++;
@@ -207,7 +207,7 @@ public class ExtractDBStep extends StepManager {
 					if (!currentRowOK1.equals(lastRowOK1) && !currentRowPK1.equals(lastRowPK1)) {
 						
 						finalRowNum = startingRowNum - endRowsToSkip;
-						System.out.println("\tExported " + finalRowNum + " rows (skipped " + endRowsToSkip + ")");
+						System.out.println("\t[Extract] Exported " + finalRowNum + " rows (skipped " + endRowsToSkip + ")");
 						System.out.println("\tFinal row: " + currentRowOK1 + " / " + currentRowPK1);
 						break;
 					}
