@@ -121,24 +121,12 @@ public class ExtractDBStep extends StepManager {
 			while (m.find()) {
 				whereTokenCount += 1;
 			}
-			// Count instances of WHERE clause
-			Pattern wherePattern = Pattern.compile(" where ");
-			Matcher whereMatcher = wherePattern.matcher(raw_sql.toLowerCase());
-			int whereCount = 0;
-			while (whereMatcher.find()) {
-				whereCount += 1;
+			System.out.println("WHERE TOKEN COUNT: " + whereTokenCount);
+			// Replace all /* where */ tokens with the startClause
+			if (whereTokenCount > 0 ) {
+				raw_sql = raw_sql.replaceAll("/\\* where \\*/", " AND " + startClause);
 			}
-			
-			// Replace the where token (and add a WHERE clause, if missing)
-			if (whereTokenCount == 1 ) {
-				if (whereCount > 1) { // There is an existing where clause
-					raw_sql = raw_sql.replace("/* where */", " AND " + startClause);
-				}
-				else {  // No WHERE clause, add it
-					raw_sql = raw_sql.replace("/* where */", " WHERE " + startClause);
-				}
-			}
-			else {
+			else { // TODO:  log the missing where token and abort job
 				// TODO:  fail this job, and log the fact that the /* where */ token was missing
 				this.job_manager.db.getTransaction().begin();
 				this.log_dtl.setStatus("Failed");
@@ -150,6 +138,7 @@ public class ExtractDBStep extends StepManager {
 				this.failed=true;
 				return false;  // abort this step
 			}
+			
 			
 			
 			
