@@ -142,6 +142,9 @@ public class GenerateCSVStep extends StepManager {
 			this.completed=true;
 			this.failed=false;
 			
+			// Mark this step complete in the logs
+			this.logComplete();
+			
 		}
 		else {
 			// Log the start of this step
@@ -366,6 +369,20 @@ public class GenerateCSVStep extends StepManager {
 		this.job_manager.db.persist(this.log_dtl);
 		this.job_manager.db.getTransaction().commit();
 		
-		System.out.println("\t" + msg);
+		System.out.println("\t[TRG] Step completed.");
+	}
+	
+private void logComplete() {
+		
+		this.job_manager.db.getTransaction().begin();
+		// Create entry in batch_log_dtl
+		
+		this.log_dtl.setStartDt(new Date());
+		this.log_dtl.setStatus("Completed");
+		
+		// Commit log entry
+		this.job_manager.db.persist(this.log_dtl);
+		this.job_manager.db.getTransaction().commit();
+		System.out.println("\t[CSV] Step completed.");
 	}
 }
