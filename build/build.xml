@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project default="minimal" name="Create Runnable Jar for Project vBatch" basedir=".">
+    <!--this file was created by Eclipse Runnable JAR Export Wizard-->
+    <!--ANT 1.7 is required                                        -->
+	
+	<property name="target.dir" location="." />
+	<property name="staging" location="${target.dir}/staging" />
+	
+	<tstamp>
+	    <format property="TODAY" pattern="yyyy-M-dd_h-m-s"/>
+	  </tstamp>
+	
+	<target name="clean">
+	           <delete dir="${staging}"/>
+	           <mkdir dir="${staging}"/>
+	</target>
+	
+    <target name="build_jar">
+        <jar destfile="${staging}/vbatch.jar" filesetmanifest="mergewithoutmain">
+            <manifest>
+                <attribute name="Main-Class" value="com.vco.VBatchManager"/>
+                <attribute name="Class-Path" value="."/>
+            </manifest>
+            <fileset dir="/home/vco/dev/workspaces/eclipse_workspace/vBatch/build/classes"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/vco/dev/workspaces/eclipse_workspace/vBatch/lib/eclipselink.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/vco/dev/workspaces/eclipse_workspace/vBatch/lib/javax.persistence_2.1.0.v201304241213.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/vco/dev/workspaces/eclipse_workspace/vBatch/lib/commons-cli-1.2.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/vco/dev/workspaces/eclipse_workspace/vBatch/lib/ojdbc6.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/vco/dev/workspaces/eclipse_workspace/vBatch/lib/commons-lang-2.6.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/vco/dev/workspaces/eclipse_workspace/vBatch/lib/super-csv-2.1.0.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/vco/dev/workspaces/eclipse_workspace/vBatch/lib/super-csv-2.1.0-javadoc.jar"/>
+        </jar>
+    </target>
+	
+	<target name="copy_ini_files">
+		<copy todir="${staging}/config">
+		    <fileset dir="../data/ini_files" />
+		  </copy>
+	</target>
+	
+	
+	
+	<!-- Generate staging/sample_data/ folder, with all sample data and scripts -->
+	<target name="data">
+		<copy todir="${staging}/data">
+            <fileset dir="../data" >
+            	<exclude name="ini_files/"/>
+			</fileset>
+          </copy>
+	</target>
+	
+	<!-- Zip the staging directory up into a deployment zip file,
+	     with date-time.zip -->
+	<target name="zip-all">
+		 <zip destfile="vbatch_${TODAY}.zip"
+		       basedir="${staging}"
+		  />
+	</target>
+	
+	<!-- Build the minimal deploy package:  jar file, ini files -->
+    <target name="minimal" depends="clean,build_jar,copy_ini_files,zip-all">
+    </target>
+	
+	<!-- Build the minimal deploy package:  jar file, ini files -->
+    <target name="full" depends="clean,build_jar,copy_ini_files,data,zip-all">
+    </target>
+</project>

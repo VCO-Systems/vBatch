@@ -1,3 +1,5 @@
 *.class
 output/*.csv
-build/*
+build/staging/*
+build/classes
+build/*.zip
