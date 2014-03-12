@@ -111,7 +111,7 @@ public class JobManager {
 			for (int stepNum = 0; stepNum < this.stepManagers.size(); stepNum++) {
 				// Get the step manager to start
 				StepManager stepToStart = (StepManager) this.stepManagers.get(stepNum);
-				System.out.println("Starting step: " + stepNum);
+				//System.out.println("Starting step: " + stepNum);
 				stepToStart.start();
 				
 			}
