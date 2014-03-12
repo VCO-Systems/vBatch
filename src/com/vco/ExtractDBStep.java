@@ -92,7 +92,11 @@ public class ExtractDBStep extends StepManager {
 		
 		// Get the raw sql to run
 		String raw_sql = this.step_record.getExtractSql();
-				
+		// Remove trailing semicolon which is valid sql but confuses jdbc sometimes
+		if (raw_sql.indexOf(";", raw_sql.length()-1) != -1) {
+			raw_sql = raw_sql.substring(0, raw_sql.length()-1);
+		}
+		
 		// If there's at least one previous run with valid maxOK1
 		if (dtls.size() > 0) {
 			BatchLogDtl lastRun = dtls.get(0);  // Most recent successful run of the same type
@@ -124,7 +128,7 @@ public class ExtractDBStep extends StepManager {
 			while (whereMatcher.find()) {
 				whereCount += 1;
 			}
-			System.out.println("WhereToken: " + whereTokenCount + ", WhereCount: " + whereCount);
+			
 			// Replace the where token (and add a WHERE clause, if missing)
 			if (whereTokenCount == 1 ) {
 				if (whereCount > 1) { // There is an existing where clause
@@ -175,7 +179,7 @@ public class ExtractDBStep extends StepManager {
 		// go to end of recordset
 		int finalRowNum = 0;  // this will be the final row # for this job
 		try {
-			System.out.println("\tABout to query " + this.max_rec + " records");
+			System.out.println("\tAbout to query " + this.max_rec + " records");
 			System.out.println("REWRITTEN QUERY: " + raw_sql);
 			rs = this.sqlQuery(raw_sql, commit_freq, this.max_rec);  // limit query to max_rec rows
 			
@@ -184,7 +188,7 @@ public class ExtractDBStep extends StepManager {
 			
 			int startingRowNum = rs.getRow();
 			
-			System.out.println("\tLast row #: " + startingRowNum);
+			// System.out.println("\tLast row #: " + startingRowNum);
 			String lastRowOK1, lastRowPK1;
 			try {
 				lastRowOK1 = this.convertDateFieldToString(rs, "OK1");
@@ -203,8 +207,8 @@ public class ExtractDBStep extends StepManager {
 					if (!currentRowOK1.equals(lastRowOK1) && !currentRowPK1.equals(lastRowPK1)) {
 						
 						finalRowNum = startingRowNum - endRowsToSkip;
-						System.out.println("\tSkipped : " + endRowsToSkip + " rows.  Final rownum: " + finalRowNum);
-						System.out.println("\tKeeping row: " + currentRowOK1 + " / " + currentRowPK1);
+						System.out.println("\tExported " + finalRowNum + " rows (skipped " + endRowsToSkip + ")");
+						System.out.println("\tFinal row: " + currentRowOK1 + " / " + currentRowPK1);
 						break;
 					}
 					else {
