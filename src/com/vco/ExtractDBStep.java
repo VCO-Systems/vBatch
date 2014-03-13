@@ -59,8 +59,6 @@ public class ExtractDBStep extends StepManager {
 	
 	@Override
 	public boolean start() {
-		// Start db transaction
-		//this.job_manager.db.getTransaction().begin();
 		
 		// Set this step to running
 		this.running = true;
@@ -218,54 +216,13 @@ public class ExtractDBStep extends StepManager {
 		}
 		
 		
-		
-		
-		// System.out.println(raw_sql);
-		
-		// Do we need to break this into pages?
-		
-		
-		
-		
-		/*
-		 * Before performing the data extraction, move the ending point backwards
-		 * until both the ok1 value and the create_date_time have changed.
-		 */
-		
-		
 		try {
-			// rs = this.sqlQuery(raw_sql, commit_freq, -1);
-			
 			// go back to beginning of recordset 
 			rs.first();
 			
+			int rownum = 0, col_count = 0;
 			
-			int rownum = 0;
-			
-			// Columns to skip
-			List<String> namesOfColumnsToSkip = new ArrayList<String>();
-			namesOfColumnsToSkip.add("pk1");
-			namesOfColumnsToSkip.add("pk2");
-			namesOfColumnsToSkip.add("pk3");
-			namesOfColumnsToSkip.add("ok1");
-			
-			// Get column names
-			ResultSetMetaData meta = rs.getMetaData();
-			int col_count = meta.getColumnCount();
-			String colType, colName;
-			Map<Integer, String> columnsToSkip = new HashMap<Integer, String>();
-			for (int colIdx = 1; colIdx <= col_count; colIdx++) {
-				colType = "";
-				colName = "";
-				colType  = meta.getColumnTypeName(colIdx);
-				colName = meta.getColumnName(colIdx);
-				String j = meta.getColumnLabel(colIdx);
-				if (namesOfColumnsToSkip.contains(colName.toLowerCase())) {
-					columnsToSkip.put(colIdx,colName);
-				}
-					
-				
-			}
+			Map<Integer,String> columnsToSkip = this.prepareSkipColumns(rs, col_count);
 			
 			// TODO:  Make sure our required columns are in the query:
 			// ok1, pk1 [pk2-pk3]
@@ -403,6 +360,38 @@ public class ExtractDBStep extends StepManager {
 		
 		return true;
 		
+	}
+	
+	private Map<Integer,String> prepareSkipColumns(ResultSet rs, int col_count) {
+		Map<Integer, String> columnsToSkip = new HashMap<Integer,String>();
+		try {
+			// List of columns to suppress in output data
+			List<String> namesOfColumnsToSkip = new ArrayList<String>();
+			namesOfColumnsToSkip.add("pk1");
+			namesOfColumnsToSkip.add("pk2");
+			namesOfColumnsToSkip.add("pk3");
+			namesOfColumnsToSkip.add("ok1");
+			
+			// Find the colNum/colName of each of the skip columns
+			ResultSetMetaData meta = rs.getMetaData();
+			col_count = meta.getColumnCount();
+			String colType, colName;
+			
+			for (int colIdx = 1; colIdx <= col_count; colIdx++) {
+				colType = "";
+				colName = "";
+				colType  = meta.getColumnTypeName(colIdx);
+				colName = meta.getColumnName(colIdx);
+				String j = meta.getColumnLabel(colIdx);
+				if (namesOfColumnsToSkip.contains(colName.toLowerCase())) {
+					columnsToSkip.put(colIdx,colName);
+				}
+			}
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return columnsToSkip;
 	}
 
 	/**
