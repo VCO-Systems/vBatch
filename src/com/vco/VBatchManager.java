@@ -32,6 +32,10 @@ public class VBatchManager {
 	
 	public static HashMap<String, String> source_db_connection = new HashMap<String,String>(1);
 
+	// Is this a new job, a re-run of an existing batch?
+	public static String BatchMode_New = "BatchModeNew";  // Start a new job
+	public static String BatchMode_Repeat = "BatchModeRepeat";  // Repeat an existing job (by batch_num)
+	public String batchMode = BatchMode_New;
 	
 	public VBatchManager() {
 		// Set up db connection
@@ -40,6 +44,23 @@ public class VBatchManager {
 		this.em = this.createEntityManager();
 	}
 	
+	/**
+	 * Takes a list of job_ids, and manages the execution
+	 * of each job.
+	 * 
+	 * @param job_ids
+	 */
+	public void init(ArrayList<Integer> job_ids) {
+		// Make sure we have all necessary configuration information for each job,
+		// 
+		for (Integer job_id : job_ids) {
+			JobManager job_manager = new JobManager(this, job_id);
+			// Tell the job manager whether new or existing job is being run
+			job_manager.batchMode = this.batchMode;  
+			job_manager.init();
+		}
+	}
+
 	/**
 	 * Create a JPA entity manager, overriding the db_connection, user, and password
 	 * with settings from the config/vbatch.ini file
@@ -95,10 +116,6 @@ public class VBatchManager {
 		this.factory = Persistence.createEntityManagerFactory("vbatch", properties);
 		EntityManager em = this.factory.createEntityManager();
 		
-		
-		
-//		this.factory = Persistence.createEntityManagerFactory(db_connect_string);
-//		EntityManager emf = factory.createEntityManager();
 		return em;
 	}
 	
@@ -117,21 +134,7 @@ public class VBatchManager {
 		factory.close();
 	}
 	
-	/**
-	 * Constructor that takes a list of job_ids, and manages the execution
-	 * of each job.
-	 * 
-	 * @param job_ids
-	 */
-	public void init(ArrayList<Integer> job_ids) {
-		// Make sure we have all necessary configuration information for each job,
-		// 
-		for (Integer job_id : job_ids) {
-			JobManager job_manager = new JobManager(this, job_id);
-			job_manager.init();
-			//job_manager.run();
-		}
-	}
+	
 	
 	public void getRequestedJobs() {
 		
@@ -150,6 +153,7 @@ public class VBatchManager {
 		options.addOption("db", true, "Source db connection string filepath");
 		//options.addOption("test_create", false, "Create a sample WMOS source database.");
 		options.addOption("j", true, "Specify one or more jobs to start.");
+		options.addOption("b", true, "Re-run an earlier batch.");
 		
 
 		CommandLineParser parser = new BasicParser();
@@ -167,18 +171,38 @@ public class VBatchManager {
 //	    	System.out.println(testing_db_name);
 	    	
 			CommandLine cmd = parser.parse(options, args);
-			
+			HelpFormatter help = new HelpFormatter();
 			if (cmd.hasOption("h")) {
-			    HelpFormatter help = new HelpFormatter();
+			    
 			    help.printHelp("vBatch v0.1", options );
 			}
 			
-			// -test_create option
-			if (cmd.hasOption("test_create")) {
-			    VBatchManager batch_manager = new VBatchManager();
-			    //batch_manager.init();
-			    
+			/**
+			 * Before processing particular commands, check to make sure the
+			 * vbatch command's basic requirements have been met.
+			 * 
+			 */
+			
+			if ( !cmd.hasOption("j")  && !cmd.hasOption("b") ) {
+				System.out.println("vbatch Error: Either -j or -b option must be specified.");
+				help.printHelp("vBatch v0.1", options );
+				System.exit(1);
 			}
+			if ( cmd.hasOption("j") && !cmd.hasOption("db")) {
+				System.out.println("vbatch Error: When '-j' option is used, '-db' option is required.");
+				help.printHelp("vBatch v0.1", options );
+				System.exit(1);
+			}
+			if ( cmd.hasOption("b") && !cmd.hasOption("db")) {
+				System.out.println("vbatch Error: When '-b' option is used, '-db' option is required.");
+				help.printHelp("vBatch v0.1", options );
+				System.exit(1);
+			}
+			
+			/**
+			 * Now process the valid vbatch commands
+			 * 
+			 */
 			
 			if (cmd.hasOption("db")) {
 				// Load properties file
@@ -204,8 +228,6 @@ public class VBatchManager {
 		    	if (man == null) {
 		    		
 		    	}
-		    	// VAN 
-		    	// Need to integrate/pass the connect_string with Step Class
 			
 			}
 			else {
@@ -235,13 +257,36 @@ public class VBatchManager {
 				// TODO: If any do not exist, report it
 				
 				// Start a new VBatchManger
-				if (man == null)
+				if (man == null) 
 					man = new VBatchManager();
-					man.init(job_ids);
+			    man.batchMode = VBatchManager.BatchMode_New;
+				man.init(job_ids);
+				System.exit(0);
 			}
-			else {
-				System.out.println("ERROR: must specify at least one job id (example: vbatch -j 12)");
-				System.exit(1);
+			
+			// Handle -b (re-run existing batch)
+			if (cmd.hasOption("b")) {
+				// TODO:  Get ready to run the -b job
+				String[] requested_jobs_ids = cmd.getOptionValue("b").split(",");
+				ArrayList<Integer> job_ids = new ArrayList<Integer>();
+				
+				// For each requested job, create and start a batch manager
+				for (String job_id_str : requested_jobs_ids) {
+					// Cast the job_id as int
+					job_ids.add(Integer.parseInt(job_id_str));
+				}
+				
+				// If no jobs are specified, exit with a polite error msg
+				if (job_ids.size() == 0) {
+					System.out.println("vbatch Eror: must specify at least one batch_num (example: vbatch -b 12 {,13,14})");
+					System.exit(1);
+				}
+				// Kick off the batch
+				if (man == null) 
+					man = new VBatchManager();
+			    man.batchMode = VBatchManager.BatchMode_Repeat;
+				man.init(job_ids);
+				System.exit(0);
 			}
 			
 		}

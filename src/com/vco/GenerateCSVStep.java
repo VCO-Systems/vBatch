@@ -142,9 +142,15 @@ public class GenerateCSVStep extends StepManager {
 			this.completed=true;
 			this.failed=false;
 			
+			// Mark this step complete in the logs
+			this.logComplete();
+			
 		}
-		// Log the start of this step
-		this.logStart();
+		else {
+			// Log the start of this step
+			this.running = true;
+			//this.logStart();
+		}
 		
 		// TODO: Loop over pages of data
 		// STUB: Fake a page of data
@@ -157,10 +163,15 @@ public class GenerateCSVStep extends StepManager {
 	
 	@Override
 	public boolean processPageOfData(List<Object> pageOfData) {
-		// Set this.running = true to indicate later when 
-		// that data has been passed into this step prior
-		// to this.start() being called.
-		this.running=true;
+		// If this is the first page of data we've received,
+		// and log the start of the job
+		if (!this.running) {
+			// Set this.running = true so we know this step has been
+			// started, even if start() has not been called yet.
+			this.running=true;
+			this.logStart();
+		}
+		
 		
 		// Prepare to process this page of data
 		this.pageCount++;
@@ -174,7 +185,7 @@ public class GenerateCSVStep extends StepManager {
 		}
 		*/
 		
-		System.out.println("\t[CSV] rows to process: " + pageOfData.size());
+		// System.out.println("\t[CSV] rows to process: " + pageOfData.size());
 		
 		try {
 			/*
@@ -261,6 +272,8 @@ public class GenerateCSVStep extends StepManager {
 		log_entry.setCreateDt(this.startingDateTime);
 		this.job_manager.db.persist(log_entry);
 		this.job_manager.db.getTransaction().commit();
+		System.out.println("\t[CSV] Generated CSV file: " + this.alternateOutputData.get(this.alternateOutputData.size()-1) 
+				+ " (" + rows + " rows)");
 		
 	}
 	
@@ -356,6 +369,20 @@ public class GenerateCSVStep extends StepManager {
 		this.job_manager.db.persist(this.log_dtl);
 		this.job_manager.db.getTransaction().commit();
 		
-		System.out.println("\t" + msg);
+		System.out.println("\t[TRG] Step completed.");
+	}
+	
+private void logComplete() {
+		
+		this.job_manager.db.getTransaction().begin();
+		// Create entry in batch_log_dtl
+		
+		this.log_dtl.setStartDt(new Date());
+		this.log_dtl.setStatus("Completed");
+		
+		// Commit log entry
+		this.job_manager.db.persist(this.log_dtl);
+		this.job_manager.db.getTransaction().commit();
+		System.out.println("\t[CSV] Step completed.");
 	}
 }

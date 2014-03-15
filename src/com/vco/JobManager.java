@@ -14,6 +14,7 @@ import java.util.List;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
+import javax.persistence.TypedQuery;
 
 import model.BatchLog;
 import model.BatchLogDtl;
@@ -34,7 +35,8 @@ public class JobManager {
 	public VBatchManager batch_manager;
 	public JobDefinition job_definition;
 	public EntityManager db;
-	private long job_id;
+	public long job_id;
+	public long batch_num;
 	public BatchLog batch_log;
 	private BatchLogDtl log_dtl;
 	private List steps = new ArrayList<Step>();
@@ -44,6 +46,9 @@ public class JobManager {
 	// file logging
 	public static Logger log = Logger.getLogger("vBatch v0.1");
 	private String defaultLogFile = "vbatch_{jobid}_{dt}.log";
+
+	public String batchMode;  // New or Repeat job?
+
 	
 	public  JobManager(VBatchManager batch_manager, Integer job_id) {
 		this.batch_manager = batch_manager;
@@ -61,8 +66,34 @@ public class JobManager {
 	}
 	
 	public void init() {
-		// Load the job definition
-		this.job_definition = this.db.find(JobDefinition.class, (Object)this.job_id);
+		
+		/** Populate this.job_definition with the correct job def record**/
+		
+		// We're doing a new run by job id, so just look up the job def by job #
+		if (this.batchMode == VBatchManager.BatchMode_New) {  // new run by job id
+			this.job_definition = this.db.find(JobDefinition.class, (Object)this.job_id);
+		}
+		// Here we're re-running a previous batch by batch num, so get the last run
+		// of this batch from the logs, and use its job_def_id to look up the job def record
+		else if (this.batchMode == VBatchManager.BatchMode_Repeat) {  // re-run by batch_num
+			// Look up the job_definition by batch_num
+			TypedQuery<BatchLog> qryPreviousBatch = this.db.createQuery(
+					"SELECT log from BatchLog log WHERE log.batchNum = :batchNumber order by log.id desc", BatchLog.class);
+			List<BatchLog> lstBatches = qryPreviousBatch
+		    		.setParameter("batchNumber", this.job_id)
+		    		.getResultList();
+			if (lstBatches.size() > 0) {  // Found at least on prev run with this batch num
+				// The list is sorted most recent first.  Grab the most recent.
+				BatchLog prevRunOfThisBatch = lstBatches.get(0);
+				this.job_definition = prevRunOfThisBatch.getJobDefinition();
+			}
+		}
+		
+		/** Load the steps_xref entries for this job,
+		 *  create new instance of each Step's StepManager class,
+		 *  add them to this.stepManagers, and call init() on 
+		 *  each step.
+		 */
 		
 		// Load this job's steps xref entries
 		String queryString = "SELECT a FROM JobStepsXref a " +
@@ -131,7 +162,7 @@ public class JobManager {
 			for (int stepNum = 0; stepNum < this.stepManagers.size(); stepNum++) {
 				// Get the step manager to start
 				StepManager stepToStart = (StepManager) this.stepManagers.get(stepNum);
-				System.out.println("Starting step: " + stepNum);
+				//System.out.println("Starting step: " + stepNum);
 				stepToStart.start();
 				
 			}
@@ -172,17 +203,11 @@ public class JobManager {
 		this.db.getTransaction().begin();
 		
 		// Create the main BatchLog entry
-		// Note: we keep this in an object var because we'll
-		// come back and update this record during and after the
-		// job completes.
 		this.batch_log = new BatchLog();;
 		this.batch_log.setJobDefinition(this.job_definition);
-		this.batch_log.setBatchSeqNbr(new BigDecimal(this.job_id));
+		this.batch_log.setBatchSeqNbr(new BigDecimal(1));
 		this.batch_log.setStatus("Started");
 		this.batch_log.setStartDt(new Date());
-		
-		
-		
 		
 		this.db.persist(this.batch_log);
 		// batch_num must = batch_log.id, but we have to wait until 
