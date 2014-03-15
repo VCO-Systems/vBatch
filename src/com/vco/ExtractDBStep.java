@@ -33,6 +33,8 @@ public class ExtractDBStep extends StepManager {
 	private BatchLogDtl log_dtl = null;
 	
 	private int recordsSoFar = 0;
+	private String raw_sql = "";
+	private int col_count = 0;
 	
 	// vars specific to this type of step
 	private int max_rec = 5000;  // default max_records for extraction, if none specified
@@ -69,7 +71,7 @@ public class ExtractDBStep extends StepManager {
 		// Log the start of this step
 		this.logStart();
 		// Get the raw sql to run
-		String raw_sql = this.step_record.getExtractSql();
+		this.raw_sql = this.step_record.getExtractSql();
 		String whereClause = new String();
 		int commit_freq = this.step_record.getExtractCommitFreq().intValue();
 		ResultSet rs = null;
@@ -122,8 +124,14 @@ public class ExtractDBStep extends StepManager {
 			whereClause += " AND ptt.create_date_time >= to_date('" + previousRunMinOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
 			whereClause += " AND ptt.create_date_time <= to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
 			
-			System.out.println(whereClause);
-			System.exit(1);
+			// Run the query
+			try {
+				rs = this.sqlQuery(this.raw_sql, commit_freq, totalRows);
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}  // limit query to max_rec rows
+			
 		}
 		
 		
@@ -150,8 +158,8 @@ public class ExtractDBStep extends StepManager {
 			// dtls.size()  is the number of previous executions of this step from log_dtl
 		    
 			// Remove trailing semicolon which is valid sql but confuses jdbc sometimes
-			if (raw_sql.indexOf(";", raw_sql.length()-1) != -1) {
-				raw_sql = raw_sql.substring(0, raw_sql.length()-1);
+			if (this.raw_sql.indexOf(";", this.raw_sql.length()-1) != -1) {
+				this.raw_sql = this.raw_sql.substring(0, this.raw_sql.length()-1);
 			}
 			
 			// If there's at least one previous run with valid maxOK1
@@ -189,10 +197,12 @@ public class ExtractDBStep extends StepManager {
 				// Create a WHERE clause that starts after lastOk1
 				whereClause = " ptt.create_date_time > to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
 				// replace the SQL TOKEN(s) ( /* where */ )
-				int sqlTokensReplaced =  this.replaceSqlToken(raw_sql, whereClause);
+				int sqlTokensReplaced =  this.replaceSqlToken(this.raw_sql, whereClause); 
 				if (sqlTokensReplaced == 0) {
 					// TODO:  Log the fact that no sql tokens were found
 				}
+				
+				
 				
 			}
 			
@@ -211,8 +221,8 @@ public class ExtractDBStep extends StepManager {
 			int finalRowNum = 0;  // this will be the final row # for this job
 			try {
 				//System.out.println("\tAbout to query " + this.max_rec + " records");
-				System.out.println("[Extract] REWRITTEN QUERY: " + raw_sql);
-				rs = this.sqlQuery(raw_sql, commit_freq, this.max_rec);  // limit query to max_rec rows
+				System.out.println("[Extract] REWRITTEN QUERY: " + this.raw_sql);
+				rs = this.sqlQuery(this.raw_sql, commit_freq, this.max_rec);  // limit query to max_rec rows
 				
 				rs.last();
 				
@@ -270,9 +280,9 @@ public class ExtractDBStep extends StepManager {
 			// go back to beginning of recordset 
 			rs.first();
 			
-			int rownum = 0, col_count = 0;
+			int rownum = 0;
 			
-			Map<Integer,String> columnsToSkip = this.prepareSkipColumns(rs, col_count);
+			Map<Integer,String> columnsToSkip = this.prepareSkipColumns(rs);
 			
 			// TODO:  Make sure our required columns are in the query:
 			// ok1, pk1 [pk2-pk3]
@@ -427,13 +437,13 @@ public class ExtractDBStep extends StepManager {
 		System.out.println("WHERE TOKEN COUNT: " + whereTokenCount);
 		// Replace all /* where */ tokens with the startClause
 		if (whereTokenCount > 0 ) {
-			raw_sql = raw_sql.replaceAll("/\\* where \\*/", " AND " + tokenReplacement);
+			this.raw_sql = raw_sql.replaceAll("/\\* where \\*/", " AND " + tokenReplacement);
 			tokensReplaced++;
 		}
 		return tokensReplaced;
 	}
 
-	private Map<Integer,String> prepareSkipColumns(ResultSet rs, int col_count) {
+	private Map<Integer,String> prepareSkipColumns(ResultSet rs) {
 		Map<Integer, String> columnsToSkip = new HashMap<Integer,String>();
 		try {
 			// List of columns to suppress in output data
@@ -445,7 +455,7 @@ public class ExtractDBStep extends StepManager {
 			
 			// Find the colNum/colName of each of the skip columns
 			ResultSetMetaData meta = rs.getMetaData();
-			col_count = meta.getColumnCount();
+			this.col_count = meta.getColumnCount();
 			String colType, colName;
 			
 			for (int colIdx = 1; colIdx <= col_count; colIdx++) {
