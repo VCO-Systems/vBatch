@@ -62,7 +62,6 @@ public class JobManager {
 			List<BatchLog> lstBatches = qryPreviousBatch
 		    		.setParameter("batchNumber", this.job_id)
 		    		.getResultList();
-			System.out.println("matches for batch_num " + this.job_id + ": " + lstBatches.size());
 			if (lstBatches.size() > 0) {  // Found at least on prev run with this batch num
 				// The list is sorted most recent first.  Grab the most recent.
 				BatchLog prevRunOfThisBatch = lstBatches.get(0);
@@ -184,12 +183,9 @@ public class JobManager {
 		this.db.getTransaction().begin();
 		
 		// Create the main BatchLog entry
-		// Note: we keep this in an object var because we'll
-		// come back and update this record during and after the
-		// job completes.
 		this.batch_log = new BatchLog();;
 		this.batch_log.setJobDefinition(this.job_definition);
-		this.batch_log.setBatchSeqNbr(new BigDecimal(this.job_id));
+		this.batch_log.setBatchSeqNbr(new BigDecimal(1));
 		this.batch_log.setStatus("Started");
 		this.batch_log.setStartDt(new Date());
 		
