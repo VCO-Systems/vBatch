@@ -25,7 +25,7 @@ import model.Step;
 import com.vco.*;
 
 // file logging
-import org.apache.log4j.Logger;
+import org.apache.l
 import org.apache.log4j.PropertyConfigurator;
 import java.util.Calendar;
 import java.text.SimpleDateFormat;
