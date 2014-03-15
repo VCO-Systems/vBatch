@@ -31,6 +31,7 @@ public class VBatchManager {
 	protected EntityManager em;
 	
 	public static HashMap<String, String> source_db_connection = new HashMap<String,String>(1);
+
 	
 	public VBatchManager() {
 		// Set up db connection
@@ -38,7 +39,7 @@ public class VBatchManager {
 		
 		this.em = this.createEntityManager();
 	}
-
+	
 	/**
 	 * Create a JPA entity manager, overriding the db_connection, user, and password
 	 * with settings from the config/vbatch.ini file

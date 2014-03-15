@@ -20,7 +20,14 @@ import model.BatchLogDtl;
 import model.JobDefinition;
 import model.JobStepsXref;
 import model.Step;
+
 import com.vco.*;
+
+// file logging
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
+import java.util.Calendar;
+import java.text.SimpleDateFormat;
 
 public class JobManager {
 	
@@ -34,10 +41,23 @@ public class JobManager {
 	private List stepManagers = new ArrayList<StepManager>();
 	private boolean atLeastOneStepFailed = false;
 	
+	// file logging
+	public static Logger log = Logger.getLogger("vBatch v0.1");
+	private String defaultLogFile = "vbatch_{jobid}_{dt}.log";
+	
 	public  JobManager(VBatchManager batch_manager, Integer job_id) {
 		this.batch_manager = batch_manager;
 		this.db = batch_manager.em;
 		this.job_id = job_id.longValue();
+		
+		// file logging
+		System.out.println("Setting Log4J");
+		//PropertyConfigurator.configure("../config/log4j.properties");
+		defaultLogFile = defaultLogFile.replace("{jobid}", job_id.toString());
+		defaultLogFile = defaultLogFile.replace("{dt}", new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()));
+		System.setProperty("logfile",defaultLogFile);
+		System.out.println(this.defaultLogFile);
+		log.info("Hello World");
 	}
 	
 	public void init() {
