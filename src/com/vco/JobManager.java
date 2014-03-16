@@ -24,9 +24,13 @@ import model.Step;
 
 import com.vco.*;
 
-// file logging
-import org.apache.l
+//file logging
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
+import org.apache.log4j.BasicConfigurator;
+import java.text.MessageFormat;
+
 import java.util.Calendar;
 import java.text.SimpleDateFormat;
 
@@ -43,9 +47,6 @@ public class JobManager {
 	private List stepManagers = new ArrayList<StepManager>();
 	private boolean atLeastOneStepFailed = false;
 	
-	// file logging
-	public static Logger log = Logger.getLogger("vBatch v0.1");
-	private String defaultLogFile = "vbatch_{jobid}_{dt}.log";
 
 	public String batchMode;  // New or Repeat job?
 
@@ -54,16 +55,9 @@ public class JobManager {
 		this.batch_manager = batch_manager;
 		this.db = batch_manager.em;
 		this.job_id = job_id.longValue();
-		
-		// file logging
-		System.out.println("Setting Log4J");
-		//PropertyConfigurator.configure("../config/log4j.properties");
-		defaultLogFile = defaultLogFile.replace("{jobid}", job_id.toString());
-		defaultLogFile = defaultLogFile.replace("{dt}", new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()));
-		System.setProperty("logfile",defaultLogFile);
-		System.out.println(this.defaultLogFile);
-		log.info("Hello World");
+		VBatchManager.log.debug(MessageFormat.format("JOB ID: {0,number,long} JOB DEF: {1} START", this.job_id, this.job_definition));
 	}
+	
 	
 	public void init() {
 		
@@ -120,22 +114,22 @@ public class JobManager {
 					step_manager.init();
 				}
 				catch ( SecurityException e) {
-					System.out.println(e);
+					VBatchManager.log.fatal(e);
 				}
 				catch ( ClassNotFoundException e) {
-					System.out.println(e);
+					VBatchManager.log.fatal(e);
 				}
 				catch ( IllegalAccessException e) {
-					System.out.println(e);
+					VBatchManager.log.fatal(e);
 				}
 				catch ( InstantiationException e) {
-					System.out.println(e);
+					VBatchManager.log.fatal(e);
 				}
 				catch ( InvocationTargetException e) {
-					System.out.println(e);
+					VBatchManager.log.fatal(e);
 				}
 				catch ( NoSuchMethodException e) {
-					System.out.println(e);
+					VBatchManager.log.fatal(e);
 				}
 				
 				
@@ -162,7 +156,6 @@ public class JobManager {
 			for (int stepNum = 0; stepNum < this.stepManagers.size(); stepNum++) {
 				// Get the step manager to start
 				StepManager stepToStart = (StepManager) this.stepManagers.get(stepNum);
-				//System.out.println("Starting step: " + stepNum);
 				stepToStart.start();
 				
 			}
@@ -171,7 +164,7 @@ public class JobManager {
 		}
 		else {
 			// TODO: Log: Error loading this job (job or steps missing)
-			System.out.println("Did not find job #: " + this.job_id);
+			VBatchManager.log.error(MessageFormat.format("Did not find job #: {0,number,long}", this.job_id));
 			
 		}
 		
@@ -263,7 +256,26 @@ public class JobManager {
 //		
 	}
 	
-	
+	public static void main(String[] args) {
+		System.out.println("log4j testing");
+		//BasicConfigurator.resetConfiguration();//enough for configuring log4j
+		//BasicConfigurator.configure();
+	      
+        //Logger.getRootLogger().setLevel(Level.TRACE); //changing log level
+
+		System.setProperty("logfile","SAMPLE1.log");
+		VBatchManager.log = Logger.getLogger("vBatch v0.1");
+		
+		//PropertyConfigurator.configure("/tmp/log4j.properties");
+		VBatchManager.log.error("Critical message, almost fatal");
+		VBatchManager.log.warn("Warnings, which may lead to system impact");
+		VBatchManager.log.info("Information");
+		VBatchManager.log.debug("Debugging information ");
+		VBatchManager.log.debug(MessageFormat.format("TEST {0,number,long}, string {1}", 1,"Chris"));
+
+		//log.info("hello world!");
+		System.out.println ("log4j done");
+	}
 	
 	
 }

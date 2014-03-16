@@ -7,7 +7,10 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.MessageFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Properties;
 
@@ -21,6 +24,14 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
+
+//file logging
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
+import org.apache.log4j.BasicConfigurator;
+import java.text.MessageFormat;
 
 import model.JobDefinition;
 
@@ -37,11 +48,39 @@ public class VBatchManager {
 	public static String BatchMode_Repeat = "BatchModeRepeat";  // Repeat an existing job (by batch_num)
 	public String batchMode = BatchMode_New;
 	
+	// file logging
+	private String log4jPropertiesFilePath = "";
+	private Properties vBatchProperties=null;
+	public static Logger log = null;
+	private String defaultLogFile = "";
+	
 	public VBatchManager() {
 		// Set up db connection
 		//factory = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT_NAME);
 		
+		loadvBatchProperties();
+		this.setLog4jPropertiesFilePath(this.getvBatchProperties().getProperty("vbatch.log4jproperties"));
 		this.em = this.createEntityManager();
+	}
+	
+	/**
+	 * Set log4j logger - log
+	 * use MessageFormat object to create the string message
+	 * @param job_id
+	 */
+	private void setLogging(long job_id){
+		// build the run logfile based on job id and timestamp
+		this.defaultLogFile = MessageFormat.format("vbatch_{0,number,long}_{1}.log", job_id, new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()));
+		
+		// set system properties used in log4j logfile Filename
+		System.setProperty("logfile",defaultLogFile);
+
+		// log4j setup - assign log4j properties file from vbatch.ini
+		PropertyConfigurator.configure(this.getLog4jPropertiesFilePath());
+		
+		// start the logging
+		log = Logger.getLogger("vBatch v0.1");	
+		log.debug(MessageFormat.format("JOB ID: {0,number,long}",job_id));
 	}
 	
 	/**
@@ -54,6 +93,7 @@ public class VBatchManager {
 		// Make sure we have all necessary configuration information for each job,
 		// 
 		for (Integer job_id : job_ids) {
+			setLogging(job_id);
 			JobManager job_manager = new JobManager(this, job_id);
 			// Tell the job manager whether new or existing job is being run
 			job_manager.batchMode = this.batchMode;  
@@ -61,13 +101,26 @@ public class VBatchManager {
 		}
 	}
 
+	public String getLog4jPropertiesFilePath() {
+		return log4jPropertiesFilePath;
+	}
+
+	public void setLog4jPropertiesFilePath(String log4jPropertiesFilePath) {
+		this.log4jPropertiesFilePath = log4jPropertiesFilePath;
+	}
+	
+	public Properties getvBatchProperties() {
+		return vBatchProperties;
+	}
+
+	public void setvBatchProperties(Properties vBatchProperties) {
+		this.vBatchProperties = vBatchProperties;
+	}
+	
 	/**
-	 * Create a JPA entity manager, overriding the db_connection, user, and password
-	 * with settings from the config/vbatch.ini file
+	 * load java properties from vbatch.ini and set the local class variable
 	 */
-	private EntityManager createEntityManager() {
-		// Settings to read from ini file
-		String db_connect_string, user, password;
+	private void loadvBatchProperties(){
 		
 		// Load JPA connection settings from ini file
 		String db_connect_string_file_path = "config/vbatch.ini";
@@ -88,19 +141,31 @@ public class VBatchManager {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-    	
-		// Load individual properties
-		db_connect_string = prop.getProperty("vbatch.db");
+		
+		this.setvBatchProperties(prop);
+	}
+	
+	/**
+	 * Create a JPA entity manager, overriding the db_connection, user, and password
+	 * with settings from the config/vbatch.ini file
+	 */
+	private EntityManager createEntityManager() {
+		
+		// Settings to read from ini file
+		String db_connect_string, user, password;
+		
+		// Load vBatch DB properties
+		db_connect_string = this.getvBatchProperties().getProperty("vbatch.db");
 		if (db_connect_string == "") {
 			System.out.println("ERROR: could not read parameter from config/vbatch.ini : vbatch.db");
 			System.exit(1);
 		}
-		user = prop.getProperty("vbatch.user");
+		user = this.getvBatchProperties().getProperty("vbatch.user");
 		if (user == "") {
 			System.out.println("ERROR: could not read parameter from config/vbatch.ini : vbatch.user");
 			System.exit(1);
 		}
-		password = prop.getProperty("vbatch.password");
+		password = this.getvBatchProperties().getProperty("vbatch.password");
 		if (password == "") {
 			System.out.println("ERROR: could not read parameter from config/vbatch.ini : vbatch.password");
 			System.exit(1);
@@ -113,8 +178,8 @@ public class VBatchManager {
 		//properties.put("javax.persistence.jdbc.driver", "oracle.jdbc.OracleDriver");
 		
 		
-		this.factory = Persistence.createEntityManagerFactory("vbatch", properties);
-		EntityManager em = this.factory.createEntityManager();
+		factory = Persistence.createEntityManagerFactory("vbatch", properties);
+		EntityManager em = factory.createEntityManager();
 		
 		return em;
 	}
@@ -301,4 +366,5 @@ public class VBatchManager {
 			ex.printStackTrace();
 		}
 	}
+
 }

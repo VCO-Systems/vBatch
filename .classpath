@@ -13,7 +13,7 @@
 			<attribute name="owner.project.facets" value="java"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/log4j-api-2.0-rc1.jar"/>
-	<classpathentry kind="lib" path="lib/log4j-core-2.0-rc1.jar"/>
+	<classpathentry kind="lib" path="lib/log4j-1.2.17.jar"/>
+	<classpathentry kind="lib" path="/home/vco/dev/workspaces/eclipse_workspace/vBatch/config"/>
 	<classpathentry kind="output" path="build/classes"/>
 </classpath>

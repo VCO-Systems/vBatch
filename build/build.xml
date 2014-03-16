@@ -29,6 +29,7 @@
             <zipfileset excludes="META-INF/*.SF" src="/home/vco/dev/workspaces/eclipse_workspace/vBatch/lib/commons-lang-2.6.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="/home/vco/dev/workspaces/eclipse_workspace/vBatch/lib/super-csv-2.1.0.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="/home/vco/dev/workspaces/eclipse_workspace/vBatch/lib/super-csv-2.1.0-javadoc.jar"/>
+	    <zipfileset excludes="META-INF/*.SF" src="/home/vco/dev/workspaces/eclipse_workspace/vBatch/lib/log4j-1.2.17.jar"/>
         </jar>
     </target>
 	
