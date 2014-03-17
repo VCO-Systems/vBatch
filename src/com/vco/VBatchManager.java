@@ -70,7 +70,8 @@ public class VBatchManager {
 	 */
 	private void setLogging(long job_id){
 		// build the run logfile based on job id and timestamp
-		this.defaultLogFile = MessageFormat.format("vbatch_{0,number,long}_{1}.log", job_id, new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()));
+		Date today = new Date();
+		this.defaultLogFile = MessageFormat.format("vbatch_j{0}_d{1}_t{2}.log", job_id+"", new SimpleDateFormat("yyyyMMdd").format(today), new SimpleDateFormat("HHmmss").format(today));
 		
 		// set system properties used in log4j logfile Filename
 		System.setProperty("logfile",defaultLogFile);
@@ -80,7 +81,7 @@ public class VBatchManager {
 		
 		// start the logging
 		log = Logger.getLogger("vBatch v0.1");	
-		log.debug(MessageFormat.format("JOB ID: {0,number,long}",job_id));
+		log.debug(MessageFormat.format("JOB ID: {0}",job_id));
 	}
 	
 	/**

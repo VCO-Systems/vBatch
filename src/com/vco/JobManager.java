@@ -55,7 +55,7 @@ public class JobManager {
 		this.batch_manager = batch_manager;
 		this.db = batch_manager.em;
 		this.job_id = job_id.longValue();
-		VBatchManager.log.debug(MessageFormat.format("JOB ID: {0,number,long} JOB DEF: {1} START", this.job_id, this.job_definition));
+		VBatchManager.log.debug(MessageFormat.format("JOB ID: {0} JOB DEF: {1} START", this.job_id, this.job_definition));
 	}
 	
 	
