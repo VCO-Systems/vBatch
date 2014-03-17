@@ -3,3 +3,4 @@ output/*.csv
 build/staging/*
 build/classes
 build/*.zip
+logs/*
