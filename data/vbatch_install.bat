@@ -10,7 +10,7 @@ echo "Errors encountered during execution.  Exited with status: %errorlevel%"
 goto :endofscript
 
 :jobs
-call sqlplus vbatch/vbatch @sample_data/config_sample.sql
+call sqlplus vbatch/vbatch @sample_data/ohl_jobs.sql
 if %ERRORLEVEL% == 0 goto :prod_trkg
 echo "Errors encountered during execution.  Exited with status: %errorlevel%"
 goto :endofscript
