@@ -185,22 +185,6 @@ public class VBatchManager {
 		return em;
 	}
 	
-	public void init_old() {
-		// Set up db connection
-		factory = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT_NAME);
-		this.em = factory.createEntityManager();
-		this.em.getTransaction().begin();
-		// Create new job_master record
-		JobDefinition job = new JobDefinition();
-		job.setShortDesc("Dummy Job");
-		job.setLongDesc("Simple test job.");
-		this.em.persist(job);
-		this.em.getTransaction().commit();
-		this.em.close();
-		factory.close();
-	}
-	
-	
 	
 	public void getRequestedJobs() {
 		
@@ -300,6 +284,7 @@ public class VBatchManager {
 				System.out.println("ERROR:  Did not find all required settings in db connection file");
 				return;
 			}
+			
 			// -j xx[,xx,xx]
 			// runs one more more jobs with specified job id
 			if (cmd.hasOption("j")) {

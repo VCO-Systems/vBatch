@@ -49,7 +49,6 @@ public class JobManager {
 	
 
 	public String batchMode;  // New or Repeat job?
-
 	
 	public  JobManager(VBatchManager batch_manager, Integer job_id) {
 		this.batch_manager = batch_manager;
@@ -72,7 +71,9 @@ public class JobManager {
 		else if (this.batchMode == VBatchManager.BatchMode_Repeat) {  // re-run by batch_num
 			// Look up the job_definition by batch_num
 			TypedQuery<BatchLog> qryPreviousBatch = this.db.createQuery(
-					"SELECT log from BatchLog log WHERE log.batchNum = :batchNumber order by log.id desc", BatchLog.class);
+					"SELECT log from BatchLog log "
+					+ "WHERE log.batchNum = :batchNumber "
+					+ "order by log.id desc", BatchLog.class);
 			List<BatchLog> lstBatches = qryPreviousBatch
 		    		.setParameter("batchNumber", this.job_id)
 		    		.getResultList();
@@ -192,25 +193,74 @@ public class JobManager {
 	 * Log the start of this job to the batchLogDtl table
 	 */
 	private void logStart() {
+		// Before opening transaction for batch_log, do any queries
+		// necessary to look up batch_num and batch_seq_nbr
 		
+		BigDecimal tempBatchNum = new BigDecimal(-1);
+		BigDecimal tempBatchSeqNbr = new BigDecimal(-1);
+		// If this is a new run for this job, set batch_num to batch_log_id,
+		// and batch_seq_nbr to 1
+		if (this.batchMode == VBatchManager.BatchMode_New) {
+//					this.batch_log.setBatchNum(new BigDecimal(this.batch_log.getId()));
+			//tempBatchNum = new BigDecimal(this.job_id);
+			//this.batch_log.setBatchSeqNbr(new BigDecimal(1));
+			tempBatchSeqNbr = new BigDecimal(1);
+		}
+		// Look up last run of this batch, to get batch/seq nbr for this run.
+		if (this.batchMode == VBatchManager.BatchMode_Repeat) {
+			int highestBatchSeqNbr = 0;
+			BatchLog latestRun = null;
+			TypedQuery<BatchLog> qryRunsOfThisBatch = this.db.createQuery(
+					"SELECT log from BatchLog log WHERE log.batchNum = :bNumber order by log.batchSeqNbr desc", BatchLog.class);
+			List<BatchLog> lstRunsOfThisBatch = qryRunsOfThisBatch
+		    		.setParameter("bNumber", this.job_id)
+		    		.getResultList();
+			// If there's at least one previous run with this batch number
+			if (lstRunsOfThisBatch.size() > 0 ) {
+				// Get the batch_seq_nbr or the latest run
+				latestRun = lstRunsOfThisBatch.get(0);
+				highestBatchSeqNbr = latestRun.getBatchSeqNbr().intValue();
+			}
+			else {  // Abort this job: no previous runs with this batch number exist
+				System.out.println("VBatch error:  No previous runs found for batch_id: " + this.job_id);
+				
+			}
+//					this.batch_log.setBatchNum(new BigDecimal(this.batch_log.getId()));
+//					this.batch_log.setBatchSeqNbr(new BigDecimal(highestBatchSeqNbr+1));
+			tempBatchNum = latestRun.getBatchNum();
+			tempBatchSeqNbr = new BigDecimal(highestBatchSeqNbr+1);
+ 		}
+				
+				
 		this.db.getTransaction().begin();
 		
 		// Create the main BatchLog entry
-		this.batch_log = new BatchLog();;
+		this.batch_log = new BatchLog();
 		this.batch_log.setJobDefinition(this.job_definition);
-		this.batch_log.setBatchSeqNbr(new BigDecimal(1));
 		this.batch_log.setStatus("Started");
 		this.batch_log.setStartDt(new Date());
 		
 		this.db.persist(this.batch_log);
+		
 		// batch_num must = batch_log.id, but we have to wait until 
 		// db.persist is called so ID is populated from sequence.
 		// This means we have to write this record out twice, would
 		// but don't know a better way currently.
-		this.batch_log.setBatchNum(new BigDecimal(this.batch_log.getId()));
+		if (this.batchMode == VBatchManager.BatchMode_New) {
+			this.batch_log.setBatchNum(new BigDecimal(this.batch_log.getId()));
+		}
+		else {
+			this.batch_log.setBatchNum(tempBatchNum);
+		}
+		
+		this.batch_log.setBatchSeqNbr(tempBatchSeqNbr);
+		
 		
 		String logMsg = "";
 		logMsg += "Batch " + this.batch_log.getBatchNum();
+		if (tempBatchSeqNbr != new BigDecimal(-1) ) {
+			logMsg += " (seq " + tempBatchSeqNbr + ")";
+		}
 		logMsg += ", Job " + this.job_definition.getId();
 		logMsg += " (" + this.job_definition.getLongDesc() + ")";
 		this.batch_log.setLongDesc(logMsg);

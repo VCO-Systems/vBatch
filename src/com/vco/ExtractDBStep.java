@@ -434,7 +434,6 @@ public class ExtractDBStep extends StepManager {
 		while (m.find()) {
 			whereTokenCount += 1;
 		}
-		System.out.println("WHERE TOKEN COUNT: " + whereTokenCount);
 		// Replace all /* where */ tokens with the startClause
 		if (whereTokenCount > 0 ) {
 			this.raw_sql = raw_sql.replaceAll("/\\* where \\*/", " AND " + tokenReplacement);
