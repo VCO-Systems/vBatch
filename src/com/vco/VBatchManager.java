@@ -36,6 +36,8 @@ import java.text.MessageFormat;
 import model.JobDefinition;
 
 public class VBatchManager {
+	
+	public static String version = "vBatch v0.2.1";
 
 	private static final String PERSISTENCE_UNIT_NAME = "vbatch";
 	private static EntityManagerFactory factory;
@@ -224,7 +226,7 @@ public class VBatchManager {
 			HelpFormatter help = new HelpFormatter();
 			if (cmd.hasOption("h")) {
 			    
-			    help.printHelp("vBatch v0.2", options );
+			    help.printHelp(VBatchManager.version, options );
 			}
 			
 			/**
@@ -235,17 +237,17 @@ public class VBatchManager {
 			
 			if ( !cmd.hasOption("j")  && !cmd.hasOption("b") ) {
 				System.out.println("vbatch Error: Either -j or -b option must be specified.");
-				help.printHelp("vBatch v0.2", options );
+				help.printHelp(VBatchManager.version, options );
 				System.exit(1);
 			}
 			if ( cmd.hasOption("j") && !cmd.hasOption("db")) {
 				System.out.println("vbatch Error: When '-j' option is used, '-db' option is required.");
-				help.printHelp("vBatch v0.2", options );
+				help.printHelp(VBatchManager.version, options );
 				System.exit(1);
 			}
 			if ( cmd.hasOption("b") && !cmd.hasOption("db")) {
 				System.out.println("vbatch Error: When '-b' option is used, '-db' option is required.");
-				help.printHelp("vBatch v0.2", options );
+				help.printHelp(VBatchManager.version, options );
 				System.exit(1);
 			}
 			
