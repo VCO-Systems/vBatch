@@ -27,6 +27,9 @@ import model.Step;
 
 public class GenerateCSVStep extends StepManager {
 
+	// Step configuration
+	public Boolean quoteAllOutputFields = false;
+	 
 	/**
 	 * This step uses the optional mode_special flag
 	 * to indicate that it does not output data for
@@ -320,11 +323,13 @@ public class GenerateCSVStep extends StepManager {
 		String retval = "";
 		for (int i=0; i < row.size(); i++) {
 			String fieldVal = (String) row.get(i);
-			retval += "\"";
+			if (this.quoteAllOutputFields)
+				retval += "\"";
 			if (row.get(i) != null) {
 				retval += row.get(i);
 			}
-			retval += "\"";
+			if (this.quoteAllOutputFields)
+				retval += "\"";
 			// Add comma after field (unless last field)
 			String comma = (i < row.size() - 1) ? "," : "";
 			retval += comma;
