@@ -169,7 +169,7 @@ public class ExtractDBStep extends StepManager {
 				// Get total_rows from the previous run (if set in record)
 				BigDecimal ll = lastRun.getNumRecords();
 				int lastRunNumRecords = -1;
-				if (lastRunNumRecords != -1) {
+				if (ll != new BigDecimal(-1)) {
 					lastRunNumRecords = ll.intValue();
 				}
 				
@@ -221,7 +221,6 @@ public class ExtractDBStep extends StepManager {
 			int finalRowNum = 0;  // this will be the final row # for this job
 			try {
 				//System.out.println("\tAbout to query " + this.max_rec + " records");
-				System.out.println("[Extract] REWRITTEN QUERY: " + this.raw_sql);
 				rs = this.sqlQuery(this.raw_sql, commit_freq, this.max_rec);  // limit query to max_rec rows
 				
 				rs.last();
@@ -484,7 +483,7 @@ public class ExtractDBStep extends StepManager {
 	private String convertDateFieldToString(ResultSet rs, String columnName) throws SQLException,
 			ParseException {
 		SimpleDateFormat incomingDateFormat  = new SimpleDateFormat("y-MM-d HH:mm:ss.S");
-		SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y k:mm:ss");
+		SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y H:mm:ss");
 		String ds = rs.getString(columnName);
 		//System.out.println("\t[Extract] Original String dt: " + ds);
 		Date dt = incomingDateFormat.parse(ds);
@@ -598,7 +597,7 @@ public class ExtractDBStep extends StepManager {
 			if (maxRecords > 0) {
 				statement.setMaxRows(maxRecords);
 			}
-			
+			System.out.println("Executing query: " + this.raw_sql);
 			// execute select SQL statement
 			rs = statement.executeQuery(sql);
 			

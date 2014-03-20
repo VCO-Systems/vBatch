@@ -224,7 +224,7 @@ public class VBatchManager {
 			HelpFormatter help = new HelpFormatter();
 			if (cmd.hasOption("h")) {
 			    
-			    help.printHelp("vBatch v0.1", options );
+			    help.printHelp("vBatch v0.2", options );
 			}
 			
 			/**
@@ -235,17 +235,17 @@ public class VBatchManager {
 			
 			if ( !cmd.hasOption("j")  && !cmd.hasOption("b") ) {
 				System.out.println("vbatch Error: Either -j or -b option must be specified.");
-				help.printHelp("vBatch v0.1", options );
+				help.printHelp("vBatch v0.2", options );
 				System.exit(1);
 			}
 			if ( cmd.hasOption("j") && !cmd.hasOption("db")) {
 				System.out.println("vbatch Error: When '-j' option is used, '-db' option is required.");
-				help.printHelp("vBatch v0.1", options );
+				help.printHelp("vBatch v0.2", options );
 				System.exit(1);
 			}
 			if ( cmd.hasOption("b") && !cmd.hasOption("db")) {
 				System.out.println("vbatch Error: When '-b' option is used, '-db' option is required.");
-				help.printHelp("vBatch v0.1", options );
+				help.printHelp("vBatch v0.2", options );
 				System.exit(1);
 			}
 			
