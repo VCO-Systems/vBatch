@@ -36,12 +36,16 @@
 	<target name="copy_ini_files">
 		<copy todir="${staging}/config">
 		    <fileset dir="../data/ini_files" />
+			<fileset dir="../config/" casesensitive="yes">
+              <include name="log4j.properties"/>
+            </fileset>
 		</copy>
 		<copy todir="${staging}/">
 			<fileset dir="../build/" casesensitive="yes">
 			  <include name="vbatch.sh"/>
 			  <include name="vbatch.bat"/>
 			</fileset>
+			
 		</copy>
 	</target>
 	
