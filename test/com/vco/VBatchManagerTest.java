@@ -29,13 +29,7 @@ public class VBatchManagerTest {
 		System.out.println("Setup before VBatchManager test.");
 	}
 
-	/**
-	 * @throws java.lang.Exception
-	 */
-	@After
-	public void tearDown() throws Exception {
-		System.out.println("Teardown after VBatchManager test.");
-	}
+	
 
 	/**
 	 * Test method for {@link com.vco.VBatchManager#main(java.lang.String[])}.
@@ -61,6 +55,14 @@ public class VBatchManagerTest {
 		if (!foundExpectedString) {
 			fail("vbatch -h did not display the command usage");
 		}
+	}
+	
+	/**
+	 * @throws java.lang.Exception
+	 */
+	@After
+	public void tearDown() throws Exception {
+		System.out.println("Teardown after VBatchManager test.");
 	}
 
 }
