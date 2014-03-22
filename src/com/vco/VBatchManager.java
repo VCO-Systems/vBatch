@@ -31,11 +31,14 @@ import org.apache.log4j.PropertyConfigurator;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.apache.log4j.BasicConfigurator;
+
 import java.text.MessageFormat;
 
 import model.JobDefinition;
 
 public class VBatchManager {
+	
+	public static final String vbatch_version = "vBatch v0.3";
 
 	private static final String PERSISTENCE_UNIT_NAME = "vbatch";
 	private static EntityManagerFactory factory;
@@ -80,7 +83,7 @@ public class VBatchManager {
 		PropertyConfigurator.configure(this.getLog4jPropertiesFilePath());
 		
 		// start the logging
-		log = Logger.getLogger("vBatch v0.1");	
+		log = Logger.getLogger(vbatch_version);	
 		log.debug(MessageFormat.format("JOB ID: {0}",job_id));
 	}
 	
@@ -224,7 +227,7 @@ public class VBatchManager {
 			HelpFormatter help = new HelpFormatter();
 			if (cmd.hasOption("h")) {
 			    
-			    help.printHelp("vBatch v0.1", options );
+			    help.printHelp(vbatch_version, options );
 			}
 			
 			/**
@@ -233,123 +236,123 @@ public class VBatchManager {
 			 * 
 			 */
 			
-			if ( !cmd.hasOption("j")  && !cmd.hasOption("b") ) {
+			else if ( !cmd.hasOption("j")  && !cmd.hasOption("b") ) {
 				System.out.println("vbatch Error: Either -j or -b option must be specified.");
-				help.printHelp("vBatch v0.1", options );
-				System.exit(1);
+				help.printHelp(vbatch_version, options );
 			}
-			if ( cmd.hasOption("j") && !cmd.hasOption("db")) {
+			else if ( cmd.hasOption("j") && !cmd.hasOption("db")) {
 				System.out.println("vbatch Error: When '-j' option is used, '-db' option is required.");
-				help.printHelp("vBatch v0.1", options );
-				System.exit(1);
+				help.printHelp(vbatch_version, options );
 			}
-			if ( cmd.hasOption("b") && !cmd.hasOption("db")) {
+			else if ( cmd.hasOption("b") && !cmd.hasOption("db")) {
 				System.out.println("vbatch Error: When '-b' option is used, '-db' option is required.");
-				help.printHelp("vBatch v0.1", options );
-				System.exit(1);
+				help.printHelp(vbatch_version, options );
 			}
 			
-			/**
-			 * Now process the valid vbatch commands
-			 * 
-			 */
-			
-			if (cmd.hasOption("db")) {
-				// Load properties file
-				String db_connect_string_file_path = cmd.getOptionValue("db");
-				InputStream inp = null;
-				try {
-					inp = new FileInputStream(db_connect_string_file_path);
-				}
-				catch (FileNotFoundException e) {
-					System.out.println("ERROR: DB settings file not found: " + db_connect_string_file_path);
-					System.exit(1);
-				}
-				
-				Properties prop = new Properties();
-				prop.load(inp);
-		    	
-				// Load individual properties
-				source_db_connection.put("db", prop.getProperty("db"));
-				source_db_connection.put("user", prop.getProperty("user"));
-				source_db_connection.put("password", prop.getProperty("password"));
-				
-				
-		    	if (man == null) {
-		    		
-		    	}
-			
-			}
 			else {
-				System.out.println("ERROR:  Did not find all required settings in db connection file");
-				return;
+				/**
+				 * Now process the valid vbatch commands
+				 * 
+				 */
+				
+				if (cmd.hasOption("db")) {
+					// Load properties file
+					String db_connect_string_file_path = cmd.getOptionValue("db");
+					InputStream inp = null;
+					try {
+						inp = new FileInputStream(db_connect_string_file_path);
+					}
+					catch (FileNotFoundException e) {
+//						System.out.println("ERROR: DB settings file not found: " + db_connect_string_file_path);
+						throw new Exception("vbatch ERROR: DB settings file not found: " + db_connect_string_file_path);
+					}
+					
+					Properties prop = new Properties();
+					prop.load(inp);
+			    	
+					// Load individual properties
+					source_db_connection.put("db", prop.getProperty("db"));
+					source_db_connection.put("user", prop.getProperty("user"));
+					source_db_connection.put("password", prop.getProperty("password"));
+					
+					
+			    	if (man == null) {
+			    		
+			    	}
+				
+				}
+				else {
+					System.out.println("ERROR:  Did not find all required settings in db connection file");
+					return;
+				}
+				
+				// -j xx[,xx,xx]
+				// runs one more more jobs with specified job id
+				if (cmd.hasOption("j")) {
+					// System.out.println("in the -t block");
+					String[] requested_jobs_ids = cmd.getOptionValue("j").split(",");
+					ArrayList<Integer> job_ids = new ArrayList<Integer>();
+					
+					// For each requested job, create and start a batch manager
+					for (String job_id_str : requested_jobs_ids) {
+						// Cast the job_id as int
+						job_ids.add(Integer.parseInt(job_id_str));
+					}
+					
+					// If no jobs are specified, exit with a polite error msg
+					if (job_ids.size() == 0) {
+						throw new Exception("ERROR: must specify at least one job id (example: vbatch -j 12)");
+					}
+					
+					// TODO: Verify that each requested job_id exists
+					// TODO: If any do not exist, report it
+					
+					// Start a new VBatchManger
+					if (man == null) 
+						man = new VBatchManager();
+				    man.batchMode = VBatchManager.BatchMode_New;
+					man.init(job_ids);
+					
+				}
+				
+				// Handle -b (re-run existing batch)
+				if (cmd.hasOption("b")) {
+					if (cmd.hasOption("b"))
+						throw new Exception("Forcibly aborting -b, to test exception handling");
+					// TODO:  Get ready to run the -b job
+					String[] requested_jobs_ids = cmd.getOptionValue("b").split(",");
+					ArrayList<Integer> job_ids = new ArrayList<Integer>();
+					
+					// For each requested job, create and start a batch manager
+					for (String job_id_str : requested_jobs_ids) {
+						// Cast the job_id as int
+						job_ids.add(Integer.parseInt(job_id_str));
+					}
+					
+					// If no jobs are specified, exit with a polite error msg
+					if (job_ids.size() == 0) {
+						throw new Exception("vbatch Eror: must specify at least one batch_num (example: vbatch -b 12 {,13,14})");
+					}
+					// Kick off the batch
+					if (man == null) 
+						man = new VBatchManager();
+				    man.batchMode = VBatchManager.BatchMode_Repeat;
+					man.init(job_ids);
+					
+				}
 			}
+				
 			
-			// -j xx[,xx,xx]
-			// runs one more more jobs with specified job id
-			if (cmd.hasOption("j")) {
-				// System.out.println("in the -t block");
-				String[] requested_jobs_ids = cmd.getOptionValue("j").split(",");
-				ArrayList<Integer> job_ids = new ArrayList<Integer>();
-				
-				// For each requested job, create and start a batch manager
-				for (String job_id_str : requested_jobs_ids) {
-					// Cast the job_id as int
-					job_ids.add(Integer.parseInt(job_id_str));
-				}
-				
-				// If no jobs are specified, exit with a polite error msg
-				if (job_ids.size() == 0) {
-					System.out.println("ERROR: must specify at least one job id (example: vbatch -j 12)");
-					System.exit(1);
-				}
-				
-				// TODO: Verify that each requested job_id exists
-				// TODO: If any do not exist, report it
-				
-				// Start a new VBatchManger
-				if (man == null) 
-					man = new VBatchManager();
-			    man.batchMode = VBatchManager.BatchMode_New;
-				man.init(job_ids);
-				System.exit(0);
-			}
-			
-			// Handle -b (re-run existing batch)
-			if (cmd.hasOption("b")) {
-				// TODO:  Get ready to run the -b job
-				String[] requested_jobs_ids = cmd.getOptionValue("b").split(",");
-				ArrayList<Integer> job_ids = new ArrayList<Integer>();
-				
-				// For each requested job, create and start a batch manager
-				for (String job_id_str : requested_jobs_ids) {
-					// Cast the job_id as int
-					job_ids.add(Integer.parseInt(job_id_str));
-				}
-				
-				// If no jobs are specified, exit with a polite error msg
-				if (job_ids.size() == 0) {
-					System.out.println("vbatch Eror: must specify at least one batch_num (example: vbatch -b 12 {,13,14})");
-					System.exit(1);
-				}
-				// Kick off the batch
-				if (man == null) 
-					man = new VBatchManager();
-			    man.batchMode = VBatchManager.BatchMode_Repeat;
-				man.init(job_ids);
-				System.exit(0);
-			}
-			
-		}
+		} // end: outer try/catch
 		catch (ParseException e) {
-
 		    System.err.println(e);
-		    HelpFormatter formatter = new HelpFormatter();
-		    formatter.printHelp("PROJECT_NAME", options );
 		} 
 		catch (IOException ex) {
 			System.out.println("*******Canonical path****** "+ ex.getClass().getCanonicalName());
 			ex.printStackTrace();
+		}
+		catch (Exception e) {
+			System.out.println(e.getMessage());
 		}
 	}
 

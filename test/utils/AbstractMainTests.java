@@ -15,7 +15,7 @@ public abstract class AbstractMainTests {
         System.setErr(AbstractMainTests.ERR);
     }
     public static String[] executeMain(String className, String[] args) {
-        // First, change the standard and error output streams
+    	// First, change the standard and error output streams
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         PrintStream tempOutput = new PrintStream(bos, true);
         System.setOut(tempOutput); 
@@ -41,7 +41,7 @@ public abstract class AbstractMainTests {
             try {
                 bos.close();
                 tempOutput.close();  // Close streams
-            } catch (IOException e) { }
+            } catch (IOException e) { e.printStackTrace(); }
         }
         return result.toArray(new String[0]); // Convert from list to an array
     }
@@ -51,7 +51,7 @@ public abstract class AbstractMainTests {
            Object app = clazz.newInstance();
            Method m = app.getClass().
                getMethod("main", (new String[0]).getClass());
-
+           
            // Make sure it is the static void main(String[]) method
            if ((m.getReturnType() != Void.TYPE) || 
                (!Modifier.isStatic(m.getModifiers()))) {
