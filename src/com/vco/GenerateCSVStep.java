@@ -364,11 +364,19 @@ public class GenerateCSVStep extends StepManager {
 				+ this.step_record.getType() + " : " + this.step_record.getLongDesc() 
 				+ "]";
 		this.log_dtl.setLongDesc(msg);
+		// TODO: log the steps xref id
 		this.log_dtl.setStepsId(new BigDecimal(this.step_record.getId()));
 		this.log_dtl.setStepsShortDesc(this.step_record.getShortDesc());
 		this.log_dtl.setStepType(this.step_record.getType());
 		this.log_dtl.setStartDt(new Date());
 		this.log_dtl.setStatus("Started");
+		
+		// Log job settings used to run this job
+		this.log_dtl.setClassPath(this.step_record.getClassPath());
+		this.log_dtl.setExtractMaxRecsPerFile(this.step_record.getExtractMaxRecPerFile());
+		this.log_dtl.setOutputFileFormat(this.step_record.getOutputFileFormat());
+		this.log_dtl.setOutputFilenamePrefix(this.step_record.getOutputFilenamePrefix());
+		this.log_dtl.setOutputFilenameSuffix(this.step_record.getOutputFilenamePostfix());
 		
 		// Commit log entry
 		this.job_manager.db.persist(this.log_dtl);

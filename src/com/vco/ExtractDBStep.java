@@ -551,6 +551,14 @@ public class ExtractDBStep extends StepManager {
 		this.log_dtl.setStartDt(new Date());
 		this.log_dtl.setStatus("Started");
 		
+		// Log the job settings used to run this job
+		this.log_dtl.setExtractSql(this.step_record.getExtractSql());
+		this.log_dtl.setExtractMaxRecs(this.step_record.getExtractMaxRec());
+		this.log_dtl.setExtractCommitFreq(this.step_record.getExtractCommitFreq());
+		this.log_dtl.setClassPath(this.step_record.getClassPath());
+		// TODO:  job steps xref id
+		this.log_dtl.setStepsId(new BigDecimal(this.step_record.getId()));
+		
 		// Commit log entry
 		this.job_manager.db.persist(this.log_dtl);
 		this.job_manager.db.getTransaction().commit();

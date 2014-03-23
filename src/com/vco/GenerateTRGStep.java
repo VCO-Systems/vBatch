@@ -113,6 +113,9 @@ public class GenerateTRGStep extends StepManager {
 		this.log_dtl.setStartDt(new Date());
 		this.log_dtl.setStatus("Started");
 		
+		// Log job settings used to run this job
+		this.log_dtl.setClassPath(this.step_record.getClassPath());
+		
 		// Commit log entry
 		this.job_manager.db.persist(this.log_dtl);
 		this.job_manager.db.getTransaction().commit();
