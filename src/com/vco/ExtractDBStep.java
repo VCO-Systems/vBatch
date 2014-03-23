@@ -1,7 +1,6 @@
 package com.vco;
 
 import java.lang.reflect.Array;
-import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -25,6 +24,7 @@ import javax.persistence.TypedQuery;
 
 import model.BatchLog;
 import model.BatchLogDtl;
+import model.JobStepsXref;
 import model.Step;
 
 public class ExtractDBStep extends StepManager {
@@ -39,16 +39,12 @@ public class ExtractDBStep extends StepManager {
 	// vars specific to this type of step
 	private int max_rec = 5000;  // default max_records for extraction, if none specified
 	
-	public ExtractDBStep(JobManager jm, Step step_record) {
+	public ExtractDBStep(JobManager jm, JobStepsXref jobStepXref) {
 		this.job_manager = jm;
-		this.step_record = step_record;
+		this.jobStepXref = jobStepXref;
 		
 		// Use hard-coded default for max_rec, unless one is defined in the step config table
-		int max_rec = this.step_record.getExtractMaxRec().intValue();
-		if (max_rec > 0 ) {
-			this.max_rec = this.step_record.getExtractMaxRec().intValue();
-		}
-		
+		int max_rec = this.jobStepXref.getStep().getExtractMaxRec().intValue();
 	}
 	
 	/**
@@ -71,9 +67,9 @@ public class ExtractDBStep extends StepManager {
 		// Log the start of this step
 		this.logStart();
 		// Get the raw sql to run
-		this.raw_sql = this.step_record.getExtractSql();
+		this.raw_sql = this.jobStepXref.getStep().getExtractSql();
 		String whereClause = new String();
-		int commit_freq = this.step_record.getExtractCommitFreq().intValue();
+		int commit_freq = this.jobStepXref.getStep().getExtractCommitFreq().intValue();
 		ResultSet rs = null;
 		// For an extract run, these values must be set
 		String previousRunMinOk1, previousRunMaxOk1;
@@ -117,7 +113,7 @@ public class ExtractDBStep extends StepManager {
 			previousRunMinOk1 = this.convertDateStringToAnotherDateString(previousRunMinOk1, "MM/d/yy k:mm:ss", "MM/dd/yyyy k:mm:ss");
 			previousRunMaxOk1 = extract_log.getMaxOk1();
 			previousRunMaxOk1 = this.convertDateStringToAnotherDateString(previousRunMaxOk1, "MM/d/yy k:mm:ss", "MM/dd/yyyy k:mm:ss");
-			BigDecimal numRecs = extract_log.getNumRecords();
+			Long numRecs = extract_log.getNumRecords();
 			totalRows = numRecs.intValue();
 			
 			// Add minOk1 and maxOk1 to startClause to the startClause
@@ -152,7 +148,7 @@ public class ExtractDBStep extends StepManager {
 		        + "order by dtl.id desc", BatchLogDtl.class);  // most recent match comes first
 		    List<BatchLogDtl> dtls = query
 		    		.setParameter("stepType", "Extract")
-		    		.setParameter("stepId", (int) this.step_record.getId())
+		    		.setParameter("stepId", (int) this.jobStepXref.getId())
 		    		.getResultList();
 			
 			// dtls.size()  is the number of previous executions of this step from log_dtl
@@ -167,7 +163,7 @@ public class ExtractDBStep extends StepManager {
 				BatchLogDtl lastRun = dtls.get(0);  // Most recent successful run of the same type
 				
 				// Get total_rows from the previous run (if set in record)
-				BigDecimal ll = lastRun.getNumRecords();
+				Long ll = lastRun.getNumRecords();
 				int lastRunNumRecords = -1;
 				if (lastRunNumRecords != -1) {
 					lastRunNumRecords = ll.intValue();
@@ -301,7 +297,7 @@ public class ExtractDBStep extends StepManager {
 					this.job_manager.db.getTransaction().begin();
 					this.log_dtl.setMaxOk1(previousRowOK1Value);
 					this.log_dtl.setStatus("Completed");
-					this.log_dtl.setNumRecords(new BigDecimal(this.records_processed-1));
+					this.log_dtl.setNumRecords(this.records_processed-1);
 					this.job_manager.db.persist(this.log_dtl);
 					this.job_manager.db.getTransaction().commit();
 					break;
@@ -339,7 +335,7 @@ public class ExtractDBStep extends StepManager {
 					// add these rows to log_dtl.num_records
 					this.job_manager.db.getTransaction().begin();
 					//this.records_processed = rownum;
-					this.log_dtl.setNumRecords(new BigDecimal(this.records_processed));
+					this.log_dtl.setNumRecords(this.records_processed);
 					this.job_manager.db.persist(this.log_dtl);
 					this.job_manager.db.getTransaction().commit();
 					
@@ -360,7 +356,7 @@ public class ExtractDBStep extends StepManager {
 					this.log_dtl.setMaxOk1(lastRowOK1Value);
 					this.log_dtl.setEndDt(new Date());
 					this.log_dtl.setStatus("Completed");
-					this.log_dtl.setNumRecords(new BigDecimal(this.records_processed));
+					this.log_dtl.setNumRecords(this.records_processed);
 					this.job_manager.db.persist(this.log_dtl);
 					this.job_manager.db.getTransaction().commit();
 				}
@@ -542,13 +538,14 @@ public class ExtractDBStep extends StepManager {
 		this.log_dtl = new BatchLogDtl();
 		this.log_dtl.setBatchLog(this.job_manager.batch_log);
 		
-		String msg = "Step [" + this.step_record.getType() 
-				+ " : " + this.step_record.getShortDesc()
+		String msg = "Step [" + this.jobStepXref.getStep().getType() 
+				+ " : " + this.jobStepXref.getStep().getShortDesc()
 				+ "]";
 		this.log_dtl.setLongDesc(msg);
-		this.log_dtl.setStepsId(new BigDecimal(this.step_record.getId()));
-		this.log_dtl.setStepsShortDesc(this.step_record.getShortDesc());
-		this.log_dtl.setStepType(this.step_record.getType());
+		this.log_dtl.setStepsId(this.jobStepXref.getId());
+		this.log_dtl.setJobStepsXrefJobStepSeq(this.jobStepXref.getJobStepSeq());
+		this.log_dtl.setStepsShortDesc(this.jobStepXref.getStep().getShortDesc());
+		this.log_dtl.setStepType(this.jobStepXref.getStep().getType());
 		this.log_dtl.setStartDt(new Date());
 		this.log_dtl.setStatus("Started");
 		

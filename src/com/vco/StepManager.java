@@ -3,19 +3,20 @@ package com.vco;
 import java.util.ArrayList;
 import java.util.List;
 
+import model.JobStepsXref;
 import model.Step;
 
 public class StepManager implements IStepManager {
 
 	public JobManager job_manager;
-	public Step step_record;
+	public JobStepsXref jobStepXref;
 	
 	// State Management
 	protected boolean running = false;
 	protected boolean completed=false;
 	protected boolean failed = false;
-	protected int pages_processed = 0;
-	protected int records_processed = 0;
+	protected Long pages_processed = 0L;
+	protected Long records_processed = 0L;
 	
 	// Data
 	protected List<Object> dataPageOut = new ArrayList<Object>();

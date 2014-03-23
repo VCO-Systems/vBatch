@@ -2,7 +2,6 @@ package com.vco;
 
 import java.io.File;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -30,10 +29,10 @@ public class GenerateTRGStep extends StepManager {
 	// Logging
 	private BatchLogDtl log_dtl;
 	
-	public GenerateTRGStep(JobManager jm, Step step_record) {
+	public GenerateTRGStep(JobManager jm, JobStepsXref jobStepXref) {
 		System.out.println("\t[TRG] constructor");
 		this.job_manager = jm;
-		this.step_record = step_record;
+		this.jobStepXref = jobStepXref;
 		
 		// Intialize vars
 		this.csvFilenames = new ArrayList<String>();
@@ -103,13 +102,14 @@ public class GenerateTRGStep extends StepManager {
 		this.log_dtl = new BatchLogDtl();
 		this.log_dtl.setBatchLog(this.job_manager.batch_log);
 		
-		String msg = "Step [" + this.step_record.getType() 
-				+ " : " + this.step_record.getShortDesc()
+		String msg = "Step [" + this.jobStepXref.getStep().getType() 
+				+ " : " + this.jobStepXref.getStep().getShortDesc()
 				+ "]";
 		this.log_dtl.setLongDesc(msg);
-		this.log_dtl.setStepsId(new BigDecimal(this.step_record.getId()));
-		this.log_dtl.setStepsShortDesc(this.step_record.getShortDesc());
-		this.log_dtl.setStepType(this.step_record.getType());
+		this.log_dtl.setStepsId((Long)this.jobStepXref.getId());
+		this.log_dtl.setStepsShortDesc(this.jobStepXref.getStep().getShortDesc());
+		this.log_dtl.setStepType(this.jobStepXref.getStep().getType());
+		this.log_dtl.setJobStepsXrefJobStepSeq(this.jobStepXref.getJobStepSeq());
 		this.log_dtl.setStartDt(new Date());
 		this.log_dtl.setStatus("Started");
 		
@@ -123,8 +123,8 @@ public class GenerateTRGStep extends StepManager {
 	private void logComplete() {
 		this.job_manager.db.getTransaction().begin();
 		
-		String msg = "Step [" + this.step_record.getType() 
-				+ " : " + this.step_record.getShortDesc()
+		String msg = "Step [" + this.jobStepXref.getStep().getType() 
+				+ " : " + this.jobStepXref.getStep().getShortDesc()
 				+ "]";
 		this.log_dtl.setEndDt(new Date());
 		this.log_dtl.setStatus("Completed");

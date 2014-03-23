@@ -2,7 +2,6 @@ package model;
 
 import java.io.Serializable;
 import javax.persistence.*;
-import java.math.BigDecimal;
 import java.util.List;
 
 
@@ -24,13 +23,13 @@ public class Step implements Serializable {
 	private String classPath;
 
 	@Column(name="EXTRACT_COMMIT_FREQ")
-	private BigDecimal extractCommitFreq;
+	private Long extractCommitFreq;
 
 	@Column(name="EXTRACT_MAX_REC")
-	private BigDecimal extractMaxRec;
+	private Long extractMaxRec;
 	
 	@Column(name="EXTRACT_MAX_REC_PER_FILE")
-	private BigDecimal extractMaxRecPerFile;
+	private Long extractMaxRecPerFile;
 
 	@Column(name="EXTRACT_SQL", length=4000)
 	private String extractSql;
@@ -85,27 +84,27 @@ public class Step implements Serializable {
 		this.classPath = classPath;
 	}
 
-	public BigDecimal getExtractCommitFreq() {
+	public Long getExtractCommitFreq() {
 		return this.extractCommitFreq;
 	}
 
-	public void setExtractCommitFreq(BigDecimal extractCommitFreq) {
+	public void setExtractCommitFreq(Long extractCommitFreq) {
 		this.extractCommitFreq = extractCommitFreq;
 	}
 
-	public BigDecimal getExtractMaxRec() {
+	public Long getExtractMaxRec() {
 		return this.extractMaxRec;
 	}
 
-	public void setExtractMaxRec(BigDecimal extractMaxRec) {
+	public void setExtractMaxRec(Long extractMaxRec) {
 		this.extractMaxRec = extractMaxRec;
 	}
 	
-	public BigDecimal getExtractMaxRecPerFile() {
+	public Long getExtractMaxRecPerFile() {
 		return this.extractMaxRecPerFile;
 	}
 
-	public void setExtractMaxRecPerFile(BigDecimal extractMaxRecPerFile) {
+	public void setExtractMaxRecPerFile(Long extractMaxRecPerFile) {
 		this.extractMaxRecPerFile = extractMaxRecPerFile;
 	}
 

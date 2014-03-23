@@ -1,10 +1,7 @@
 package model;
 
 import java.io.Serializable;
-
 import javax.persistence.*;
-
-import java.math.BigDecimal;
 import java.util.Date;
 
 
@@ -32,7 +29,7 @@ public class BatchLogFileOutput implements Serializable {
 	private String filename;
 
 	@Column(name="NUM_RECORDS")
-	private BigDecimal numRecords;
+	private Long numRecords;
 
 	//bi-directional many-to-one association to BatchLog
 	@ManyToOne
@@ -66,11 +63,11 @@ public class BatchLogFileOutput implements Serializable {
 		this.filename = filename;
 	}
 
-	public BigDecimal getNumRecords() {
+	public Long getNumRecords() {
 		return this.numRecords;
 	}
 
-	public void setNumRecords(BigDecimal numRecords) {
+	public void setNumRecords(Long numRecords) {
 		this.numRecords = numRecords;
 	}
 

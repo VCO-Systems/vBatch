@@ -2,7 +2,6 @@ package com.vco;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -23,6 +22,7 @@ import org.supercsv.quote.QuoteMode;
 
 import model.BatchLogDtl;
 import model.BatchLogFileOutput;
+import model.JobStepsXref;
 import model.Step;
 
 public class GenerateCSVStep extends StepManager {
@@ -47,10 +47,10 @@ public class GenerateCSVStep extends StepManager {
 	 */
 	
 	// Keep track of rows and paging
-	private int totalRowsGenerated = 0;
-	private int totalRowsThisFile = 0;
-	private int max_rec_per_file = 0;
-	private int pageCount=0; // Pages of data sent in from another step (not necessarily db or CSV pages)
+	private Long totalRowsGenerated = 0L;
+	private Long totalRowsThisFile = 0L;
+	private Long max_rec_per_file = 0L;
+	private Long pageCount=0L; // Pages of data sent in from another step (not necessarily db or CSV pages)
 	private BatchLogDtl log_dtl;
 	
 	// Track the generated CSV Files
@@ -69,19 +69,19 @@ public class GenerateCSVStep extends StepManager {
 		    new CsvPreference.Builder(CsvPreference.STANDARD_PREFERENCE).useQuoteMode(new AlwaysQuoteMode()).build();
 	
 	
-	public GenerateCSVStep(JobManager jm, Step step_record) {
+	public GenerateCSVStep(JobManager jm, JobStepsXref jobStepXref) {
 		this.job_manager = jm;
-		this.step_record = step_record;
+		this.jobStepXref = jobStepXref;
 		
 		// If this step has a filename prefix defined, use that.  Otherwise use the default.
-		if (this.step_record.getOutputFilenamePrefix() != "") {
-			this.defaultCSVFilename = this.step_record.getOutputFilenamePrefix();
+		if (this.jobStepXref.getStep().getOutputFilenamePrefix() != "") {
+			this.defaultCSVFilename = this.jobStepXref.getStep().getOutputFilenamePrefix();
 		}
 		this.alternateOutputData = new ArrayList<String>();
 		
 		// Get extract_max_rec_per_file from the step config
-		if (this.step_record.getExtractMaxRecPerFile() != null) {
-			this.max_rec_per_file = this.step_record.getExtractMaxRecPerFile().intValue();
+		if (this.jobStepXref.getStep().getExtractMaxRecPerFile() != null) {
+			this.max_rec_per_file = this.jobStepXref.getStep().getExtractMaxRecPerFile();
 		}
 			
 	}
@@ -253,7 +253,7 @@ public class GenerateCSVStep extends StepManager {
 	 */
 	private void closeCurrentOutputFile() throws IOException {
 		// rows
-		int rows = this.totalRowsThisFile;
+		Long rows = this.totalRowsThisFile;
 		
 		// Close the output file
 		this.currentOutputFile.flush();
@@ -261,14 +261,14 @@ public class GenerateCSVStep extends StepManager {
 		this.currentOutputFile = null;
 		
 		// Update counters
-		this.totalRowsThisFile=0;
+		this.totalRowsThisFile=0L;
 		
 		// Create new entry in batch_log_file_output log table for this file
 		this.job_manager.db.getTransaction().begin();
 		BatchLogFileOutput log_entry = new BatchLogFileOutput();
 		log_entry.setBatchLog(this.job_manager.batch_log);
 		log_entry.setFilename(this.alternateOutputData.get(this.alternateOutputData.size()-1));
-		log_entry.setNumRecords(new BigDecimal(rows));
+		log_entry.setNumRecords(rows);
 		log_entry.setCreateDt(this.startingDateTime);
 		this.job_manager.db.persist(log_entry);
 		this.job_manager.db.getTransaction().commit();
@@ -298,7 +298,7 @@ public class GenerateCSVStep extends StepManager {
 			this.alternateOutputData.add("output/" + newFileName);
 			
 			// Reset counters
-			this.totalRowsThisFile=0;
+			this.totalRowsThisFile=0L;
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -356,12 +356,13 @@ public class GenerateCSVStep extends StepManager {
 		this.log_dtl.setBatchLog(this.job_manager.batch_log);
 		
 		String msg = "Step [" 
-				+ this.step_record.getType() + " : " + this.step_record.getLongDesc() 
+				+ this.jobStepXref.getStep().getType() + " : " + this.jobStepXref.getStep().getLongDesc() 
 				+ "]";
 		this.log_dtl.setLongDesc(msg);
-		this.log_dtl.setStepsId(new BigDecimal(this.step_record.getId()));
-		this.log_dtl.setStepsShortDesc(this.step_record.getShortDesc());
-		this.log_dtl.setStepType(this.step_record.getType());
+		this.log_dtl.setStepsId((Long)this.jobStepXref.getId());
+		this.log_dtl.setStepsShortDesc(this.jobStepXref.getStep().getShortDesc());
+		this.log_dtl.setStepType(this.jobStepXref.getStep().getType());
+		this.log_dtl.setJobStepsXrefJobStepSeq(this.jobStepXref.getJobStepSeq());
 		this.log_dtl.setStartDt(new Date());
 		this.log_dtl.setStatus("Started");
 		

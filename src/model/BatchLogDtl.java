@@ -1,10 +1,7 @@
 package model;
 
 import java.io.Serializable;
-
 import javax.persistence.*;
-
-import java.math.BigDecimal;
 import java.util.Date;
 
 
@@ -38,16 +35,16 @@ public class BatchLogDtl implements Serializable {
 	private String errorMsg;
 
 	@Column(name="EXTRACT_COMMIT_FREQ")
-	private BigDecimal extractCommitFreq;
+	private Long extractCommitFreq;
 
 	@Column(name="EXTRACT_MAX_RECS_PER_FILE")
-	private BigDecimal extractMaxRecsPerFile;
+	private Long extractMaxRecsPerFile;
 
 	@Column(name="EXTRACT_SQL", length=4000)
 	private String extractSql;
 
 	@Column(name="JOB_STEPS_XREF_JOB_STEP_SEQ")
-	private BigDecimal jobStepsXrefJobStepSeq;
+	private Long jobStepsXrefJobStepSeq;
 
 	@Column(name="LONG_DESC", length=150)
 	private String longDesc;
@@ -59,7 +56,7 @@ public class BatchLogDtl implements Serializable {
 	private String minOk1;
 
 	@Column(name="NUM_RECORDS")
-	private BigDecimal numRecords;
+	private Long numRecords;
 
 	@Column(name="OUTPUT_FILE_FORMAT", length=15)
 	private String outputFileFormat;
@@ -88,7 +85,7 @@ public class BatchLogDtl implements Serializable {
 	private String stepType;
 
 	@Column(name="STEPS_ID")
-	private BigDecimal stepsId;
+	private Long stepsId;
 
 	@Column(name="STEPS_SHORT_DESC", length=20)
 	private String stepsShortDesc;
@@ -133,19 +130,19 @@ public class BatchLogDtl implements Serializable {
 		this.errorMsg = errorMsg;
 	}
 
-	public BigDecimal getExtractCommitFreq() {
+	public Long getExtractCommitFreq() {
 		return this.extractCommitFreq;
 	}
 
-	public void setExtractCommitFreq(BigDecimal extractCommitFreq) {
+	public void setExtractCommitFreq(Long extractCommitFreq) {
 		this.extractCommitFreq = extractCommitFreq;
 	}
 
-	public BigDecimal getExtractMaxRecsPerFile() {
+	public Long getExtractMaxRecsPerFile() {
 		return this.extractMaxRecsPerFile;
 	}
 
-	public void setExtractMaxRecsPerFile(BigDecimal extractMaxRecsPerFile) {
+	public void setExtractMaxRecsPerFile(Long extractMaxRecsPerFile) {
 		this.extractMaxRecsPerFile = extractMaxRecsPerFile;
 	}
 
@@ -157,11 +154,11 @@ public class BatchLogDtl implements Serializable {
 		this.extractSql = extractSql;
 	}
 
-	public BigDecimal getJobStepsXrefJobStepSeq() {
+	public Long getJobStepsXrefJobStepSeq() {
 		return this.jobStepsXrefJobStepSeq;
 	}
 
-	public void setJobStepsXrefJobStepSeq(BigDecimal jobStepsXrefJobStepSeq) {
+	public void setJobStepsXrefJobStepSeq(Long jobStepsXrefJobStepSeq) {
 		this.jobStepsXrefJobStepSeq = jobStepsXrefJobStepSeq;
 	}
 
@@ -189,11 +186,11 @@ public class BatchLogDtl implements Serializable {
 		this.minOk1 = minOk1;
 	}
 
-	public BigDecimal getNumRecords() {
+	public Long getNumRecords() {
 		return this.numRecords;
 	}
 
-	public void setNumRecords(BigDecimal numRecords) {
+	public void setNumRecords(Long numRecords) {
 		this.numRecords = numRecords;
 	}
 
@@ -269,11 +266,11 @@ public class BatchLogDtl implements Serializable {
 		this.stepType = stepType;
 	}
 
-	public BigDecimal getStepsId() {
+	public Long getStepsId() {
 		return this.stepsId;
 	}
 
-	public void setStepsId(BigDecimal stepsId) {
+	public void setStepsId(Long stepsId) {
 		this.stepsId = stepsId;
 	}
 

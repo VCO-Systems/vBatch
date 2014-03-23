@@ -2,7 +2,6 @@ package com.vco;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -105,9 +104,9 @@ public class JobManager {
 					// Get the classpath from the step table
 					// and create it.
 					Class<?> c = Class.forName(s.getClassPath());
-					Constructor<?> cons = c.getConstructor(JobManager.class, Step.class);
+					Constructor<?> cons = c.getConstructor(JobManager.class, JobStepsXref.class);
 					// Create new step manager, passing in this job manager, and the step record
-					StepManager step_manager = (StepManager) cons.newInstance(this, s);
+					StepManager step_manager = (StepManager) cons.newInstance(this, step_xref);
 					// Add the step_manager to this.stepManagers
 					this.stepManagers.add(step_manager);
 					// Initialize the step
@@ -127,6 +126,7 @@ public class JobManager {
 				}
 				catch ( InvocationTargetException e) {
 					VBatchManager.log.fatal(e);
+					e.printStackTrace();
 				}
 				catch ( NoSuchMethodException e) {
 					VBatchManager.log.fatal(e);
@@ -198,16 +198,29 @@ public class JobManager {
 		// Create the main BatchLog entry
 		this.batch_log = new BatchLog();;
 		this.batch_log.setJobDefinition(this.job_definition);
-		this.batch_log.setBatchSeqNbr(new BigDecimal(1));
+		
+		//batch_num should be set from sequence BATCH_LOG_BATCH_NUM_SEQ
+		String queryString = "SELECT BATCH_LOG_BATCH_NUM_SEQ.NEXTVAL FROM DUAL";	
+		Query query = this.db.createNativeQuery(queryString);
+		List<Number> batchNumList = (List<Number>)query.getResultList();
+		this.batch_log.setBatchNum(batchNumList.get(0).longValue());
+		
+		//batch_seq_nbr should be set to max + 1
+		query = this.db.createQuery("SELECT MAX(BL.batchSeqNbr) FROM BatchLog BL WHERE BL.batchNum = ?1");
+		query.setParameter(1, this.batch_log.getBatchNum());
+		Long batchSeqNum = (Long)query.getSingleResult();
+		if ( batchSeqNum == null )
+			batchSeqNum = 1L;
+		else
+			batchSeqNum += 1L;
+		VBatchManager.log.debug(MessageFormat.format("batchSeqNbr: {0}",batchSeqNum));
+		this.batch_log.setBatchSeqNbr(batchSeqNum);
+		
+		this.batch_log.setOrderNum(this.job_definition.getOrderNum());
 		this.batch_log.setStatus("Started");
 		this.batch_log.setStartDt(new Date());
 		
 		this.db.persist(this.batch_log);
-		// batch_num must = batch_log.id, but we have to wait until 
-		// db.persist is called so ID is populated from sequence.
-		// This means we have to write this record out twice, would
-		// but don't know a better way currently.
-		this.batch_log.setBatchNum(new BigDecimal(this.batch_log.getId()));
 		
 		String logMsg = "";
 		logMsg += "Batch " + this.batch_log.getBatchNum();
@@ -218,7 +231,9 @@ public class JobManager {
 		this.db.persist(this.batch_log);
 		this.db.getTransaction().commit();
 		
+		/* This Logging for BATCHLogDtl will be done for each Step
 		// Create the batch_log_dtl entry showing this job started
+		// TODO : This should really be logged in StepManager
 		this.db.getTransaction().begin();
 		this.log_dtl = new BatchLogDtl();
 		this.log_dtl.setBatchLog(this.batch_log);
@@ -227,11 +242,13 @@ public class JobManager {
 		this.log_dtl.setLongDesc(logMsg);
 		this.log_dtl.setStartDt(new Date());
 		this.log_dtl.setStatus("Started");
+		//this.log_dtl.setJobStepsXrefJobStepSeq(this.job_definition.getJobStepsXrefs());
 		System.out.println("Batch " + this.batch_log.getBatchNum() + " started.");
 		
 		// Commit the batch_log_dtl entry
 		this.db.persist(this.log_dtl);
 		this.db.getTransaction().commit();
+		*/
 	}
 	
 	/**
@@ -247,10 +264,12 @@ public class JobManager {
 		// Show this job complete in the log_dtl table
 		// Create the batch_log_dtl entry showing this job started
 		//this.log_dtl = new BatchLogDtl();
+		/*
 		this.log_dtl.setBatchLog(this.batch_log);
 		this.log_dtl.setEndDt(new Date());
 		this.log_dtl.setStatus("Completed");
 		this.db.persist(this.log_dtl);
+		*/
 		
 		this.db.getTransaction().commit();
 //		

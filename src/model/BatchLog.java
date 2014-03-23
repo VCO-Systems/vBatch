@@ -2,7 +2,6 @@ package model;
 
 import java.io.Serializable;
 import javax.persistence.*;
-import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
@@ -24,10 +23,10 @@ public class BatchLog implements Serializable {
 	private long id;
 
 	@Column(name="BATCH_NUM", nullable=false)
-	private BigDecimal batchNum;
+	private Long batchNum;
 
 	@Column(name="BATCH_SEQ_NBR", nullable=false)
-	private BigDecimal batchSeqNbr;
+	private Long batchSeqNbr;
 
 	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name="END_DT")
@@ -40,7 +39,7 @@ public class BatchLog implements Serializable {
 	private String longDesc;
 
 	@Column(name="ORDER_NUM")
-	private BigDecimal orderNum;
+	private Long orderNum;
 
 	@Column(name="SHORT_DESC", length=20)
 	private String shortDesc;
@@ -80,19 +79,19 @@ public class BatchLog implements Serializable {
 		this.id = id;
 	}
 
-	public BigDecimal getBatchNum() {
+	public Long getBatchNum() {
 		return this.batchNum;
 	}
 
-	public void setBatchNum(BigDecimal batchNum) {
+	public void setBatchNum(Long batchNum) {
 		this.batchNum = batchNum;
 	}
 
-	public BigDecimal getBatchSeqNbr() {
+	public Long getBatchSeqNbr() {
 		return this.batchSeqNbr;
 	}
 
-	public void setBatchSeqNbr(BigDecimal batchSeqNbr) {
+	public void setBatchSeqNbr(Long batchSeqNbr) {
 		this.batchSeqNbr = batchSeqNbr;
 	}
 
@@ -120,11 +119,11 @@ public class BatchLog implements Serializable {
 		this.longDesc = longDesc;
 	}
 
-	public BigDecimal getOrderNum() {
+	public Long getOrderNum() {
 		return this.orderNum;
 	}
 
-	public void setOrderNum(BigDecimal orderNum) {
+	public void setOrderNum(Long orderNum) {
 		this.orderNum = orderNum;
 	}
 

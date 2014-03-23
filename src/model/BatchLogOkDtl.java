@@ -3,7 +3,6 @@ package model;
 import java.io.Serializable;
 import javax.persistence.*;
 import java.sql.Timestamp;
-import java.math.BigDecimal;
 
 
 /**
@@ -23,11 +22,11 @@ public class BatchLogOkDtl implements Serializable {
 	@Column(nullable=false)
 	private Timestamp ok1;
 
-	private BigDecimal pk1;
+	private Long pk1;
 
-	private BigDecimal pk2;
+	private Long pk2;
 
-	private BigDecimal pk3;
+	private Long pk3;
 
 	//bi-directional many-to-one association to BatchLog
 	@ManyToOne
@@ -53,27 +52,27 @@ public class BatchLogOkDtl implements Serializable {
 		this.ok1 = ok1;
 	}
 
-	public BigDecimal getPk1() {
+	public Long getPk1() {
 		return this.pk1;
 	}
 
-	public void setPk1(BigDecimal pk1) {
+	public void setPk1(Long pk1) {
 		this.pk1 = pk1;
 	}
 
-	public BigDecimal getPk2() {
+	public Long getPk2() {
 		return this.pk2;
 	}
 
-	public void setPk2(BigDecimal pk2) {
+	public void setPk2(Long pk2) {
 		this.pk2 = pk2;
 	}
 
-	public BigDecimal getPk3() {
+	public Long getPk3() {
 		return this.pk3;
 	}
 
-	public void setPk3(BigDecimal pk3) {
+	public void setPk3(Long pk3) {
 		this.pk3 = pk3;
 	}
 

@@ -2,7 +2,6 @@ package model;
 
 import java.io.Serializable;
 import javax.persistence.*;
-import java.math.BigDecimal;
 
 
 /**
@@ -20,7 +19,7 @@ public class JobStepsXref implements Serializable {
 	private long id;
 
 	@Column(name="JOB_STEP_SEQ", nullable=false)
-	private BigDecimal jobStepSeq;
+	private Long jobStepSeq;
 
 	@Column(name="SPECIAL_MODE", length=25)
 	private String specialMode;
@@ -46,11 +45,11 @@ public class JobStepsXref implements Serializable {
 		this.id = id;
 	}
 
-	public BigDecimal getJobStepSeq() {
+	public Long getJobStepSeq() {
 		return this.jobStepSeq;
 	}
 
-	public void setJobStepSeq(BigDecimal jobStepSeq) {
+	public void setJobStepSeq(Long jobStepSeq) {
 		this.jobStepSeq = jobStepSeq;
 	}
 

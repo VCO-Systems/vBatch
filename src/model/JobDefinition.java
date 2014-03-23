@@ -2,7 +2,6 @@ package model;
 
 import java.io.Serializable;
 import javax.persistence.*;
-import java.math.BigDecimal;
 import java.util.List;
 
 
@@ -24,7 +23,7 @@ public class JobDefinition implements Serializable {
 	private String longDesc;
 
 	@Column(name="ORDER_NUM", nullable=false)
-	private BigDecimal orderNum;
+	private Long orderNum;
 
 	@Column(name="SHORT_DESC", length=20)
 	private String shortDesc;
@@ -56,11 +55,11 @@ public class JobDefinition implements Serializable {
 		this.longDesc = longDesc;
 	}
 
-	public BigDecimal getOrderNum() {
+	public Long getOrderNum() {
 		return this.orderNum;
 	}
 
-	public void setOrderNum(BigDecimal orderNum) {
+	public void setOrderNum(Long orderNum) {
 		this.orderNum = orderNum;
 	}
 
