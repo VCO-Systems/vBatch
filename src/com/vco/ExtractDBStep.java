@@ -93,7 +93,6 @@ public class ExtractDBStep extends StepManager {
 			// to get the min/maxOk1 values
 			
 			// Get the BatchLog entry by batch_num
-			
 			TypedQuery<BatchLog> qryPreviousBatch = this.job_manager.db.createQuery(
 					"SELECT log from BatchLog log WHERE log.batchNum = :batchNumber order by log.id asc", BatchLog.class);
 			List<BatchLog> lstPreviousBatch = qryPreviousBatch
@@ -391,27 +390,6 @@ public class ExtractDBStep extends StepManager {
 			e.printStackTrace();
 		}
 			
-		
-		/*
-		List lst;
-		while (this.record_pointer != -1) {  // Keep loading more pages of data
-			Query qry = this.job_manager.db.createNativeQuery(raw_sql)
-				    .setFirstResult(this.record_pointer)
-					.setMaxResults(commit_freq);
-			lst = qry.getResultList();
-			System.out.println("\tLoaded " + lst.size() + " records");
-			if (lst.size() < commit_freq) {  // this is the last page of data
-				// Update record pointers for next query
-				this.record_pointer = -1;
-				this.job_manager.submitPageOfData(lst, this);
-			}
-			else {  // This won't be the last page of data
-				this.record_pointer += commit_freq;
-				this.job_manager.submitPageOfData(lst, this);
-			}
-		}
-		
-		*/
 		// This step is done.  Clean up, write to logs,
 		// and return control to JobManager.
 		this.running=false;

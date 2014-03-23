@@ -317,8 +317,6 @@ public class VBatchManager {
 				
 				// Handle -b (re-run existing batch)
 				if (cmd.hasOption("b")) {
-					if (cmd.hasOption("b"))
-						throw new Exception("Forcibly aborting -b, to test exception handling");
 					// TODO:  Get ready to run the -b job
 					String[] requested_jobs_ids = cmd.getOptionValue("b").split(",");
 					ArrayList<Integer> job_ids = new ArrayList<Integer>();

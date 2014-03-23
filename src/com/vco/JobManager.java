@@ -59,15 +59,38 @@ public class JobManager {
 	
 	
 	public void init() {
+		Boolean breakOutOfThisJob = false;
 		
 		/** Populate this.job_definition with the correct job def record**/
 		
 		// We're doing a new run by job id, so just look up the job def by job #
 		if (this.batchMode == VBatchManager.BatchMode_New) {  // new run by job id
-			this.job_definition = this.db.find(JobDefinition.class, (Object)this.job_id);
+			// Look up the job definition by JobDefinition.order_num (not id)
+			TypedQuery<JobDefinition> qryMyJobDef = this.db.createQuery(
+					"SELECT j from JobDefinition j "
+					+ "WHERE j.orderNum = :jobOrderNumber "
+					+ "order by j.id desc", JobDefinition.class);
+			List<JobDefinition> lstMyJobDefs = qryMyJobDef
+		    		.setParameter("jobOrderNumber", this.job_id)
+		    		.getResultList();
+			if (lstMyJobDefs.size() == 1) {  // If we found the job definition 
+				this.job_definition = lstMyJobDefs.get(0);
+			}
+			else if (lstMyJobDefs.size() == 0) { // Didn't find any matching job
+				// TODO: Report that no job with this id was found.  Abort job.
+				System.out.println("Job # " + this.job_id + " not found.");
+				breakOutOfThisJob=true;
+			}
+			else if (lstMyJobDefs.size() > 1 ) {  // Found more than one matching job
+				// TODO:  Report that more than one job with this id has been defined,
+				// inform user that job will not run.  Abort job.
+				
+				breakOutOfThisJob=true;
+			}
+//			this.job_definition = this.db.find(JobDefinition.class, (Object)this.job_id);
 		}
 		// Here we're re-running a previous batch by batch num, so get the last run
-		// of this batch from the logs, and use its job_def_id to look up the job def record
+		// of this batch from the logs, and use its job_definition
 		else if (this.batchMode == VBatchManager.BatchMode_Repeat) {  // re-run by batch_num
 			// Look up the job_definition by batch_num
 			TypedQuery<BatchLog> qryPreviousBatch = this.db.createQuery(
@@ -82,6 +105,10 @@ public class JobManager {
 				BatchLog prevRunOfThisBatch = lstBatches.get(0);
 				this.job_definition = prevRunOfThisBatch.getJobDefinition();
 			}
+			else if (lstBatches.size() == 0) {
+				System.out.println("Could not find any previous runs for batch # " + this.job_id + ".  Aborting job.");
+				breakOutOfThisJob=true;
+			}
 		}
 		
 		/** Load the steps_xref entries for this job,
@@ -89,68 +116,68 @@ public class JobManager {
 		 *  add them to this.stepManagers, and call init() on 
 		 *  each step.
 		 */
-		
-		// Load this job's steps xref entries
-		String queryString = "SELECT a FROM JobStepsXref a " +
-                "WHERE a.jobDefinition = :jid";	
-		Query query = this.db.createQuery(queryString);
-		query.setParameter("jid", this.job_definition);
-		List<JobStepsXref> step_xrefs = query.getResultList();
-		this.logStart();
-		// Load the actual steps into this.steps
-		if (step_xrefs.size() > 0) {
-			for (JobStepsXref step_xref: step_xrefs) {
-				Step s = step_xref.getStep();
-				// Create the StepManager objects for each step
-				try {
-					// Get the classpath from the step table
-					// and create it.
-					Class<?> c = Class.forName(s.getClassPath());
-					Constructor<?> cons = c.getConstructor(JobManager.class, Step.class);
-					// Create new step manager, passing in this job manager, and the step record
-					StepManager step_manager = (StepManager) cons.newInstance(this, s);
-					// Add the step_manager to this.stepManagers
-					this.stepManagers.add(step_manager);
-					// Initialize the step
-					step_manager.init();
-				}
-				catch ( SecurityException e) {
-					VBatchManager.log.fatal(e);
-				}
-				catch ( ClassNotFoundException e) {
-					VBatchManager.log.fatal(e);
-				}
-				catch ( IllegalAccessException e) {
-					VBatchManager.log.fatal(e);
-				}
-				catch ( InstantiationException e) {
-					VBatchManager.log.fatal(e);
-				}
-				catch ( InvocationTargetException e) {
-					VBatchManager.log.fatal(e);
-				}
-				catch ( NoSuchMethodException e) {
-					VBatchManager.log.fatal(e);
-				}
+		if (!breakOutOfThisJob) {
+			// Load this job's steps xref entries
+			String queryString = "SELECT a FROM JobStepsXref a " +
+	                "WHERE a.jobDefinition = :jid";	
+			Query query = this.db.createQuery(queryString);
+			query.setParameter("jid", this.job_definition);
+			List<JobStepsXref> step_xrefs = query.getResultList();
+			this.logStart();
+			// Load the actual steps into this.steps
+			if (step_xrefs.size() > 0) {
+				for (JobStepsXref step_xref: step_xrefs) {
+					Step s = step_xref.getStep();
+					// Create the StepManager objects for each step
+					try {
+						// Get the classpath from the step table
+						// and create it.
+						Class<?> c = Class.forName(s.getClassPath());
+						Constructor<?> cons = c.getConstructor(JobManager.class, Step.class);
+						// Create new step manager, passing in this job manager, and the step record
+						StepManager step_manager = (StepManager) cons.newInstance(this, s);
+						// Add the step_manager to this.stepManagers
+						this.stepManagers.add(step_manager);
+						// Initialize the step
+						step_manager.init();
+					}
+					catch ( SecurityException e) {
+						VBatchManager.log.fatal(e);
+					}
+					catch ( ClassNotFoundException e) {
+						VBatchManager.log.fatal(e);
+					}
+					catch ( IllegalAccessException e) {
+						VBatchManager.log.fatal(e);
+					}
+					catch ( InstantiationException e) {
+						VBatchManager.log.fatal(e);
+					}
+					catch ( InvocationTargetException e) {
+						VBatchManager.log.fatal(e);
+					}
+					catch ( NoSuchMethodException e) {
+						VBatchManager.log.fatal(e);
+					}
+					
+					
+					this.steps.add(s);
+				} // end: looping over step_xref records for this job
+				// This job is done.  Make appropriate log entries
+				//this.logComplete();
+			}
+			else {
+				// TODO:  Log that no steps were found, end job
 				
-				
-				this.steps.add(s);
-			} // end: looping over step_xref records for this job
-			// This job is done.  Make appropriate log entries
-			//this.logComplete();
+			}
 		}
-		else {
-			// TODO:  Log that no steps were found, end job
-			
-		}
-		
 		/**
 		 *  Run the job here, as long as:
 		 *    - the job definition is found
 		 *    - at least one steps is configured for the job
 		 */
 	
-		if (job_definition != null && this.steps.size() > 0) {
+		if (!breakOutOfThisJob && job_definition != null && this.steps.size() > 0) {
 			// Write log entries showing this job has started
 			 
 			// Call start() on each step, in order
