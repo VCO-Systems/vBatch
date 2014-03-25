@@ -231,18 +231,18 @@ public class ExtractDBStep extends StepManager {
 				String lastRowOK1, lastRowPK1;
 				try {
 					lastRowOK1 = this.convertDateFieldToString(rs, "OK1");
-					lastRowPK1 = rs.getString("tran_nbr");
+					lastRowPK1 = rs.getString("PK1");
 					
 					String currentRowOK1, currentRowPK1;
 					// STUB:  comparison here should match
 					currentRowOK1 = this.convertDateFieldToString(rs, "OK1");
-					currentRowPK1 = rs.getString("tran_nbr");
+					currentRowPK1 = rs.getString("PK1");
 					//System.out.println("\tLast row: " + currentRowOK1 + " / " + currentRowPK1);
 					// Go backwards until pk1 and ok1 are different from last row
 					while (rs.previous()) {
 						endRowsToSkip++;
 						currentRowOK1 = this.convertDateFieldToString(rs, "OK1");
-						currentRowPK1 = rs.getString("tran_nbr");
+						currentRowPK1 = rs.getString("PK1");
 						if (!currentRowOK1.equals(lastRowOK1) && !currentRowPK1.equals(lastRowPK1)) {
 							
 							finalRowNum = startingRowNum - endRowsToSkip;
