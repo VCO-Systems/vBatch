@@ -363,8 +363,9 @@ public class ExtractDBStep extends StepManager {
 					this.job_manager.db.persist(this.log_dtl);
 					this.job_manager.db.getTransaction().commit();
 				}
-				
+				System.out.println("before: " + previousRowOK1Value);
 				previousRowOK1Value = this.convertDateFieldToString(rs, "OK1");
+				System.out.println("after: " + previousRowOK1Value);
 				
 				// Move to the next record (or abort if we're past the last row
 				if (rs.next() == false) {  // moved past the last record
@@ -462,7 +463,7 @@ public class ExtractDBStep extends StepManager {
 	private String convertDateFieldToString(ResultSet rs, String columnName) throws SQLException,
 			ParseException {
 		SimpleDateFormat incomingDateFormat  = new SimpleDateFormat("y-MM-d HH:mm:ss.S");
-		SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y k:mm:ss");
+		SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y H:mm:ss");
 		String ds = rs.getString(columnName);
 		//System.out.println("\t[Extract] Original String dt: " + ds);
 		Date dt = incomingDateFormat.parse(ds);
