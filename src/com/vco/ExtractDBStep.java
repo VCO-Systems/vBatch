@@ -113,9 +113,9 @@ public class ExtractDBStep extends StepManager {
 			BatchLogDtl extract_log = lstMatchingLogDtl.get(0);
 			// Get the vars we need for min/max to re-run this job with the same records
 			previousRunMinOk1 = extract_log.getMinOk1();
-			previousRunMinOk1 = this.convertDateStringToAnotherDateString(previousRunMinOk1, "MM/d/yy k:mm:ss", "MM/dd/yyyy k:mm:ss");
+			previousRunMinOk1 = this.convertDateStringToAnotherDateString(previousRunMinOk1, "MM/d/yy H:mm:ss", "MM/dd/yyyy H:mm:ss");
 			previousRunMaxOk1 = extract_log.getMaxOk1();
-			previousRunMaxOk1 = this.convertDateStringToAnotherDateString(previousRunMaxOk1, "MM/d/yy k:mm:ss", "MM/dd/yyyy k:mm:ss");
+			previousRunMaxOk1 = this.convertDateStringToAnotherDateString(previousRunMaxOk1, "MM/d/yy H:mm:ss", "MM/dd/yyyy H:mm:ss");
 			BigDecimal numRecs = extract_log.getNumRecords();
 			totalRows = numRecs.intValue();
 			
@@ -185,7 +185,7 @@ public class ExtractDBStep extends StepManager {
 				// Since we're relying on JDBC to convert a date object to a string,
 				// force it into the specific date format that Oracle will be able to use in
 				// a query (for instance, forcing the year from 2-digit to 4-digit)
-				previousRunMaxOk1 = this.convertDateStringToAnotherDateString(previousRunMaxOk1, "MM/d/yy H:mm:ss", "MM/dd/yyyy k:mm:ss");
+				previousRunMaxOk1 = this.convertDateStringToAnotherDateString(previousRunMaxOk1, "MM/dd/yy H:mm:ss", "MM/dd/yyyy H:mm:ss");
 				
 				
 				
