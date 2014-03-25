@@ -185,7 +185,7 @@ public class ExtractDBStep extends StepManager {
 				// Since we're relying on JDBC to convert a date object to a string,
 				// force it into the specific date format that Oracle will be able to use in
 				// a query (for instance, forcing the year from 2-digit to 4-digit)
-				previousRunMaxOk1 = this.convertDateStringToAnotherDateString(previousRunMaxOk1, "MM/d/yy k:mm:ss", "MM/dd/yyyy k:mm:ss");
+				previousRunMaxOk1 = this.convertDateStringToAnotherDateString(previousRunMaxOk1, "MM/d/yy H:mm:ss", "MM/dd/yyyy k:mm:ss");
 				
 				
 				
