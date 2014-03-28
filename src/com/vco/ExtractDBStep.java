@@ -363,9 +363,7 @@ public class ExtractDBStep extends StepManager {
 					this.job_manager.db.persist(this.log_dtl);
 					this.job_manager.db.getTransaction().commit();
 				}
-				System.out.println("before: " + previousRowOK1Value);
 				previousRowOK1Value = this.convertDateFieldToString(rs, "OK1");
-				System.out.println("after: " + previousRowOK1Value);
 				
 				// Move to the next record (or abort if we're past the last row
 				if (rs.next() == false) {  // moved past the last record
