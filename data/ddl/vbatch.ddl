@@ -97,7 +97,7 @@ CREATE TABLE vbatch.batch_log_ok_dtl (
                 pk1 NUMBER,
                 pk2 NUMBER,
                 pk3 NUMBER,
-                ok1 TIMESTAMP NOT NULL,
+                ok1 VARCHAR2(150) NOT NULL,
                 CONSTRAINT BATCH_LOG_OK_DTL_PK PRIMARY KEY (id)
 );
 

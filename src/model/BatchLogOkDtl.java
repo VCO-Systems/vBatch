@@ -21,7 +21,7 @@ public class BatchLogOkDtl implements Serializable {
 	private long id;
 
 	@Column(nullable=false)
-	private Timestamp ok1;
+	private String ok1;
 
 	private BigDecimal pk1;
 
@@ -45,11 +45,11 @@ public class BatchLogOkDtl implements Serializable {
 		this.id = id;
 	}
 
-	public Timestamp getOk1() {
+	public String getOk1() {
 		return this.ok1;
 	}
 
-	public void setOk1(Timestamp ok1) {
+	public void setOk1(String ok1) {
 		this.ok1 = ok1;
 	}
 
