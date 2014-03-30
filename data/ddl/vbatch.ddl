@@ -72,6 +72,7 @@ CREATE TABLE vbatch.batch_log_dtl (
                 num_records NUMBER ,
                 min_ok1 VARCHAR2(150),
                 max_ok1 VARCHAR2(150),
+                extract_max_recs NUMBER,
                 extract_max_recs_per_file NUMBER,
                 extract_commit_freq NUMBER,
                 output_file_format VARCHAR2(15),
