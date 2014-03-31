@@ -70,7 +70,7 @@ public class ExtractDBStep extends StepManager {
 		// Set this step to running
 		this.running = true;
 		// Log the start of this step
-		this.logStart();
+		// this.logStart();
 		// Get the raw sql to run
 		this.raw_sql = this.step_record.getExtractSql();
 		String whereClause = new String();
@@ -248,6 +248,51 @@ public class ExtractDBStep extends StepManager {
 			boolean endOfRecordset=false;
 			boolean endOfPage = false;
 			
+			boolean isPageDataAlmostComplete  =false;
+			boolean isPageDataComplete        =false;
+			boolean isRecordsetAlmostComplete =false;
+			boolean isRecordsetComplete       =false;
+			// NEW LOOP
+			while (!endOfRecordset) {
+				// todo: Set ispageDataAlmostComplete
+				rownum++;  // Note: rownum starts at 1
+				if (rownum % commit_freq == 0) {
+					isPageDataAlmostComplete=true;
+				}
+				// todo: Set isPageDataComplete
+				
+				// todo: Set isRecordsetAlmostComplete
+				// todo: Set isRecordsetComplete
+				
+				// todo: Add this row to the dataPageOut
+				
+				// todo: if first row, start log
+				
+				// todo: If isPageDataAlmostComplete
+					// todo: log ok-dtl
+				// todo: If isPageDataComplete
+					// todo: Mark job started
+					// todo: Start step log_dtl, if not started
+					// todo: update logs
+					// todo: write ok-dtl logs
+				    // todo: submit page of data
+					// todo: clear dataPageOut
+				
+				// todo: If isRecordsetComplete
+					// todo: mark step completed
+				
+				// end of loop
+				// todo: set previous ok1/pk1
+				// todo: increment this.records_processed
+				
+				// todo: Is endOfRecordset
+					// todo: Abandon remaining records
+					// 
+				
+			}
+			// end of recordset
+			
+			// OLD LOOP
 			while (!endOfRecordset) {
 				rownum++;  // Note: rownum starts at 1
 				this.records_processed++;
