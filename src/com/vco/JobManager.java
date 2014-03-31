@@ -48,7 +48,6 @@ public class JobManager {
 	
 
 	public String batchMode;  // New or Repeat job?
-
 	
 	public  JobManager(VBatchManager batch_manager, Integer job_id) {
 		this.batch_manager = batch_manager;
@@ -59,19 +58,44 @@ public class JobManager {
 	
 	
 	public void init() {
+		Boolean breakOutOfThisJob = false;
 		
 		/** Populate this.job_definition with the correct job def record**/
 		
 		// We're doing a new run by job id, so just look up the job def by job #
 		if (this.batchMode == VBatchManager.BatchMode_New) {  // new run by job id
-			this.job_definition = this.db.find(JobDefinition.class, (Object)this.job_id);
+			// Look up the job definition by JobDefinition.order_num (not id)
+			TypedQuery<JobDefinition> qryMyJobDef = this.db.createQuery(
+					"SELECT j from JobDefinition j "
+					+ "WHERE j.orderNum = :jobOrderNumber "
+					+ "order by j.id desc", JobDefinition.class);
+			List<JobDefinition> lstMyJobDefs = qryMyJobDef
+		    		.setParameter("jobOrderNumber", this.job_id)
+		    		.getResultList();
+			if (lstMyJobDefs.size() == 1) {  // If we found the job definition 
+				this.job_definition = lstMyJobDefs.get(0);
+			}
+			else if (lstMyJobDefs.size() == 0) { // Didn't find any matching job
+				// TODO: Report that no job with this id was found.  Abort job.
+				System.out.println("Job # " + this.job_id + " not found.");
+				breakOutOfThisJob=true;
+			}
+			else if (lstMyJobDefs.size() > 1 ) {  // Found more than one matching job
+				// TODO:  Report that more than one job with this id has been defined,
+				// inform user that job will not run.  Abort job.
+				
+				breakOutOfThisJob=true;
+			}
+//			this.job_definition = this.db.find(JobDefinition.class, (Object)this.job_id);
 		}
 		// Here we're re-running a previous batch by batch num, so get the last run
-		// of this batch from the logs, and use its job_def_id to look up the job def record
+		// of this batch from the logs, and use its job_definition
 		else if (this.batchMode == VBatchManager.BatchMode_Repeat) {  // re-run by batch_num
 			// Look up the job_definition by batch_num
 			TypedQuery<BatchLog> qryPreviousBatch = this.db.createQuery(
-					"SELECT log from BatchLog log WHERE log.batchNum = :batchNumber order by log.id desc", BatchLog.class);
+					"SELECT log from BatchLog log "
+					+ "WHERE log.batchNum = :batchNumber "
+					+ "order by log.id desc", BatchLog.class);
 			List<BatchLog> lstBatches = qryPreviousBatch
 		    		.setParameter("batchNumber", this.job_id)
 		    		.getResultList();
@@ -80,6 +104,10 @@ public class JobManager {
 				BatchLog prevRunOfThisBatch = lstBatches.get(0);
 				this.job_definition = prevRunOfThisBatch.getJobDefinition();
 			}
+			else if (lstBatches.size() == 0) {
+				System.out.println("Could not find any previous runs for batch # " + this.job_id + ".  Aborting job.");
+				breakOutOfThisJob=true;
+			}
 		}
 		
 		/** Load the steps_xref entries for this job,
@@ -87,69 +115,69 @@ public class JobManager {
 		 *  add them to this.stepManagers, and call init() on 
 		 *  each step.
 		 */
-		
-		// Load this job's steps xref entries
-		String queryString = "SELECT a FROM JobStepsXref a " +
-                "WHERE a.jobDefinition = :jid";	
-		Query query = this.db.createQuery(queryString);
-		query.setParameter("jid", this.job_definition);
-		List<JobStepsXref> step_xrefs = query.getResultList();
-		this.logStart();
-		// Load the actual steps into this.steps
-		if (step_xrefs.size() > 0) {
-			for (JobStepsXref step_xref: step_xrefs) {
-				Step s = step_xref.getStep();
-				// Create the StepManager objects for each step
-				try {
-					// Get the classpath from the step table
-					// and create it.
-					Class<?> c = Class.forName(s.getClassPath());
-					Constructor<?> cons = c.getConstructor(JobManager.class, JobStepsXref.class);
-					// Create new step manager, passing in this job manager, and the step record
-					StepManager step_manager = (StepManager) cons.newInstance(this, step_xref);
-					// Add the step_manager to this.stepManagers
-					this.stepManagers.add(step_manager);
-					// Initialize the step
-					step_manager.init();
-				}
-				catch ( SecurityException e) {
-					VBatchManager.log.fatal(e);
-				}
-				catch ( ClassNotFoundException e) {
-					VBatchManager.log.fatal(e);
-				}
-				catch ( IllegalAccessException e) {
-					VBatchManager.log.fatal(e);
-				}
-				catch ( InstantiationException e) {
-					VBatchManager.log.fatal(e);
-				}
-				catch ( InvocationTargetException e) {
-					VBatchManager.log.fatal(e);
-					e.printStackTrace();
-				}
-				catch ( NoSuchMethodException e) {
-					VBatchManager.log.fatal(e);
-				}
-				
-				
-				this.steps.add(s);
-			} // end: looping over step_xref records for this job
-			// This job is done.  Make appropriate log entries
-			//this.logComplete();
+		if (!breakOutOfThisJob) {
+			// Load this job's steps xref entries
+			String queryString = "SELECT a FROM JobStepsXref a " +
+	                "WHERE a.jobDefinition = :jid";	
+			Query query = this.db.createQuery(queryString);
+			query.setParameter("jid", this.job_definition);
+			List<JobStepsXref> step_xrefs = query.getResultList();
+			this.logStart();
+			// Load the actual steps into this.steps
+			if (step_xrefs.size() > 0) {
+				for (JobStepsXref step_xref: step_xrefs) {
+					Step s = step_xref.getStep();
+					// Create the StepManager objects for each step
+					try {
+						// Get the classpath from the step table
+						// and create it.
+						Class<?> c = Class.forName(s.getClassPath());
+						Constructor<?> cons = c.getConstructor(JobManager.class, JobStepsXref.class);
+						// Create new step manager, passing in this job manager, and the step record
+						StepManager step_manager = (StepManager) cons.newInstance(this, step_xref);
+						// Add the step_manager to this.stepManagers
+						this.stepManagers.add(step_manager);
+						// Initialize the step
+						step_manager.init();
+					}
+					catch ( SecurityException e) {
+						VBatchManager.log.fatal(e);
+						//TODO : Exception Stack Trace should be logged
+						e.printStackTrace();
+					}
+					catch ( ClassNotFoundException e) {
+						VBatchManager.log.fatal(e);
+					}
+					catch ( IllegalAccessException e) {
+						VBatchManager.log.fatal(e);
+					}
+					catch ( InstantiationException e) {
+						VBatchManager.log.fatal(e);
+					}
+					catch ( InvocationTargetException e) {
+						VBatchManager.log.fatal(e);
+					}
+					catch ( NoSuchMethodException e) {
+						VBatchManager.log.fatal(e);
+					}
+					
+					
+					this.steps.add(s);
+				} // end: looping over step_xref records for this job
+				// This job is done.  Make appropriate log entries
+				//this.logComplete();
+			}
+			else {
+				// TODO:  Log that no steps were found, end job
+			}
 		}
-		else {
-			// TODO:  Log that no steps were found, end job
-			
-		}
-		
 		/**
 		 *  Run the job here, as long as:
 		 *    - the job definition is found
 		 *    - at least one steps is configured for the job
 		 */
 	
-		if (job_definition != null && this.steps.size() > 0) {
+		if (!breakOutOfThisJob && job_definition != null && this.steps.size() > 0) {
 			// Write log entries showing this job has started
 			 
 			// Call start() on each step, in order
@@ -192,39 +220,77 @@ public class JobManager {
 	 * Log the start of this job to the batchLogDtl table
 	 */
 	private void logStart() {
+		// Before opening transaction for batch_log, do any queries
+		// necessary to look up batch_num and batch_seq_nbr
 		
+		Long tempBatchNum = -1L;
+		Long tempBatchSeqNbr = -1L;
+		// If this is a new run for this job, set batch_num to batch_log_id,
+		// and batch_seq_nbr to 1
+		if (this.batchMode == VBatchManager.BatchMode_New) {
+//					this.batch_log.setBatchNum(new BigDecimal(this.batch_log.getId()));
+			//tempBatchNum = new BigDecimal(this.job_id);
+			//this.batch_log.setBatchSeqNbr(new BigDecimal(1));
+			tempBatchSeqNbr = 1L;
+		}
+		// Look up last run of this batch, to get batch/seq nbr for this run.
+		if (this.batchMode == VBatchManager.BatchMode_Repeat) {
+			int highestBatchSeqNbr = 0;
+			BatchLog latestRun = null;
+			TypedQuery<BatchLog> qryRunsOfThisBatch = this.db.createQuery(
+					"SELECT log from BatchLog log WHERE log.batchNum = :bNumber order by log.batchSeqNbr desc", BatchLog.class);
+			List<BatchLog> lstRunsOfThisBatch = qryRunsOfThisBatch
+		    		.setParameter("bNumber", this.job_id)
+		    		.getResultList();
+			// If there's at least one previous run with this batch number
+			if (lstRunsOfThisBatch.size() > 0 ) {
+				// Get the batch_seq_nbr or the latest run
+				latestRun = lstRunsOfThisBatch.get(0);
+				highestBatchSeqNbr = latestRun.getBatchSeqNbr().intValue();
+			}
+			else {  // Abort this job: no previous runs with this batch number exist
+				System.out.println("VBatch error:  No previous runs found for batch_id: " + this.job_id);
+				
+			}
+//					this.batch_log.setBatchNum(new BigDecimal(this.batch_log.getId()));
+//					this.batch_log.setBatchSeqNbr(new BigDecimal(highestBatchSeqNbr+1));
+			tempBatchNum = latestRun.getBatchNum();
+			tempBatchSeqNbr = highestBatchSeqNbr+1L;
+ 		}
+				
+				
 		this.db.getTransaction().begin();
 		
 		// Create the main BatchLog entry
-		this.batch_log = new BatchLog();;
+		this.batch_log = new BatchLog();
 		this.batch_log.setJobDefinition(this.job_definition);
-		
-		//batch_num should be set from sequence BATCH_LOG_BATCH_NUM_SEQ
-		String queryString = "SELECT BATCH_LOG_BATCH_NUM_SEQ.NEXTVAL FROM DUAL";	
-		Query query = this.db.createNativeQuery(queryString);
-		List<Number> batchNumList = (List<Number>)query.getResultList();
-		this.batch_log.setBatchNum(batchNumList.get(0).longValue());
-		
-		//batch_seq_nbr should be set to max + 1
-		query = this.db.createQuery("SELECT MAX(BL.batchSeqNbr) FROM BatchLog BL WHERE BL.batchNum = ?1");
-		query.setParameter(1, this.batch_log.getBatchNum());
-		Long batchSeqNum = (Long)query.getSingleResult();
-		if ( batchSeqNum == null )
-			batchSeqNum = 1L;
-		else
-			batchSeqNum += 1L;
-		VBatchManager.log.debug(MessageFormat.format("batchSeqNbr: {0}",batchSeqNum));
-		this.batch_log.setBatchSeqNbr(batchSeqNum);
 		
 		this.batch_log.setOrderNum(this.job_definition.getOrderNum());
 		this.batch_log.setStatus("Started");
 		this.batch_log.setStartDt(new Date());
 		
-		this.db.persist(this.batch_log);
+		//batch_num should be set from sequence BATCH_LOG_BATCH_NUM_SEQ
+		String queryString = "SELECT BATCH_LOG_BATCH_NUM_SEQ.NEXTVAL FROM DUAL";	
+		Query query = null;
+		
+		if (this.batchMode == VBatchManager.BatchMode_New) {
+			query = this.db.createNativeQuery(queryString);
+			List<Number> batchNumList = (List<Number>)query.getResultList();
+			this.batch_log.setBatchNum(batchNumList.get(0).longValue());
+			
+			this.batch_log.setBatchSeqNbr(1L);
+		}
+		else {
+			this.batch_log.setBatchNum(tempBatchNum);
+			
+			//batch_seq_nbr should be set to max + 1
+			this.batch_log.setBatchSeqNbr(tempBatchSeqNbr);
+		}
 		
 		String logMsg = "";
 		logMsg += "Batch " + this.batch_log.getBatchNum();
-		logMsg += ", Job " + this.job_definition.getId();
+		logMsg += " (seq " + this.batch_log.getBatchSeqNbr() + ")";
+		logMsg += ", Job " + this.job_definition.getOrderNum();
 		logMsg += " (" + this.job_definition.getLongDesc() + ")";
 		this.batch_log.setLongDesc(logMsg);
 		

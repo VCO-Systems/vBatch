@@ -37,7 +37,10 @@ public class BatchLogDtl implements Serializable {
 	@Column(name="EXTRACT_COMMIT_FREQ")
 	private Long extractCommitFreq;
 
-	@Column(name="EXTRACT_MAX_RECS_PER_FILE")
+	@Column(name="EXTRACT_MAX_REC")
+	private Long extractMaxRecs;
+	
+	@Column(name="EXTRACT_MAX_REC_PER_FILE")
 	private Long extractMaxRecsPerFile;
 
 	@Column(name="EXTRACT_SQL", length=4000)
@@ -138,6 +141,15 @@ public class BatchLogDtl implements Serializable {
 		this.extractCommitFreq = extractCommitFreq;
 	}
 
+
+	public Long getExtractMaxRecs() {
+		return this.extractMaxRecs;
+	}
+	
+	public void setExtractMaxRecs(Long extractMaxRecs) {
+		this.extractMaxRecs = extractMaxRecs;
+	}
+	
 	public Long getExtractMaxRecsPerFile() {
 		return this.extractMaxRecsPerFile;
 	}
