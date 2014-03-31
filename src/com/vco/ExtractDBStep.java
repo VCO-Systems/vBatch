@@ -165,10 +165,7 @@ public class ExtractDBStep extends StepManager {
 			
 			// If there's at least one previous run with valid maxOK1
 			if (dtls.size() > 0) {
-				BatchLogDtl lastRun = dtls.get(0);  // Most recent successful run of the same type
-				
-				
-				
+				BatchLogDtl lastRun = dtls.get(0);  // Most recent successful run of this job
 				// Get maxOk1 from previous run
 				previousRunMaxOk1 = lastRun.getMaxOk1();  // Oracle date in string format
 				
@@ -249,17 +246,18 @@ public class ExtractDBStep extends StepManager {
 			
 			// Iterate over all the rows of the ResultSet
 			boolean endOfRecordset=false;
+			boolean endOfPage = false;
 			
 			while (!endOfRecordset) {
 				rownum++;  // Note: rownum starts at 1
 				this.records_processed++;
-				// If this row would exceed step.max_rec,
-				// stop processing records here.
+				
+				// totalRows is max_rec + 10%.  When we reach max_rec,
+				// start stepping forward until ok1 changes
 				if (rownum > totalRows) {
 					// Get the current OK1 value
 					String lastRowOK1Value = this.convertDateFieldToString(rs, "OK1");
 					// Write maxOK1 to the log_dtl record for this extraction step
-//					this.job_manager.db.getTransaction().begin();
 					this.log_dtl.setMaxOk1(previousRowOK1Value);
 					this.log_dtl.setStatus("Completed");
 					this.log_dtl.setNumRecords(new BigDecimal(this.records_processed-1));
@@ -287,9 +285,11 @@ public class ExtractDBStep extends StepManager {
 				BatchLogOkDtl newOkDtl = new BatchLogOkDtl();
 				newOkDtl.setBatchLog(this.job_manager.batch_log);
 				newOkDtl.setOk1(this.convertDateFieldToString(rs, "OK1"));
-				currentRowPK1Value = rs.getString("PK1");
+				newOkDtl.setPk1(new BigDecimal(rs.getInt("PK1")));
+				newOkDtl.setPk2(new BigDecimal(rs.getInt("PK2")));
+				currentRowOK1Value = this.convertDateFieldToString(rs, "OK1");
 				// If PK1 has changed, remove previous entries from tempOkDtlList
-				if (!currentRowPK1Value.equals(previousRowPK1Value)) {
+				if (!currentRowOK1Value.equals(previousRowOK1Value)) {
 					tempOkDtlList.clear();
 				}
 				
@@ -321,6 +321,14 @@ public class ExtractDBStep extends StepManager {
 					this.log_dtl.setNumRecords(new BigDecimal(this.records_processed));
 					this.job_manager.db.persist(this.log_dtl);
 					
+					// Delete any previous ok_dtl entries created by this job
+					Query qryOkDtls = this.job_manager.db.createNamedQuery("BatchLogOkDtl.findByBatchLogId");
+					qryOkDtls.setParameter("batchLogId", this.job_manager.batch_log);
+					List<BatchLogOkDtl> rstOkDtls = qryOkDtls.getResultList();
+					for (BatchLogOkDtl okDtlRecord : rstOkDtls) {
+						this.job_manager.db.remove(okDtlRecord);
+					}
+					
 					// Write okdtl logs for this step
 					for (BatchLogOkDtl okdtl : tempOkDtlList) {
 						this.job_manager.db.persist(okdtl);
@@ -329,13 +337,11 @@ public class ExtractDBStep extends StepManager {
 					tempOkDtlList.clear();
 					
 					this.job_manager.db.getTransaction().commit();
-					this.job_manager.db.getTransaction().begin();
+//					this.job_manager.db.getTransaction().begin();
 					
 					// Submit this page of data to job manager
 					this.job_manager.submitPageOfData(this.dataPageOut, this);
-					
-					
-					
+					this.job_manager.db.getTransaction().begin();
 					
 					// Reset page data
 					this.dataPageOut = new ArrayList<Object>();
@@ -354,12 +360,22 @@ public class ExtractDBStep extends StepManager {
 					this.log_dtl.setEndDt(new Date());
 					this.log_dtl.setStatus("Completed");
 					this.log_dtl.setNumRecords(new BigDecimal(this.records_processed));
+					
+					// Delete any previous ok_dtl entries created by this job
+					Query qryOkDtls = this.job_manager.db.createNamedQuery("BatchLogOkDtl.findByBatchLogId");
+					qryOkDtls.setParameter("batchLogId", this.job_manager.batch_log);
+					List<BatchLogOkDtl> rstOkDtls = qryOkDtls.getResultList();
+					for (BatchLogOkDtl okDtlRecord : rstOkDtls) {
+						this.job_manager.db.remove(okDtlRecord);
+					}
+					
 					// Write okdtl logs for this step
 					for (BatchLogOkDtl okdtl : tempOkDtlList) {
 						this.job_manager.db.persist(okdtl);
 					}
 					// Clear out ok_dtl list
 					tempOkDtlList.clear();
+					
 					this.job_manager.db.persist(this.log_dtl);
 					this.job_manager.db.getTransaction().commit();
 				}
@@ -399,6 +415,13 @@ public class ExtractDBStep extends StepManager {
 		// TODO:  log completion of this step
 		
 		return true;
+		
+	}
+
+	/**
+	 * @param tempOkDtlList
+	 */
+	private void updateOkDtlLogsForThisJob(List<BatchLogOkDtl> tempOkDtlList) {
 		
 	}
 	

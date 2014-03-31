@@ -1,7 +1,9 @@
 package model;
 
 import java.io.Serializable;
+
 import javax.persistence.*;
+
 import java.sql.Timestamp;
 import java.math.BigDecimal;
 
@@ -12,11 +14,18 @@ import java.math.BigDecimal;
  */
 @Entity
 @Table(name="BATCH_LOG_OK_DTL")
-@NamedQuery(name="BatchLogOkDtl.findAll", query="SELECT b FROM BatchLogOkDtl b")
+
+@NamedQueries({
+	@NamedQuery(name="BatchLogOkDtl.findAll", query="SELECT b FROM BatchLogOkDtl b"),
+	@NamedQuery(name="BatchLogOkDtl.findByBatchLogId", query="SELECT b FROM BatchLogOkDtl b where b.batchLog = :batchLogId")
+})
+
 public class BatchLogOkDtl implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Id
+	@GeneratedValue(generator="BatchLogOkDtlGen")
+	@SequenceGenerator(name="BatchLogOkDtlGen", sequenceName="BATCH_LOG_OK_DTL_ID_SEQ", allocationSize=1)
 	@Column(unique=true, nullable=false)
 	private long id;
 
