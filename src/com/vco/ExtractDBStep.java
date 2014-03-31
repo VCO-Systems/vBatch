@@ -109,9 +109,9 @@ public class ExtractDBStep extends StepManager {
 			BatchLogDtl extract_log = lstMatchingLogDtl.get(0);
 			// Get the vars we need for min/max to re-run this job with the same records
 			previousRunMinOk1 = extract_log.getMinOk1();
-			previousRunMinOk1 = this.convertDateStringToAnotherDateString(previousRunMinOk1, "MM/d/yy k:mm:ss", "MM/dd/yyyy k:mm:ss");
+			previousRunMinOk1 = this.convertDateStringToAnotherDateString(previousRunMinOk1, "MM/d/yy H:mm:ss", "MM/dd/yyyy H:mm:ss");
 			previousRunMaxOk1 = extract_log.getMaxOk1();
-			previousRunMaxOk1 = this.convertDateStringToAnotherDateString(previousRunMaxOk1, "MM/d/yy k:mm:ss", "MM/dd/yyyy k:mm:ss");
+			previousRunMaxOk1 = this.convertDateStringToAnotherDateString(previousRunMaxOk1, "MM/d/yy H:mm:ss", "MM/dd/yyyy H:mm:ss");
 			Long numRecs = extract_log.getNumRecords();
 			totalRows = numRecs.intValue();
 			
@@ -181,7 +181,7 @@ public class ExtractDBStep extends StepManager {
 				// Since we're relying on JDBC to convert a date object to a string,
 				// force it into the specific date format that Oracle will be able to use in
 				// a query (for instance, forcing the year from 2-digit to 4-digit)
-				previousRunMaxOk1 = this.convertDateStringToAnotherDateString(previousRunMaxOk1, "MM/d/yy k:mm:ss", "MM/dd/yyyy k:mm:ss");
+				previousRunMaxOk1 = this.convertDateStringToAnotherDateString(previousRunMaxOk1, "MM/dd/yy H:mm:ss", "MM/dd/yyyy H:mm:ss");
 				
 				
 				
@@ -227,18 +227,18 @@ public class ExtractDBStep extends StepManager {
 				String lastRowOK1, lastRowPK1;
 				try {
 					lastRowOK1 = this.convertDateFieldToString(rs, "OK1");
-					lastRowPK1 = rs.getString("tran_nbr");
+					lastRowPK1 = rs.getString("PK1");
 					
 					String currentRowOK1, currentRowPK1;
 					// STUB:  comparison here should match
 					currentRowOK1 = this.convertDateFieldToString(rs, "OK1");
-					currentRowPK1 = rs.getString("tran_nbr");
+					currentRowPK1 = rs.getString("PK1");
 					//System.out.println("\tLast row: " + currentRowOK1 + " / " + currentRowPK1);
 					// Go backwards until pk1 and ok1 are different from last row
 					while (rs.previous()) {
 						endRowsToSkip++;
 						currentRowOK1 = this.convertDateFieldToString(rs, "OK1");
-						currentRowPK1 = rs.getString("tran_nbr");
+						currentRowPK1 = rs.getString("PK1");
 						if (!currentRowOK1.equals(lastRowOK1) && !currentRowPK1.equals(lastRowPK1)) {
 							
 							finalRowNum = startingRowNum - endRowsToSkip;
@@ -359,7 +359,6 @@ public class ExtractDBStep extends StepManager {
 					this.job_manager.db.persist(this.log_dtl);
 					this.job_manager.db.getTransaction().commit();
 				}
-				
 				previousRowOK1Value = this.convertDateFieldToString(rs, "OK1");
 				
 				// Move to the next record (or abort if we're past the last row
@@ -458,7 +457,7 @@ public class ExtractDBStep extends StepManager {
 	private String convertDateFieldToString(ResultSet rs, String columnName) throws SQLException,
 			ParseException {
 		SimpleDateFormat incomingDateFormat  = new SimpleDateFormat("y-MM-d HH:mm:ss.S");
-		SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y k:mm:ss");
+		SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y H:mm:ss");
 		String ds = rs.getString(columnName);
 		//System.out.println("\t[Extract] Original String dt: " + ds);
 		Date dt = incomingDateFormat.parse(ds);

@@ -38,7 +38,7 @@ import model.JobDefinition;
 
 public class VBatchManager {
 	
-	public static final String vbatch_version = "vBatch v0.3";
+	public static final String vbatch_version = "vBatch v0.4";
 
 	private static final String PERSISTENCE_UNIT_NAME = "vbatch";
 	private static EntityManagerFactory factory;

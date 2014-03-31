@@ -77,6 +77,6 @@
     </target>
 	
 	<!-- Full build:  jar file, ini files -->
-    <target name="full" depends="clean,build_jar,copy_ini_files,data,zip-all">
+    <target name="dev" depends="clean,build_jar,copy_ini_files,data,zip-all">
     </target>
 </project>
