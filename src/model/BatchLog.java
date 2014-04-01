@@ -15,6 +15,8 @@ import java.util.List;
 @NamedQuery(name="BatchLog.findAll", query="SELECT b FROM BatchLog b")
 public class BatchLog implements Serializable {
 	private static final long serialVersionUID = 1L;
+	public static final String statusStarted = "Started";
+	public static final String statusComplete = "Complete";
 
 	@Id
 	@GeneratedValue(generator="BatchLogGen")

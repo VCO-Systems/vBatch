@@ -71,10 +71,10 @@ public class VBatchManager {
 	 * use MessageFormat object to create the string message
 	 * @param job_id
 	 */
-	private void setLogging(long job_id){
+	private void setLogging(long order_num){
 		// build the run logfile based on job id and timestamp
 		Date today = new Date();
-		this.defaultLogFile = MessageFormat.format("vbatch_j{0}_d{1}_t{2}.log", job_id+"", new SimpleDateFormat("yyyyMMdd").format(today), new SimpleDateFormat("HHmmss").format(today));
+		this.defaultLogFile = MessageFormat.format("vbatch_j{0}_d{1}_t{2}.log", String.valueOf(order_num), new SimpleDateFormat("yyyyMMdd").format(today), new SimpleDateFormat("HHmmss").format(today));
 		
 		// set system properties used in log4j logfile Filename
 		System.setProperty("logfile",defaultLogFile);
@@ -84,7 +84,7 @@ public class VBatchManager {
 		
 		// start the logging
 		log = Logger.getLogger(vbatch_version);	
-		log.debug(MessageFormat.format("JOB ID: {0}",job_id));
+		log.debug(MessageFormat.format("ORDER_NUM : {0}", order_num));
 	}
 	
 	/**

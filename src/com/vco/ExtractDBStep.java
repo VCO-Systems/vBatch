@@ -8,6 +8,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.DateFormat;
+import java.text.MessageFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -44,7 +45,7 @@ public class ExtractDBStep extends StepManager {
 		this.jobStepXref = jobStepXref;
 		
 		// Use hard-coded default for max_rec, unless one is defined in the step config table
-		int max_rec = this.jobStepXref.getStep().getExtractMaxRec().intValue();
+		max_rec = this.jobStepXref.getStep().getExtractMaxRec().intValue();
 	}
 	
 	/**
@@ -141,13 +142,18 @@ public class ExtractDBStep extends StepManager {
 		 */
 		
 		if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_New) {
+			// Look for previous Complete runs of this particular JOB
 			TypedQuery<BatchLogDtl> query = this.job_manager.db.createQuery(
 		        "SELECT dtl FROM BatchLogDtl dtl WHERE dtl.stepType = :stepType  and dtl.stepsId = :stepId "  // must match this step's type and id
-				+ " and dtl.maxOk1 is not null "  // must have  min_ok1 and max_ok1 value
-		        + "order by dtl.id desc", BatchLogDtl.class);  // most recent match comes first
+				+ " and dtl.batchLog.orderNum = :orderNum "
+				+ " and dtl.batchLog.status = :status"
+		        + " and dtl.maxOk1 is not null "  // must have max_ok1 value
+		        + " order by dtl.id desc", BatchLogDtl.class);  // most recent match comes first
 		    List<BatchLogDtl> dtls = query
 		    		.setParameter("stepType", "Extract")
 		    		.setParameter("stepId", (int) this.jobStepXref.getId())
+		    		.setParameter("orderNum", this.jobStepXref.getJobDefinition().getOrderNum())
+		    		.setParameter("status", BatchLog.statusComplete)
 		    		.getResultList();
 			
 			// dtls.size()  is the number of previous executions of this step from log_dtl
@@ -194,11 +200,8 @@ public class ExtractDBStep extends StepManager {
 				// replace the SQL TOKEN(s) ( /* where */ )
 				int sqlTokensReplaced =  this.replaceSqlToken(this.raw_sql, whereClause); 
 				if (sqlTokensReplaced == 0) {
-					// TODO:  Log the fact that no sql tokens were found
+					VBatchManager.log.debug(MessageFormat.format("[Extract] QUERY : {0}", this.raw_sql));
 				}
-				
-				
-				
 			}
 			
 			/**
@@ -210,13 +213,10 @@ public class ExtractDBStep extends StepManager {
 			int endRowsToSkip = 0;
 			int rowCount = 0;
 			
-			
-			
 			// go to end of recordset
 			int finalRowNum = 0;  // this will be the final row # for this job
 			try {
 				//System.out.println("\tAbout to query " + this.max_rec + " records");
-				System.out.println("[Extract] REWRITTEN QUERY: " + this.raw_sql);
 				rs = this.sqlQuery(this.raw_sql, commit_freq, this.max_rec);  // limit query to max_rec rows
 				
 				rs.last();
