@@ -1,5 +1,6 @@
 package com.vco;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -60,6 +61,7 @@ public class GenerateCSVStep extends StepManager {
 	private int totalFilesGenerated = 0;
 	
 	FileWriter currentOutputFile = null;
+	String currentOutputFilename = new String();
 	private String defaultCSVFilename = "vbatch_{dt}_W914_{seq}.csv";
 	
 	// private vars
@@ -192,43 +194,15 @@ public class GenerateCSVStep extends StepManager {
 		// System.out.println("\t[CSV] rows to process: " + pageOfData.size());
 		
 		try {
-			/*
-			Iterator<Object> rows = pageOfData.iterator();
-			int rowcount=0;
-			while (rows.hasNext()) {
-				rowcount++;
-				ArrayList<String> row = (ArrayList<String>)rows.next();
-				//System.out.println(row.get(0));
-				listWriter.write(row);
-				// GENERATE
-			}
-			System.out.println("\t[CSV] row count: " + rowcount);
-			//listWriter.write(pageOfData);
-			 */
-			
 			// Loop over the rows of data in this page
 			for (int i = 0; i < pageOfData.size(); i++) {
-				
-				// See if we need to close out this file
-				if (this.max_rec_per_file > 0 && this.totalRowsThisFile + 1 > this.max_rec_per_file) {
-					// Close out the file
-//					closeCurrentOutputFile();
-				}
-				else {
-					
-					// TODO: Update the counters
-				}
-				
-				// See if a new file needs to be created
-				// this.currentOutputFile will be null if this is the first record for
-				// the job, or if the previous file was closed out after writing the last row.
-				if (this.currentOutputFile == null) {
-					this.generateNextCSVFile();
+				// Create the csv file before outputting the first row
+				if (this.currentOutputFile == null && i == 0) {
+					this.currentOutputFilename = this.generateNextCSVFile();
 				}
 				
 				// Write this row to the CSV
 				List row = (List)pageOfData.get(i);
-				//listWriter.write(row);
 				String rowStr = this.generateCSVRow(row);
 				this.currentOutputFile.append(rowStr);
 				this.currentOutputFile.flush();
@@ -237,8 +211,17 @@ public class GenerateCSVStep extends StepManager {
 				this.totalRowsThisFile++;
 				this.totalRowsGenerated++;
 				
+				
 			}
+			// Close the output file
 			closeCurrentOutputFile();
+			// Rename the .tmp to .csv
+			renameTMPToCSV();
+			
+			// Send the .tmp file to GenerateTRGStep
+			this.job_manager.submitPageOfData(this.alternateOutputData, this);
+			// Clear the list of generated csvs since we've generated the .tmp
+			this.alternateOutputData = new ArrayList<String>();
 			
 		}
 		catch( Exception e) {
@@ -249,6 +232,33 @@ public class GenerateCSVStep extends StepManager {
 		}
 		
 		return true;
+	}
+
+	/**
+	 * 
+	 */
+	private boolean renameTMPToCSV() {
+		int pos = this.currentOutputFilename.length()-5;
+		String newFilename = this.currentOutputFilename.substring(0,pos) + this.currentOutputFilename.substring(pos).replaceFirst(".tmp", ".csv");
+		// Open the tmp file
+		File tmpFile = new File("output/" + this.currentOutputFilename);
+		File csvFile = new File("output/" + newFilename);
+		// Make sure the csv file doesn't already exist
+		if (csvFile.exists())
+			try {
+				throw new java.io.IOException("Cannot rename .tmp to .csv (file already exists): " + this.currentOutputFilename);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		boolean success = tmpFile.renameTo(csvFile);
+		
+		// Update this filename in this.alternateOutputData as well,
+		// since that will be sent to the trg step
+		this.alternateOutputData.set(0,	this.alternateOutputData.get(0).replace(".tmp", ".csv"));
+		
+		return success;
+		
 	}
 
 	/**
@@ -287,23 +297,33 @@ public class GenerateCSVStep extends StepManager {
 	
 	/**
 	 * Generate the next CSV file.
+	 * 
+	 * Returns the name of the generated file
 	 */
 	
-	private void generateNextCSVFile() {
-		
+	private String generateNextCSVFile() {
+		String newFileName = this.defaultCSVFilename;
 		try {
 			// Increment the counters
 			this.totalFilesGenerated++;
 			
 			// Construct the filename for this output file
-			String newFileName = this.defaultCSVFilename;
+			
 			newFileName = newFileName.replace("{dt}", this.startingDateTimeStr);
 			newFileName = newFileName.replace("{seq}", Integer.toString(this.totalFilesGenerated));
 			newFileName = newFileName.replace("{batch_num}",  this.job_manager.batch_log.getBatchNum().toString());
 			
+			
+			// Replace ".csv" with ".tmp"
+			String tmpFilename = new String();
+			if (newFileName.toLowerCase().endsWith(".csv")) {
+				int pos = newFileName.length()-5;
+				tmpFilename = newFileName.substring(0,pos) + newFileName.substring(pos).replaceFirst(".csv", ".tmp");
+				newFileName = tmpFilename;
+			}
 			// Create the file
-			this.currentOutputFile = new FileWriter("output/" + newFileName,true);
-			this.alternateOutputData.add("output/" + newFileName);
+			this.currentOutputFile = new FileWriter("output/" + tmpFilename,true);
+			this.alternateOutputData.add("output/" + tmpFilename);
 			
 			// Reset counters
 			this.totalRowsThisFile=0;
@@ -312,7 +332,7 @@ public class GenerateCSVStep extends StepManager {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+		return newFileName;
 	}
 	
 	

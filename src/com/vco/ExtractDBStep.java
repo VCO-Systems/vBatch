@@ -342,7 +342,7 @@ public class ExtractDBStep extends StepManager {
 					// Update logs for this step, since we just sucessfully wrote some data
 					this.log_dtl.setMaxOk1(previousRowOK1Value);
 					
-					// We successfully saved some data, commit the logs
+					// We successfully saved some data, commit the logs for all steps and job manager
 					this.job_manager.db.getTransaction().commit();
 					// Start a new transaction
 					this.job_manager.db.getTransaction().begin();
