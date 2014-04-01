@@ -137,13 +137,13 @@ public class GenerateCSVStep extends StepManager {
 			// perhaps the last one.
 			
 			// Write out the last CSV
-			try {
-				this.closeCurrentOutputFile();
-				String j = "Do Nothing";
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+//			try {
+//				this.closeCurrentOutputFile();
+//				String j = "Do Nothing";
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
 			// Mark this step as complete
 			this.completed=true;
 			this.failed=false;
