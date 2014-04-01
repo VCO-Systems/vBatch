@@ -350,7 +350,7 @@ public class VBatchManager {
 			ex.printStackTrace();
 		}
 		catch (Exception e) {
-			System.out.println(e.getMessage());
+			e.printStackTrace();
 		}
 	}
 

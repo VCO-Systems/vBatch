@@ -46,6 +46,7 @@ public class JobManager {
 	private List steps = new ArrayList<Step>();
 	private List stepManagers = new ArrayList<StepManager>();
 	private boolean atLeastOneStepFailed = false;
+	private int extract_max_rec_per_file = -1;
 	
 
 	public String batchMode;  // New or Repeat job?
@@ -138,8 +139,16 @@ public class JobManager {
 						StepManager step_manager = (StepManager) cons.newInstance(this, s);
 						// Add the step_manager to this.stepManagers
 						this.stepManagers.add(step_manager);
+						
 						// Initialize the step
 						step_manager.init();
+						// If this is the first CSV step for this job, get the
+						// extract_max_rec_per_file
+						Class j = step_manager.getClass();
+						if (step_manager instanceof GenerateCSVStep && this.extract_max_rec_per_file == -1) {
+							GenerateCSVStep g = (GenerateCSVStep)step_manager;
+							this.extract_max_rec_per_file = g.max_rec_per_file;
+						}
 					}
 					catch ( SecurityException e) {
 						VBatchManager.log.fatal(e);
@@ -214,6 +223,14 @@ public class JobManager {
 		targetStep.processPageOfData(pageOfData);
 		
 	}
+	
+	/**
+	 * Returns the step.extract_max_recs_per_file for the first CSV step in this job.
+	 */
+	public int getMaxRecPerFile() {
+		return this.extract_max_rec_per_file;
+	}
+	
 	
 	
 	/**

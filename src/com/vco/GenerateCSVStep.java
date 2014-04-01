@@ -52,7 +52,7 @@ public class GenerateCSVStep extends StepManager {
 	// Keep track of rows and paging
 	private int totalRowsGenerated = 0;
 	private int totalRowsThisFile = 0;
-	private int max_rec_per_file = 0;
+	public int max_rec_per_file = 0;
 	private int pageCount=0; // Pages of data sent in from another step (not necessarily db or CSV pages)
 	private BatchLogDtl log_dtl;
 	
@@ -137,6 +137,7 @@ public class GenerateCSVStep extends StepManager {
 			// Write out the last CSV
 			try {
 				this.closeCurrentOutputFile();
+				String j = "Do Nothing";
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -211,7 +212,7 @@ public class GenerateCSVStep extends StepManager {
 				// See if we need to close out this file
 				if (this.max_rec_per_file > 0 && this.totalRowsThisFile + 1 > this.max_rec_per_file) {
 					// Close out the file
-					closeCurrentOutputFile();
+//					closeCurrentOutputFile();
 				}
 				else {
 					
@@ -237,6 +238,7 @@ public class GenerateCSVStep extends StepManager {
 				this.totalRowsGenerated++;
 				
 			}
+			closeCurrentOutputFile();
 			
 		}
 		catch( Exception e) {
@@ -259,22 +261,25 @@ public class GenerateCSVStep extends StepManager {
 		int rows = this.totalRowsThisFile;
 		
 		// Close the output file
-		this.currentOutputFile.flush();
-		this.currentOutputFile.close();
-		this.currentOutputFile = null;
+		if (this.currentOutputFile != null) {
+			this.currentOutputFile.flush();
+			this.currentOutputFile.close();
+			this.currentOutputFile = null;
+		}
+		
 		
 		// Update counters
 		this.totalRowsThisFile=0;
 		
 		// Create new entry in batch_log_file_output log table for this file
-		this.job_manager.db.getTransaction().begin();
+//		this.job_manager.db.getTransaction().begin();
 		BatchLogFileOutput log_entry = new BatchLogFileOutput();
 		log_entry.setBatchLog(this.job_manager.batch_log);
 		log_entry.setFilename(this.alternateOutputData.get(this.alternateOutputData.size()-1));
 		log_entry.setNumRecords(new BigDecimal(rows));
 		log_entry.setCreateDt(this.startingDateTime);
 		this.job_manager.db.persist(log_entry);
-		this.job_manager.db.getTransaction().commit();
+//		this.job_manager.db.getTransaction().commit();
 		System.out.println("\t[CSV] Generated CSV file: " + this.alternateOutputData.get(this.alternateOutputData.size()-1) 
 				+ " (" + rows + " rows)");
 		
@@ -355,7 +360,7 @@ public class GenerateCSVStep extends StepManager {
 	
 	private void logStart() {
 		
-		this.job_manager.db.getTransaction().begin();
+//		this.job_manager.db.getTransaction().begin();
 		// Create entry in batch_log_dtl
 		this.log_dtl = new BatchLogDtl();
 		this.log_dtl.setBatchLog(this.job_manager.batch_log);
@@ -380,14 +385,17 @@ public class GenerateCSVStep extends StepManager {
 		
 		// Commit log entry
 		this.job_manager.db.persist(this.log_dtl);
-		this.job_manager.db.getTransaction().commit();
+//		this.job_manager.db.getTransaction().commit();
 		
 		System.out.println("\t[TRG] Step completed.");
 	}
 	
 private void logComplete() {
 		
-		this.job_manager.db.getTransaction().begin();
+		if (!this.job_manager.db.getTransaction().isActive()) {
+			this.job_manager.db.getTransaction().begin();
+		}
+		
 		// Create entry in batch_log_dtl
 		
 		this.log_dtl.setStartDt(new Date());
