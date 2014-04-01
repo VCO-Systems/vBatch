@@ -213,6 +213,12 @@ public class GenerateCSVStep extends StepManager {
 				
 				
 			}
+			
+			int pos = this.currentOutputFilename.length()-5;
+			String newFilename = this.currentOutputFilename.substring(0,pos) + this.currentOutputFilename.substring(pos).replaceFirst(".tmp", ".csv");
+			System.out.println("\t[CSV] Generated CSV file: " + newFilename 
+					+ " (" + this.totalRowsThisFile + " rows)");
+			
 			// Close the output file
 			closeCurrentOutputFile();
 			// Rename the .tmp to .csv
@@ -290,8 +296,7 @@ public class GenerateCSVStep extends StepManager {
 		log_entry.setCreateDt(this.startingDateTime);
 		this.job_manager.db.persist(log_entry);
 //		this.job_manager.db.getTransaction().commit();
-		System.out.println("\t[CSV] Generated CSV file: " + this.alternateOutputData.get(this.alternateOutputData.size()-1) 
-				+ " (" + rows + " rows)");
+		
 		
 	}
 	

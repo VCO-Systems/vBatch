@@ -48,6 +48,8 @@ public class JobManager {
 	private boolean atLeastOneStepFailed = false;
 	private int extract_max_rec_per_file = -1;
 	
+	private Date start_time;
+	
 
 	public String batchMode;  // New or Repeat job?
 	
@@ -60,6 +62,7 @@ public class JobManager {
 	
 	
 	public void init() {
+		this.start_time = new Date();
 		Boolean breakOutOfThisJob = false;
 		
 		/** Populate this.job_definition with the correct job def record**/
@@ -282,7 +285,8 @@ public class JobManager {
 		this.batch_log = new BatchLog();
 		this.batch_log.setJobDefinition(this.job_definition);
 		this.batch_log.setStatus("Started");
-		this.batch_log.setStartDt(new Date());
+		this.batch_log.setStartDt(this.start_time);
+		this.batch_log.setShortDesc(this.job_definition.getShortDesc());
 		
 		this.db.persist(this.batch_log);
 		

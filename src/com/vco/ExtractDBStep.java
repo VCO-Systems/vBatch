@@ -326,7 +326,8 @@ public class ExtractDBStep extends StepManager {
 					Iterator<BatchLogOkDtl> it = tempOkDtlList.iterator();
 				    while (it.hasNext()) {
 				    	BatchLogOkDtl tempOkDtl = it.next();
-				    	if (!tempOkDtl.getPk1().equals(PK1AtEndOfCurrentPage)) {
+				    	String rowPK1 = tempOkDtl.getPk1().toString();
+				    	if (!rowPK1.equals(PK1AtEndOfCurrentPage)) {
 							// Todo: delete this entry from the array so it doesn't get persisted
 							it.remove();
 						}
@@ -353,12 +354,7 @@ public class ExtractDBStep extends StepManager {
 					
 					// todo: Page completed, update logs
 				}
-				// We've process all records in this recordset
-				if (isRecordsetComplete) {
-					// todo: mark step completed
-					// todo: break out of recordset while
-					break;
-				}
+				
 				// end of loop
 				
 				// Add this row to dataPageOut, to be sent to the next step
@@ -386,6 +382,31 @@ public class ExtractDBStep extends StepManager {
 				// Remember pk1/ok1 to compare to the next row
 				previousRowPK1Value = rs.getString("PK1");
 				previousRowOK1Value = this.convertDateFieldToString(rs, "OK1");
+				
+				/**
+				 * We've sent the final page of data, now close out the step.
+				 */
+				if (isRecordsetComplete) {
+					// todo: mark step completed
+					// Send any remaining records to the next step
+					if (this.dataPageOut.size() > 0) {
+						// Mark this step as complete
+						this.running=false;
+						this.completed=true;
+						this.failed=false;
+						// Reset page data
+						this.dataPageOut = new ArrayList<Object>();
+					}
+					// Update the step record to show it's completed
+					this.log_dtl.setMaxOk1(previousRowOK1Value);
+					this.log_dtl.setEndDt(new Date());
+					this.log_dtl.setStatus("Completed");
+					this.log_dtl.setNumRecords(new BigDecimal(this.records_processed));
+					this.job_manager.db.persist(this.log_dtl);
+					// todo: break out of recordset while
+					endOfRecordset=true;
+				}
+				
 				// todo: increment this.records_processed
 				// Move to the next record (or abort if we're past the last row
 				if (rs.next() == false) {  // moved past the last record
@@ -400,14 +421,7 @@ public class ExtractDBStep extends StepManager {
 			// end of recordset
 			
 			
-			// Send any remaining records to the next step
-			if (this.dataPageOut.size() > 0) {
-				// Mark this step as complete
-				this.completed = true;
-				this.job_manager.submitPageOfData(this.dataPageOut, this);
-				// Reset page data
-				this.dataPageOut = new ArrayList<Object>();
-			}
+			
 			
 		} catch (SQLException  e) {
 			// TODO Auto-generated catch block
@@ -420,9 +434,7 @@ public class ExtractDBStep extends StepManager {
 			
 		// This step is done.  Clean up, write to logs,
 		// and return control to JobManager.
-		this.running=false;
-		this.completed=true;
-		this.failed=false;
+		
 		
 		// TODO:  empty data variables
 		// TODO:  log completion of this step
