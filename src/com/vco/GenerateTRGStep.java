@@ -31,7 +31,7 @@ public class GenerateTRGStep extends StepManager {
 	private BatchLogDtl log_dtl;
 	
 	public GenerateTRGStep(JobManager jm, Step step_record) {
-		System.out.println("\t[TRG] constructor");
+//		System.out.println("\t[TRG] constructor");
 		this.job_manager = jm;
 		this.step_record = step_record;
 		
@@ -171,6 +171,6 @@ public class GenerateTRGStep extends StepManager {
 		this.job_manager.db.persist(this.log_dtl);
 //		this.job_manager.db.getTransaction().commit();
 		
-		System.out.println("\t" + msg);
+//		System.out.println("\t" + msg);
 	}
 }

@@ -238,7 +238,7 @@ public class ExtractDBStep extends StepManager {
 		String currentRowPK1Value  = new String();
 		String previousRowOK1Value = new String();
 		String currentRowOK1Value  = new String();
-		String OK1AtEndOfCurrentPage = new String();
+		String PK1AtEndOfCurrentPage = new String();
 		try {
 			// go back to beginning of recordset 
 			rs.first();
@@ -262,7 +262,7 @@ public class ExtractDBStep extends StepManager {
 			boolean isRecordsetComplete       =false;
 			boolean foundRecordThatEndPage    =false;
 			
-			// NEW LOOP
+			// Process the records in this recordset
 			while (!endOfRecordset) {
 				
 				rownum++;  // Note: rownum starts at 1
@@ -278,24 +278,27 @@ public class ExtractDBStep extends StepManager {
 					isPageDataAlmostComplete=true;
 					// Since this record marks the "end" of a set of records,
 					// remember its OK1 value
-					OK1AtEndOfCurrentPage = this.convertDateFieldToString(rs, "OK1");
+					PK1AtEndOfCurrentPage = rs.getString("PK1");
 				}
 				
 				// todo: Set isPageDataComplete
 				if (isPageDataAlmostComplete && !isPageDataComplete) {
 					
-					if (!currentRowOK1Value.equals(OK1AtEndOfCurrentPage) && OK1AtEndOfCurrentPage != "") {
+					if (!currentRowPK1Value.equals(PK1AtEndOfCurrentPage) && PK1AtEndOfCurrentPage != "") {
 						isPageDataComplete=true;
 						isPageDataAlmostComplete=false;  // reset until next time we hit commit_freq
 					}
 				}
 				
 				// todo: Set isRecordsetAlmostComplete
-				if (rownum > this.max_rec) {
+				if (rownum > totalRows) {
 					isRecordsetAlmostComplete=true;
-					if (rownum >= totalRows) {  // last row of query
+					if (isPageDataComplete) {
 						isRecordsetComplete=true;
 					}
+//					if (rownum >= totalRows+100) {  // last row of query
+//						isRecordsetComplete=true;
+//					}
 				}
 				// todo: Set isRecordsetComplete
 				
@@ -312,17 +315,18 @@ public class ExtractDBStep extends StepManager {
 				
 				// todo: If isPageDataAlmostComplete
 					
-				// todo: If isPageDataComplete
+				// Send this page of data to the other steps, and update the logs
 				if (isPageDataComplete) {
 					// todo: Mark job started
 					
 					// todo: Start step log_dtl, if not started
+					this.log_dtl.setMaxOk1(previousRowOK1Value);
 					
 					// Todo: delete ok-dtl logs, except the ones at the end
 					Iterator<BatchLogOkDtl> it = tempOkDtlList.iterator();
 				    while (it.hasNext()) {
 				    	BatchLogOkDtl tempOkDtl = it.next();
-				    	if (!tempOkDtl.getOk1().equals(OK1AtEndOfCurrentPage)) {
+				    	if (!tempOkDtl.getPk1().equals(PK1AtEndOfCurrentPage)) {
 							// Todo: delete this entry from the array so it doesn't get persisted
 							it.remove();
 						}
@@ -340,7 +344,7 @@ public class ExtractDBStep extends StepManager {
 					this.dataPageOut = new ArrayList<Object>();
 					
 					// Update logs for this step, since we just sucessfully wrote some data
-					this.log_dtl.setMaxOk1(previousRowOK1Value);
+					
 					
 					// We successfully saved some data, commit the logs for all steps and job manager
 					this.job_manager.db.getTransaction().commit();
@@ -395,145 +399,6 @@ public class ExtractDBStep extends StepManager {
 			}
 			// end of recordset
 			
-			// OLD LOOP
-			while (!endOfRecordset && 1==2) {
-				rownum++;  // Note: rownum starts at 1
-				this.records_processed++;
-				
-				// totalRows is max_rec + 10%.  When we reach max_rec,
-				// start stepping forward until ok1 changes
-				if (rownum > totalRows) {
-					// Get the current OK1 value
-					String lastRowOK1Value = this.convertDateFieldToString(rs, "OK1");
-					// Write maxOK1 to the log_dtl record for this extraction step
-					this.log_dtl.setMaxOk1(previousRowOK1Value);
-					this.log_dtl.setStatus("Completed");
-					this.log_dtl.setNumRecords(new BigDecimal(this.records_processed-1));
-					this.job_manager.db.persist(this.log_dtl);
-					this.job_manager.db.getTransaction().commit();
-					break;
-				}
-				
-				// add the data from this row into the output object
-				List<Object> rowdata = new ArrayList<Object>();
-				for (int ci = 1; ci <= col_count; ci++) {
-					if (columnsToSkip.containsKey(ci)) {  // is this column in columnsToSkip?
-						// Do not export this column
-					}
-					else {
-						// Add this column to the output data
-						rowdata.add(rs.getString(ci));
-					}
-					
-				}
-				// Add this row to dataPageOut, to be sent to the next step
-				this.dataPageOut.add(rowdata);
-
-				// Add the ok/pk from this row to the temp list
-				BatchLogOkDtl newOkDtl = new BatchLogOkDtl();
-				newOkDtl.setBatchLog(this.job_manager.batch_log);
-				newOkDtl.setOk1(this.convertDateFieldToString(rs, "OK1"));
-				newOkDtl.setPk1(new BigDecimal(rs.getInt("PK1")));
-				newOkDtl.setPk2(new BigDecimal(rs.getInt("PK2")));
-				currentRowOK1Value = this.convertDateFieldToString(rs, "OK1");
-				// If PK1 has changed, remove previous entries from tempOkDtlList
-				if (!currentRowOK1Value.equals(previousRowOK1Value)) {
-					tempOkDtlList.clear();
-				}
-				
-				tempOkDtlList.add(newOkDtl);
-				
-				// Remember pk1/ok1 to compare to the next row
-				previousRowPK1Value = rs.getString("PK1");
-				previousRowOK1Value = this.convertDateFieldToString(rs, "OK1");
-				
-				// If this is the first row, write batch_log_dtl.min_ok1
-				if (rownum==1 && this.log_dtl != null) { // make sure the log_dtl exists for this step
-					// 
-					String newDs = convertDateFieldToString(rs, "OK1");
-					//System.out.println("\t[Extract] ds: " + newDs);
-					
-					// Write minOK1 to db
-					this.job_manager.db.getTransaction().begin();
-					this.log_dtl.setMinOk1(newDs);
-//					this.job_manager.db.persist(this.log_dtl);
-//					this.job_manager.db.getTransaction().commit();
-				}
-				
-				if (rownum % commit_freq == 0) {  // send this page of data to next step
-					// add these rows to log_dtl.num_records
-//					this.job_manager.db.getTransaction().begin();
-					//this.records_processed = rownum;
-					
-					// Write out the logs for this step so far
-					this.log_dtl.setNumRecords(new BigDecimal(this.records_processed));
-					this.job_manager.db.persist(this.log_dtl);
-					
-					// Delete any previous ok_dtl entries created by this job
-					Query qryOkDtls = this.job_manager.db.createNamedQuery("BatchLogOkDtl.findByBatchLogId");
-					qryOkDtls.setParameter("batchLogId", this.job_manager.batch_log);
-					List<BatchLogOkDtl> rstOkDtls = qryOkDtls.getResultList();
-					for (BatchLogOkDtl okDtlRecord : rstOkDtls) {
-						this.job_manager.db.remove(okDtlRecord);
-					}
-					
-					// Write okdtl logs for this step
-					for (BatchLogOkDtl okdtl : tempOkDtlList) {
-						this.job_manager.db.persist(okdtl);
-					}
-					// Clear out ok_dtl list
-					tempOkDtlList.clear();
-					
-					this.job_manager.db.getTransaction().commit();
-//					this.job_manager.db.getTransaction().begin();
-					
-					// Submit this page of data to job manager
-					this.job_manager.submitPageOfData(this.dataPageOut, this);
-					this.job_manager.db.getTransaction().begin();
-					
-					// Reset page data
-					this.dataPageOut = new ArrayList<Object>();
-					
-				}
-				
-				// Any special processing for the last row goes here
-				if (rs.isLast()) {
-					// rownum = (the last row number)
-					
-					// Get the current OK1 value
-					String lastRowOK1Value = this.convertDateFieldToString(rs, "OK1");
-					// Write maxOK1 to the log_dtl record for this extraction step
-//					this.job_manager.db.getTransaction().begin();
-					this.log_dtl.setMaxOk1(lastRowOK1Value);
-					this.log_dtl.setEndDt(new Date());
-					this.log_dtl.setStatus("Completed");
-					this.log_dtl.setNumRecords(new BigDecimal(this.records_processed));
-					
-					// Delete any previous ok_dtl entries created by this job
-					Query qryOkDtls = this.job_manager.db.createNamedQuery("BatchLogOkDtl.findByBatchLogId");
-					qryOkDtls.setParameter("batchLogId", this.job_manager.batch_log);
-					List<BatchLogOkDtl> rstOkDtls = qryOkDtls.getResultList();
-					for (BatchLogOkDtl okDtlRecord : rstOkDtls) {
-						this.job_manager.db.remove(okDtlRecord);
-					}
-					
-					// Write okdtl logs for this step
-					for (BatchLogOkDtl okdtl : tempOkDtlList) {
-						this.job_manager.db.persist(okdtl);
-					}
-					// Clear out ok_dtl list
-					tempOkDtlList.clear();
-					
-					this.job_manager.db.persist(this.log_dtl);
-					this.job_manager.db.getTransaction().commit();
-				}
-//				previousRowOK1Value = this.convertDateFieldToString(rs, "OK1");
-				
-				// Move to the next record (or abort if we're past the last row
-				if (rs.next() == false) {  // moved past the last record
-					endOfRecordset=true;
-				}
-			} // end: looping over rows of data
 			
 			// Send any remaining records to the next step
 			if (this.dataPageOut.size() > 0) {
