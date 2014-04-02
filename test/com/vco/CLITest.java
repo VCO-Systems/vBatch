@@ -19,7 +19,7 @@ import utils.AbstractMainTests;
  * @author vco
  *
  */
-public class VBatchManagerTest {
+public class CLITest {
 
 	/**
 	 * @throws java.lang.Exception
