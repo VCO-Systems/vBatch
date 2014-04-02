@@ -76,6 +76,7 @@ CREATE TABLE vbatch.batch_log_dtl (
                 max_ok1 VARCHAR2(150),
                 extract_max_rec NUMBER,
                 extract_max_rec_per_file NUMBER,
+
                 extract_commit_freq NUMBER,
                 output_file_format VARCHAR2(15),
                 output_filename_prefix VARCHAR2(150),
@@ -100,7 +101,7 @@ CREATE TABLE vbatch.batch_log_ok_dtl (
                 pk1 NUMBER,
                 pk2 NUMBER,
                 pk3 NUMBER,
-                ok1 TIMESTAMP NOT NULL,
+				ok1 VARCHAR2(150) NOT NULL,
                 CONSTRAINT BATCH_LOG_OK_DTL_PK PRIMARY KEY (id),
                 CONSTRAINT PK_COL_CONSTRAINT UNIQUE (pk1, pk2, pk3)
 );

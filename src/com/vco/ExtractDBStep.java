@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -26,6 +27,7 @@ import javax.persistence.TypedQuery;
 import model.BatchLog;
 import model.BatchLogDtl;
 import model.JobStepsXref;
+import model.BatchLogOkDtl;
 import model.Step;
 
 public class ExtractDBStep extends StepManager {
@@ -39,6 +41,9 @@ public class ExtractDBStep extends StepManager {
 	
 	// vars specific to this type of step
 	private int max_rec = 5000;  // default max_records for extraction, if none specified
+	
+	// Keep track of ok-dtl entries
+	List<BatchLogOkDtl> tempOkDtlList = new ArrayList<BatchLogOkDtl>();
 	
 	public ExtractDBStep(JobManager jm, JobStepsXref jobStepXref) {
 		this.job_manager = jm;
@@ -66,7 +71,7 @@ public class ExtractDBStep extends StepManager {
 		// Set this step to running
 		this.running = true;
 		// Log the start of this step
-		this.logStart();
+		// this.logStart();
 		// Get the raw sql to run
 		this.raw_sql = this.jobStepXref.getStep().getExtractSql();
 		String whereClause = new String();
@@ -116,13 +121,14 @@ public class ExtractDBStep extends StepManager {
 			Long numRecs = extract_log.getNumRecords();
 			totalRows = numRecs.intValue();
 			
-			// Add minOk1 and maxOk1 to startClause to the startClause
+			
+			// Add minOk1 and maxOk1 to startClause to the whereClause
 			whereClause += " AND ptt.create_date_time >= to_date('" + previousRunMinOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
 			whereClause += " AND ptt.create_date_time <= to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
 			
 			// Run the query
 			try {
-				rs = this.sqlQuery(this.raw_sql, commit_freq, totalRows);
+				rs = this.sqlQuery(this.raw_sql, totalRows+100);
 			} catch (SQLException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -165,22 +171,8 @@ public class ExtractDBStep extends StepManager {
 			
 			// If there's at least one previous run with valid maxOK1
 			if (dtls.size() > 0) {
-				BatchLogDtl lastRun = dtls.get(0);  // Most recent successful run of the same type
-				
-				// Get total_rows from the previous run (if set in record)
-				Long ll = lastRun.getNumRecords();
-				int lastRunNumRecords = -1;
-				if (lastRunNumRecords != -1) {
-					lastRunNumRecords = ll.intValue();
-				}
-				
-				if ( lastRunNumRecords > 0) {  // last run had num_records set
-					totalRows = lastRun.getNumRecords().intValue();
-				}
-				else { // the last run didn't have num_records set
-					totalRows = this.max_rec;
-				}
-				
+				BatchLogDtl lastRun = dtls.get(0);  // Most recent successful run of this job
+
 				// Get maxOk1 from previous run
 				previousRunMaxOk1 = lastRun.getMaxOk1();  // Oracle date in string format
 				
@@ -196,7 +188,7 @@ public class ExtractDBStep extends StepManager {
 				// we add that as well
 				
 				// Create a WHERE clause that starts after lastOk1
-				whereClause = " ptt.create_date_time > to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
+				whereClause = " ptt.create_date_time >= to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
 				// replace the SQL TOKEN(s) ( /* where */ )
 				int sqlTokensReplaced =  this.replaceSqlToken(this.raw_sql, whereClause); 
 				if (sqlTokensReplaced == 0) {
@@ -204,65 +196,32 @@ public class ExtractDBStep extends StepManager {
 				}
 			}
 			
+			// Get total_rows from the previous run (if set in record)
+			float jobMaxRecs = this.step_record.getExtractMaxRec().floatValue();
+			if (jobMaxRecs > 0) {
+//				double j = Math.floor(1.1 * jobMaxRecs);
+//				totalRows = (int)j;
+				totalRows = (int)jobMaxRecs;
+			}
+			else {
+				totalRows = this.max_rec;
+			}
 			/**
 			 * 
 			 */
-			// Work backwards from the last row, looking for the first row whose
-			// create_date_time and pk1 (tran_nbr) are different from last row
+			
 			// lastOk1 = '07-May-2013 07:15:21'
 			int endRowsToSkip = 0;
 			int rowCount = 0;
 			
-			// go to end of recordset
-			int finalRowNum = 0;  // this will be the final row # for this job
+
+			System.out.println("[Extract] REWRITTEN QUERY: " + this.raw_sql);
 			try {
-				//System.out.println("\tAbout to query " + this.max_rec + " records");
-				rs = this.sqlQuery(this.raw_sql, commit_freq, this.max_rec);  // limit query to max_rec rows
-				
-				rs.last();
-				
-				int startingRowNum = rs.getRow();
-				
-				// System.out.println("\tLast row #: " + startingRowNum);
-				String lastRowOK1, lastRowPK1;
-				try {
-					lastRowOK1 = this.convertDateFieldToString(rs, "OK1");
-					lastRowPK1 = rs.getString("PK1");
-					
-					String currentRowOK1, currentRowPK1;
-					// STUB:  comparison here should match
-					currentRowOK1 = this.convertDateFieldToString(rs, "OK1");
-					currentRowPK1 = rs.getString("PK1");
-					//System.out.println("\tLast row: " + currentRowOK1 + " / " + currentRowPK1);
-					// Go backwards until pk1 and ok1 are different from last row
-					while (rs.previous()) {
-						endRowsToSkip++;
-						currentRowOK1 = this.convertDateFieldToString(rs, "OK1");
-						currentRowPK1 = rs.getString("PK1");
-						if (!currentRowOK1.equals(lastRowOK1) && !currentRowPK1.equals(lastRowPK1)) {
-							
-							finalRowNum = startingRowNum - endRowsToSkip;
-							totalRows = finalRowNum;
-							
-							System.out.println("\t[Extract] Exported " + finalRowNum + " rows (skipped " + endRowsToSkip + ")");
-							System.out.println("\tFinal row: " + currentRowOK1 + " / " + currentRowPK1);
-							break;
-						}
-						else {
-							System.out.println("\tSkipping row: " + currentRowOK1 + " / " + currentRowPK1);
-						}
-					}
-					
-				} catch (ParseException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				//System.out.println(rowOK1);
-				
-			}
-			catch (SQLException e) {
-				e.printStackTrace(System.out);
-			}
+				rs = this.sqlQuery(this.raw_sql, totalRows+100);
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}  // limit query to max_rec rows
 		}
 		
 		/**
@@ -271,6 +230,13 @@ public class ExtractDBStep extends StepManager {
 		 * data and passing it to the next step.
 		 */
 		
+		// Vars for keeping track of ok/pk values for each row
+		
+		String previousRowPK1Value = new String();
+		String currentRowPK1Value  = new String();
+		String previousRowOK1Value = new String();
+		String currentRowOK1Value  = new String();
+		String PK1AtEndOfCurrentPage = new String();
 		try {
 			// go back to beginning of recordset 
 			rs.first();
@@ -281,28 +247,116 @@ public class ExtractDBStep extends StepManager {
 			
 			// TODO:  Make sure our required columns are in the query:
 			// ok1, pk1 [pk2-pk3]
-			String previousRowOK1Value = new String();
+			
+			// Todo:  Check which of the OK1 and PK1-3 columns are present in the query
+			
 			// Iterate over all the rows of the ResultSet
 			boolean endOfRecordset=false;
+			boolean endOfPage = false;
+			
+			boolean isPageDataAlmostComplete  =false;
+			boolean isPageDataComplete        =false;
+			boolean isRecordsetAlmostComplete =false;
+			boolean isRecordsetComplete       =false;
+			boolean foundRecordThatEndPage    =false;
+			
+			// Process the records in this recordset
 			while (!endOfRecordset) {
+				
 				rownum++;  // Note: rownum starts at 1
-				this.records_processed++;
-				// If this row would exceed step.max_rec,
-				// stop processing records here.
-				if (rownum > totalRows) {
-					// Get the current OK1 value
-					String lastRowOK1Value = this.convertDateFieldToString(rs, "OK1");
-					// Write maxOK1 to the log_dtl record for this extraction step
-					this.job_manager.db.getTransaction().begin();
-					this.log_dtl.setMaxOk1(previousRowOK1Value);
-					this.log_dtl.setStatus("Completed");
-					this.log_dtl.setNumRecords(this.records_processed-1);
-					this.job_manager.db.persist(this.log_dtl);
-					this.job_manager.db.getTransaction().commit();
-					break;
+				currentRowOK1Value = this.convertDateFieldToString(rs, "OK1");
+				currentRowPK1Value = rs.getString("PK1");
+				/** Set flags that determine how to handle this row **/
+				
+				// todo: Set ispageDataAlmostComplete
+				// Get max_recs_per_file from csv step
+				
+				int jobMaxRecPerFile = this.job_manager.getMaxRecPerFile();
+				if (rownum % jobMaxRecPerFile == 0) { 
+					isPageDataAlmostComplete=true;
+					// Since this record marks the "end" of a set of records,
+					// remember its OK1 value
+					PK1AtEndOfCurrentPage = rs.getString("PK1");
 				}
 				
-				// add the data from this row into the output object
+				// todo: Set isPageDataComplete
+				if (isPageDataAlmostComplete && !isPageDataComplete) {
+					
+					if (!currentRowPK1Value.equals(PK1AtEndOfCurrentPage) && PK1AtEndOfCurrentPage != "") {
+						isPageDataComplete=true;
+						isPageDataAlmostComplete=false;  // reset until next time we hit commit_freq
+					}
+				}
+				
+				// todo: Set isRecordsetAlmostComplete
+				if (rownum > totalRows) {
+					isRecordsetAlmostComplete=true;
+					if (isPageDataComplete) {
+						isRecordsetComplete=true;
+					}
+//					if (rownum >= totalRows+100) {  // last row of query
+//						isRecordsetComplete=true;
+//					}
+				}
+				// todo: Set isRecordsetComplete
+				
+				
+				// Todo: for above, only do the pk1-3 that are in the query
+				
+				
+				// todo: if first row, start log
+				if (rownum==1) {
+					this.logStart();
+					this.log_dtl.setMinOk1(currentRowOK1Value);
+				}
+				
+				
+				// todo: If isPageDataAlmostComplete
+					
+				// Send this page of data to the other steps, and update the logs
+				if (isPageDataComplete) {
+					// todo: Mark job started
+					
+					// todo: Start step log_dtl, if not started
+					this.log_dtl.setMaxOk1(previousRowOK1Value);
+
+					
+					// Todo: delete ok-dtl logs, except the ones at the end
+					Iterator<BatchLogOkDtl> it = tempOkDtlList.iterator();
+				    while (it.hasNext()) {
+				    	BatchLogOkDtl tempOkDtl = it.next();
+				    	String rowPK1 = tempOkDtl.getPk1().toString();
+				    	if (!rowPK1.equals(PK1AtEndOfCurrentPage)) {
+							// Todo: delete this entry from the array so it doesn't get persisted
+							it.remove();
+						}
+				    	else {
+				    		this.job_manager.db.persist(tempOkDtl);
+				    	}
+				    }
+				    
+				    
+				    // todo: submit page of data
+				    this.job_manager.submitPageOfData(this.dataPageOut, this);
+					
+					// todo: clear dataPageOut
+					isPageDataComplete=false; 
+					this.dataPageOut = new ArrayList<Object>();
+					
+					// Update logs for this step, since we just sucessfully wrote some data
+					
+					
+					// We successfully saved some data, commit the logs for all steps and job manager
+					this.job_manager.db.getTransaction().commit();
+					// Start a new transaction
+					this.job_manager.db.getTransaction().begin();
+					
+					// todo: Page completed, update logs
+				}
+				
+				// end of loop
+				
+				// Add this row to dataPageOut, to be sent to the next step
 				List<Object> rowdata = new ArrayList<Object>();
 				for (int ci = 1; ci <= col_count; ci++) {
 					if (columnsToSkip.containsKey(ci)) {  // is this column in columnsToSkip?
@@ -312,69 +366,62 @@ public class ExtractDBStep extends StepManager {
 						// Add this column to the output data
 						rowdata.add(rs.getString(ci));
 					}
-					
 				}
-				// Add this row to dataPageOut, to be sent to the next step
 				this.dataPageOut.add(rowdata);
 				
-				// If this is the first row, write batch_log_dtl.min_ok1
-				if (rownum==1 && this.log_dtl != null) { // make sure the log_dtl exists for this step
-					// 
-					String newDs = convertDateFieldToString(rs, "OK1");
-					//System.out.println("\t[Extract] ds: " + newDs);
-					
-					// Write minOK1 to db
-					this.job_manager.db.getTransaction().begin();
-					this.log_dtl.setMinOk1(newDs);
-					this.job_manager.db.persist(this.log_dtl);
-					this.job_manager.db.getTransaction().commit();
-				}
+				// log ok-dtl for every row (some will be deleted prior to log commit)
+				BatchLogOkDtl newOkDtl = new BatchLogOkDtl();
+				newOkDtl.setBatchLog(this.job_manager.batch_log);
+				newOkDtl.setOk1(this.convertDateFieldToString(rs, "OK1"));
+				newOkDtl.setPk1(new BigDecimal(rs.getInt("PK1")));
+				newOkDtl.setPk2(new BigDecimal(rs.getInt("PK2")));
+				tempOkDtlList.add(newOkDtl);
 				
-				if (rownum % commit_freq == 0) {  // send this page of data to next step
-					// add these rows to log_dtl.num_records
-					this.job_manager.db.getTransaction().begin();
-					//this.records_processed = rownum;
-					this.log_dtl.setNumRecords(this.records_processed);
-					this.job_manager.db.persist(this.log_dtl);
-					this.job_manager.db.getTransaction().commit();
-					
-					this.job_manager.submitPageOfData(this.dataPageOut, this);
-					// Reset page data
-					this.dataPageOut = new ArrayList<Object>();
-					
-				}
+
+				// todo: set previous ok1/pk1
+				// Remember pk1/ok1 to compare to the next row
+				previousRowPK1Value = rs.getString("PK1");
+				previousRowOK1Value = this.convertDateFieldToString(rs, "OK1");
 				
-				// Any special processing for the last row goes here
-				if (rs.isLast()) {
-					// rownum = (the last row number)
-					
-					// Get the current OK1 value
-					String lastRowOK1Value = this.convertDateFieldToString(rs, "OK1");
-					// Write maxOK1 to the log_dtl record for this extraction step
-					this.job_manager.db.getTransaction().begin();
-					this.log_dtl.setMaxOk1(lastRowOK1Value);
+				/**
+				 * We've sent the final page of data, now close out the step.
+				 */
+				if (isRecordsetComplete) {
+					// todo: mark step completed
+					// Send any remaining records to the next step
+					if (this.dataPageOut.size() > 0) {
+						// Mark this step as complete
+						this.running=false;
+						this.completed=true;
+						this.failed=false;
+						// Reset page data
+						this.dataPageOut = new ArrayList<Object>();
+					}
+					// Update the step record to show it's completed
+					this.log_dtl.setMaxOk1(previousRowOK1Value);
 					this.log_dtl.setEndDt(new Date());
 					this.log_dtl.setStatus("Completed");
 					this.log_dtl.setNumRecords(this.records_processed);
 					this.job_manager.db.persist(this.log_dtl);
-					this.job_manager.db.getTransaction().commit();
+					// todo: break out of recordset while
+					endOfRecordset=true;
 				}
-				previousRowOK1Value = this.convertDateFieldToString(rs, "OK1");
 				
+				// todo: increment this.records_processed
 				// Move to the next record (or abort if we're past the last row
 				if (rs.next() == false) {  // moved past the last record
 					endOfRecordset=true;
 				}
-			} // end: looping over rows of data
-			
-			// Send any remaining records to the next step
-			if (this.dataPageOut.size() > 0) {
-				// Mark this step as complete
-				this.completed = true;
-				this.job_manager.submitPageOfData(this.dataPageOut, this);
-				// Reset page data
-				this.dataPageOut = new ArrayList<Object>();
+				
+				// todo: Is endOfRecordset
+					// todo: Abandon remaining records
+					// 
+				
 			}
+			// end of recordset
+			
+			
+			
 			
 		} catch (SQLException  e) {
 			// TODO Auto-generated catch block
@@ -387,14 +434,19 @@ public class ExtractDBStep extends StepManager {
 			
 		// This step is done.  Clean up, write to logs,
 		// and return control to JobManager.
-		this.running=false;
-		this.completed=true;
-		this.failed=false;
+		
 		
 		// TODO:  empty data variables
 		// TODO:  log completion of this step
 		
 		return true;
+		
+	}
+
+	/**
+	 * @param tempOkDtlList
+	 */
+	private void updateOkDtlLogsForThisJob(List<BatchLogOkDtl> tempOkDtlList) {
 		
 	}
 	
@@ -509,7 +561,10 @@ public class ExtractDBStep extends StepManager {
 	 */
 	
 	private void logStart() {
-		this.job_manager.db.getTransaction().begin();
+		if (!this.job_manager.db.getTransaction().isActive()) {
+			this.job_manager.db.getTransaction().begin();
+		}
+		
 		// Create entry in batch_log_dtl
 		this.log_dtl = new BatchLogDtl();
 		this.log_dtl.setBatchLog(this.job_manager.batch_log);
@@ -535,7 +590,7 @@ public class ExtractDBStep extends StepManager {
 		
 		// Commit log entry
 		this.job_manager.db.persist(this.log_dtl);
-		this.job_manager.db.getTransaction().commit();
+//		this.job_manager.db.getTransaction().commit();
 		
 		System.out.println("\t" + msg);
 	}
@@ -553,7 +608,7 @@ public class ExtractDBStep extends StepManager {
 	private ResultSet sqlQuery(String sql) {
 		ResultSet rs = null;
 		try {
-			rs = this.sqlQuery(sql, 0, -1);
+			rs = this.sqlQuery(sql, -1);
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -561,12 +616,11 @@ public class ExtractDBStep extends StepManager {
 		return rs;
 	}
 	
-	private ResultSet sqlQuery(String sql, int num_records, int maxRecords) throws SQLException {
+	private ResultSet sqlQuery(String sql, int maxRecords) throws SQLException {
 		 
 		Connection dbConnection = null;
 		Statement statement = null;
 		ResultSet rs = null;
-		//String selectTableSQL = "SELECT * from JOB_DEFINITION ";
  
 		try {
 			dbConnection = getDBConnection();
