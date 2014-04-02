@@ -6,7 +6,8 @@ CREATE TABLE vbatch.job_definition (
                 order_num NUMBER NOT NULL,
                 short_desc VARCHAR2(20),
                 long_desc VARCHAR2(150),
-                CONSTRAINT JOB_DEFINITION_PK PRIMARY KEY (id)
+                CONSTRAINT JOB_DEFINITION_PK PRIMARY KEY (id),
+                CONSTRAINT ORDER_NUM_UNIQUE UNIQUE (order_num)
 );
 
 CREATE SEQUENCE STEPS_ID_SEQ;
@@ -43,16 +44,17 @@ CREATE TABLE vbatch.job_steps_xref (
 );
 
 CREATE SEQUENCE BATCH_LOG_ID_SEQ;
+CREATE SEQUENCE BATCH_LOG_BATCH_NUM_SEQ;
 
 CREATE TABLE vbatch.batch_log (
                 id NUMBER NOT NULL,
                 job_definition_id NUMBER NOT NULL,
-                order_num NUMBER,
+                order_num NUMBER NOT NULL,
                 batch_num NUMBER NOT NULL,
                 batch_seq_nbr NUMBER NOT NULL,
                 short_desc VARCHAR2(20),
                 long_desc VARCHAR2(150),
-                status VARCHAR2(50),
+                status VARCHAR2(50) NOT NULL,
                 error_msg VARCHAR2(4000),
                 start_dt TIMESTAMP,
                 end_dt TIMESTAMP,
@@ -66,22 +68,23 @@ CREATE TABLE vbatch.batch_log_dtl (
                 batch_log_id NUMBER NOT NULL,
                 start_dt TIMESTAMP,
                 end_dt TIMESTAMP,
-                status VARCHAR2(50),
+                status VARCHAR2(50) NOT NULL,
                 long_desc VARCHAR2(150),
                 error_msg VARCHAR2(150),
-                num_records NUMBER ,
+                num_records NUMBER,
                 min_ok1 VARCHAR2(150),
                 max_ok1 VARCHAR2(150),
-                extract_max_recs_per_file NUMBER,
+                extract_max_rec NUMBER,
+                extract_max_rec_per_file NUMBER,
                 extract_commit_freq NUMBER,
                 output_file_format VARCHAR2(15),
                 output_filename_prefix VARCHAR2(150),
                 output_filename_suffix VARCHAR2(150),
                 class_path VARCHAR2(150),
-                job_steps_xref_job_step_seq NUMBER,
-                steps_id NUMBER,
+                job_steps_xref_job_step_seq NUMBER NOT NULL,
+                steps_id NUMBER NOT NULL,
                 steps_short_desc VARCHAR2(20),
-                step_type VARCHAR2(150),
+                step_type VARCHAR2(150) NOT NULL,
                 extract_sql VARCHAR2(4000),
                 param1 VARCHAR2(150),
                 param2 VARCHAR2(150),
@@ -98,7 +101,8 @@ CREATE TABLE vbatch.batch_log_ok_dtl (
                 pk2 NUMBER,
                 pk3 NUMBER,
                 ok1 TIMESTAMP NOT NULL,
-                CONSTRAINT BATCH_LOG_OK_DTL_PK PRIMARY KEY (id)
+                CONSTRAINT BATCH_LOG_OK_DTL_PK PRIMARY KEY (id),
+                CONSTRAINT PK_COL_CONSTRAINT UNIQUE (pk1, pk2, pk3)
 );
 
 
@@ -108,7 +112,7 @@ CREATE TABLE vbatch.batch_log_file_output (
                 id NUMBER NOT NULL,
                 batch_log_id NUMBER NOT NULL,
                 create_dt TIMESTAMP NOT NULL,
-                filename VARCHAR2(150),
+                filename VARCHAR2(150) NOT NULL,
                 num_records NUMBER,
                 CONSTRAINT BATCH_LOG_FILE_OUTPUT_PK PRIMARY KEY (id)
 );
