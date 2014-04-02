@@ -43,7 +43,8 @@ public class ExtractDBStep extends StepManager {
 	private int max_rec = 5000;  // default max_records for extraction, if none specified
 	
 	// Keep track of ok-dtl entries
-	List<BatchLogOkDtl> tempOkDtlList = new ArrayList<BatchLogOkDtl>();
+	private List<BatchLogOkDtl> tempOkDtlList = new ArrayList<BatchLogOkDtl>();
+	private Map<Integer,String> columnsToSkip;
 	
 	public ExtractDBStep(JobManager jm, JobStepsXref jobStepXref) {
 		this.job_manager = jm;
@@ -243,7 +244,7 @@ public class ExtractDBStep extends StepManager {
 			
 			int rownum = 0;
 			
-			Map<Integer,String> columnsToSkip = this.prepareSkipColumns(rs);
+			this.columnsToSkip = this.prepareSkipColumns(rs);
 			
 			// TODO:  Make sure our required columns are in the query:
 			// ok1, pk1 [pk2-pk3]
@@ -298,7 +299,15 @@ public class ExtractDBStep extends StepManager {
 //						isRecordsetComplete=true;
 //					}
 				}
-				// todo: Set isRecordsetComplete
+				
+				// In addition to the above checks, if we're at the end of the recordset,
+				// force the "is..Complete" flags true so all data gets written
+				if (rs.isLast()) {
+					isPageDataAlmostComplete=false;
+					isPageDataComplete=true;
+					isRecordsetAlmostComplete=false;
+					isRecordsetComplete=true;
+				}
 				
 				
 				// Todo: for above, only do the pk1-3 that are in the query
@@ -314,14 +323,19 @@ public class ExtractDBStep extends StepManager {
 				// todo: If isPageDataAlmostComplete
 					
 				// Send this page of data to the other steps, and update the logs
-				if (isPageDataComplete) {
+				if (isPageDataComplete && isRecordsetComplete) {
+					// Since this is the last page of the recordset, make sure that last record gets saved as well
+					processRowOfData(rs);
+				}
+				if (isPageDataComplete ) {
 					// todo: Mark job started
 					
 					// todo: Start step log_dtl, if not started
 					this.log_dtl.setMaxOk1(previousRowOK1Value);
-
 					
-					// Todo: delete ok-dtl logs, except the ones at the end
+					// Todo: we only want to keep ok-dtl entries for this job's last page of data
+					
+					// Persist only the ok-dtl entries at the end of this page
 					Iterator<BatchLogOkDtl> it = tempOkDtlList.iterator();
 				    while (it.hasNext()) {
 				    	BatchLogOkDtl tempOkDtl = it.next();
@@ -356,32 +370,18 @@ public class ExtractDBStep extends StepManager {
 				
 				// end of loop
 				
-				// Add this row to dataPageOut, to be sent to the next step
-				List<Object> rowdata = new ArrayList<Object>();
-				for (int ci = 1; ci <= col_count; ci++) {
-					if (columnsToSkip.containsKey(ci)) {  // is this column in columnsToSkip?
-						// Do not export this column
-					}
-					else {
-						// Add this column to the output data
-						rowdata.add(rs.getString(ci));
-					}
+				/**  
+				 * Do these things for every row 
+				 ***/
+				
+				if (!isRecordsetComplete) {
+					processRowOfData(rs);
+					// Remember pk1/ok1 to compare to the next row
+					previousRowPK1Value = rs.getString("PK1");
+					previousRowOK1Value = this.convertDateFieldToString(rs, "OK1");
 				}
-				this.dataPageOut.add(rowdata);
-				
-				// log ok-dtl for every row (some will be deleted prior to log commit)
-				BatchLogOkDtl newOkDtl = new BatchLogOkDtl();
-				newOkDtl.setBatchLog(this.job_manager.batch_log);
-				newOkDtl.setOk1(this.convertDateFieldToString(rs, "OK1"));
-				newOkDtl.setPk1(rs.getLong("PK1"));
-				newOkDtl.setPk2(rs.getLong("PK2"));
-				tempOkDtlList.add(newOkDtl);
-				
 
-				// todo: set previous ok1/pk1
-				// Remember pk1/ok1 to compare to the next row
-				previousRowPK1Value = rs.getString("PK1");
-				previousRowOK1Value = this.convertDateFieldToString(rs, "OK1");
+				
 				
 				/**
 				 * We've sent the final page of data, now close out the step.
@@ -441,6 +441,35 @@ public class ExtractDBStep extends StepManager {
 		
 		return true;
 		
+	}
+
+	/**
+	 * @param rs
+	 * @throws SQLException
+	 * @throws ParseException
+	 */
+	private void processRowOfData(ResultSet rs) throws SQLException,
+			ParseException {
+		// Add this row to dataPageOut, to be sent to the next step
+		List<Object> rowdata = new ArrayList<Object>();
+		for (int ci = 1; ci <= this.col_count; ci++) {
+			if (this.columnsToSkip.containsKey(ci)) {  // is this column in columnsToSkip?
+				// Do not export this column
+			}
+			else {
+				// Add this column to the output data
+				rowdata.add(rs.getString(ci));
+			}
+		}
+		this.dataPageOut.add(rowdata);
+		
+		// log ok-dtl for every row (some will be deleted prior to log commit)
+		BatchLogOkDtl newOkDtl = new BatchLogOkDtl();
+		newOkDtl.setBatchLog(this.job_manager.batch_log);
+		newOkDtl.setOk1(this.convertDateFieldToString(rs, "OK1"));
+		newOkDtl.setPk1(rs.getLong("PK1"));
+		newOkDtl.setPk2(rs.getLong("PK2"));
+		this.tempOkDtlList.add(newOkDtl);
 	}
 
 	/**
