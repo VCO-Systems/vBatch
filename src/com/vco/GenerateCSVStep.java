@@ -54,7 +54,7 @@ public class GenerateCSVStep extends StepManager {
 
 	private Long totalRowsGenerated = 0L;
 	private Long totalRowsThisFile = 0L;
-	private Long max_rec_per_file = 0L;
+	public Long max_rec_per_file = 0L;
 	private Long pageCount=0L; // Pages of data sent in from another step (not necessarily db or CSV pages)
 
 	private BatchLogDtl log_dtl;

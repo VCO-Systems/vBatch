@@ -149,7 +149,7 @@ public class JobManager {
 						Class j = step_manager.getClass();
 						if (step_manager instanceof GenerateCSVStep && this.extract_max_rec_per_file == -1) {
 							GenerateCSVStep g = (GenerateCSVStep)step_manager;
-							this.extract_max_rec_per_file = g.max_rec_per_file;
+							this.extract_max_rec_per_file = g.max_rec_per_file.intValue();
 						}
 					}
 					catch ( SecurityException e) {

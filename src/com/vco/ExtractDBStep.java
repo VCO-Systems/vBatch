@@ -197,7 +197,7 @@ public class ExtractDBStep extends StepManager {
 			}
 			
 			// Get total_rows from the previous run (if set in record)
-			float jobMaxRecs = this.step_record.getExtractMaxRec().floatValue();
+			float jobMaxRecs = this.jobStepXref.getStep().getExtractMaxRec().floatValue();
 			if (jobMaxRecs > 0) {
 //				double j = Math.floor(1.1 * jobMaxRecs);
 //				totalRows = (int)j;
@@ -373,8 +373,8 @@ public class ExtractDBStep extends StepManager {
 				BatchLogOkDtl newOkDtl = new BatchLogOkDtl();
 				newOkDtl.setBatchLog(this.job_manager.batch_log);
 				newOkDtl.setOk1(this.convertDateFieldToString(rs, "OK1"));
-				newOkDtl.setPk1(new BigDecimal(rs.getInt("PK1")));
-				newOkDtl.setPk2(new BigDecimal(rs.getInt("PK2")));
+				newOkDtl.setPk1(rs.getLong("PK1"));
+				newOkDtl.setPk2(rs.getLong("PK2"));
 				tempOkDtlList.add(newOkDtl);
 				
 
