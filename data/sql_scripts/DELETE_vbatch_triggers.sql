@@ -7,4 +7,5 @@ BEGIN
   END LOOP; 
 END;
 /
-EXIT
+COMMIT;
+EXIT;
