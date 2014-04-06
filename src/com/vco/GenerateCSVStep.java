@@ -21,6 +21,7 @@ import org.supercsv.prefs.CsvPreference;
 import org.supercsv.quote.AlwaysQuoteMode;
 import org.supercsv.quote.QuoteMode;
 
+import model.BatchLog;
 import model.BatchLogDtl;
 import model.BatchLogFileOutput;
 import model.JobStepsXref;
@@ -426,7 +427,7 @@ private void logComplete() {
 		// Create entry in batch_log_dtl
 		
 		this.log_dtl.setStartDt(new Date());
-		this.log_dtl.setStatus("Completed");
+		this.log_dtl.setStatus(BatchLog.statusComplete);
 		
 		// Commit log entry
 		this.job_manager.db.persist(this.log_dtl);

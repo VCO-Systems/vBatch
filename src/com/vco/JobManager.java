@@ -346,7 +346,7 @@ public class JobManager {
 		this.db.getTransaction().begin();
 		// Set the batch_log entry for this job to status = complete
 		this.batch_log.setEndDt(new Date());
-		this.batch_log.setStatus("Complete");
+		this.batch_log.setStatus(BatchLog.statusComplete);
 		
 		// Show this job complete in the log_dtl table
 		// Create the batch_log_dtl entry showing this job started
@@ -354,7 +354,7 @@ public class JobManager {
 		/*
 		this.log_dtl.setBatchLog(this.batch_log);
 		this.log_dtl.setEndDt(new Date());
-		this.log_dtl.setStatus("Completed");
+		this.log_dtl.setStatus(BatchLog.statusComplete);
 		this.db.persist(this.log_dtl);
 		*/
 		

@@ -165,7 +165,7 @@ public class GenerateTRGStep extends StepManager {
 				+ " : " + this.jobStepXref.getStep().getShortDesc()
 				+ "]";
 		this.log_dtl.setEndDt(new Date());
-		this.log_dtl.setStatus("Completed");
+		this.log_dtl.setStatus(BatchLog.statusComplete);
 		
 		// Commit log entry
 		this.job_manager.db.persist(this.log_dtl);
