@@ -1,7 +1,9 @@
 package model;
 
 import java.io.Serializable;
+
 import javax.persistence.*;
+
 import java.sql.Timestamp;
 
 
@@ -11,16 +13,23 @@ import java.sql.Timestamp;
  */
 @Entity
 @Table(name="BATCH_LOG_OK_DTL")
-@NamedQuery(name="BatchLogOkDtl.findAll", query="SELECT b FROM BatchLogOkDtl b")
+
+@NamedQueries({
+	@NamedQuery(name="BatchLogOkDtl.findAll", query="SELECT b FROM BatchLogOkDtl b"),
+	@NamedQuery(name="BatchLogOkDtl.findByBatchLogId", query="SELECT b FROM BatchLogOkDtl b where b.batchLog = :batchLogId")
+})
+
 public class BatchLogOkDtl implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Id
+	@GeneratedValue(generator="BatchLogOkDtlGen")
+	@SequenceGenerator(name="BatchLogOkDtlGen", sequenceName="BATCH_LOG_OK_DTL_ID_SEQ", allocationSize=1)
 	@Column(unique=true, nullable=false)
 	private long id;
 
 	@Column(nullable=false)
-	private Timestamp ok1;
+	private String ok1;
 
 	private Long pk1;
 
@@ -44,11 +53,11 @@ public class BatchLogOkDtl implements Serializable {
 		this.id = id;
 	}
 
-	public Timestamp getOk1() {
+	public String getOk1() {
 		return this.ok1;
 	}
 
-	public void setOk1(Timestamp ok1) {
+	public void setOk1(String ok1) {
 		this.ok1 = ok1;
 	}
 

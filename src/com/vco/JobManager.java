@@ -45,6 +45,9 @@ public class JobManager {
 	private List steps = new ArrayList<Step>();
 	private List stepManagers = new ArrayList<StepManager>();
 	private boolean atLeastOneStepFailed = false;
+	private int extract_max_rec_per_file = -1;
+	
+	private Date start_time;
 	
 
 	public String batchMode;  // New or Repeat job?
@@ -58,6 +61,7 @@ public class JobManager {
 	
 	
 	public void init() {
+		this.start_time = new Date();
 		Boolean breakOutOfThisJob = false;
 		
 		/** Populate this.job_definition with the correct job def record**/
@@ -137,8 +141,16 @@ public class JobManager {
 						StepManager step_manager = (StepManager) cons.newInstance(this, step_xref);
 						// Add the step_manager to this.stepManagers
 						this.stepManagers.add(step_manager);
+						
 						// Initialize the step
 						step_manager.init();
+						// If this is the first CSV step for this job, get the
+						// extract_max_rec_per_file
+						Class j = step_manager.getClass();
+						if (step_manager instanceof GenerateCSVStep && this.extract_max_rec_per_file == -1) {
+							GenerateCSVStep g = (GenerateCSVStep)step_manager;
+							this.extract_max_rec_per_file = g.max_rec_per_file.intValue();
+						}
 					}
 					catch ( SecurityException e) {
 						VBatchManager.log.fatal(e);
@@ -215,6 +227,14 @@ public class JobManager {
 		
 	}
 	
+	/**
+	 * Returns the step.extract_max_recs_per_file for the first CSV step in this job.
+	 */
+	public int getMaxRecPerFile() {
+		return this.extract_max_rec_per_file;
+	}
+	
+	
 	
 	/**
 	 * Log the start of this job to the batchLogDtl table
@@ -267,7 +287,8 @@ public class JobManager {
 		
 		this.batch_log.setOrderNum(this.job_definition.getOrderNum());
 		this.batch_log.setStatus("Started");
-		this.batch_log.setStartDt(new Date());
+		this.batch_log.setStartDt(this.start_time);
+		this.batch_log.setShortDesc(this.job_definition.getShortDesc());
 		
 		//batch_num should be set from sequence BATCH_LOG_BATCH_NUM_SEQ
 		String queryString = "SELECT BATCH_LOG_BATCH_NUM_SEQ.NEXTVAL FROM DUAL";	
@@ -325,7 +346,7 @@ public class JobManager {
 		this.db.getTransaction().begin();
 		// Set the batch_log entry for this job to status = complete
 		this.batch_log.setEndDt(new Date());
-		this.batch_log.setStatus("Complete");
+		this.batch_log.setStatus(BatchLog.statusComplete);
 		
 		// Show this job complete in the log_dtl table
 		// Create the batch_log_dtl entry showing this job started
@@ -333,7 +354,7 @@ public class JobManager {
 		/*
 		this.log_dtl.setBatchLog(this.batch_log);
 		this.log_dtl.setEndDt(new Date());
-		this.log_dtl.setStatus("Completed");
+		this.log_dtl.setStatus(BatchLog.statusComplete);
 		this.db.persist(this.log_dtl);
 		*/
 		
