@@ -250,6 +250,7 @@ public class ExtractDBStep extends StepManager {
 		String previousRowOK1Value = new String();
 		String currentRowOK1Value  = new String();
 		String PK1AtEndOfCurrentPage = new String();
+		String OK1AtEndOfCurrentPage = new String();
 		try {
 			// go back to beginning of recordset 
 			boolean isRecordsetEmpty = !rs.first();
@@ -279,6 +280,7 @@ public class ExtractDBStep extends StepManager {
 					skipThisRecord=false;
 					currentRowOK1Value = this.convertDateFieldToString(rs, "OK1");
 					currentRowPK1Value = rs.getString("PK1");
+					boolean isLastRecord = rs.isLast();
 					
 					/** If this row was already in the previous job,
 					 *  completely skip processing this row.
@@ -293,7 +295,7 @@ public class ExtractDBStep extends StepManager {
 					/** Set flags that determine how to handle this row **/
 					
 					int jobMaxRecPerFile = this.job_manager.getMaxRecPerFile();
-					if (rowsIncludedInJob % jobMaxRecPerFile == 0 || rs.isLast()) { 
+					if ( (rowsIncludedInJob != 0 ) && (rowsIncludedInJob % jobMaxRecPerFile == 0)) { 
 						// If we hit this mark, but pageDataComplete is already set,
 						// then we're still moving forward through records from a previous 
 						// page when we hit this mark, so don't reset the PK1 marker
@@ -301,6 +303,7 @@ public class ExtractDBStep extends StepManager {
 							// Since this record marks the "end" of a set of records,
 							// remember its PK1 value
 							PK1AtEndOfCurrentPage = rs.getString("PK1");
+							OK1AtEndOfCurrentPage = this.convertDateFieldToString(rs, "OK1");
 						}
 						isPageDataAlmostComplete=true;
 					}
@@ -328,14 +331,16 @@ public class ExtractDBStep extends StepManager {
 					
 					// In addition to the above checks, if we're at the end of the recordset,
 					// force the "is..Complete" flags true so all data gets written
-					boolean lastRecord = rs.isLast();
+					
 					// Ran out of records before reaching the job limit
-					boolean queryExhausted = (lastRecord) && (rowsIncludedInJob < totalRows);
+					boolean queryExhausted = (isLastRecord);
 					if (queryExhausted) {
 						isPageDataAlmostComplete=false;
 						isPageDataComplete=true;
 						isRecordsetAlmostComplete=false;
 						isRecordsetComplete=true;
+						PK1AtEndOfCurrentPage = rs.getString("PK1");
+						OK1AtEndOfCurrentPage = this.convertDateFieldToString(rs, "OK1");
 					}
 					
 					
@@ -345,13 +350,7 @@ public class ExtractDBStep extends StepManager {
 					/**
 					 * Process this row
 					 */
-					// todo: if first row, start log
 					
-					
-					
-					
-					// todo: If isPageDataAlmostComplete
-						
 					/** 
 					 * Handle full page of data (which might also be end
 					 * of recordset.
@@ -359,13 +358,18 @@ public class ExtractDBStep extends StepManager {
 					if (!skipThisRecord) {
 						// If first row, log start of job
 						if (rowsIncludedInJob==1) {
-							this.logStart();		
+							this.logStart();
 							this.log_dtl.setMinOk1(currentRowOK1Value);
 						}
 						// If last row, make sure this row gets persisted
-						if (isPageDataComplete && isRecordsetComplete) {
-							// Since this is the last page of the recordset, 
-							// make sure that last row gets saved as well
+//						if (isPageDataComplete && isRecordsetComplete) {
+//							// Since this is the last page of the recordset, 
+//							// make sure that last row gets saved as well
+//							if (!skipThisRecord) {
+//								processRowOfData(rs);
+//							}
+//						}
+						if (isLastRecord) {
 							if (!skipThisRecord) {
 								processRowOfData(rs);
 							}
@@ -388,33 +392,25 @@ public class ExtractDBStep extends StepManager {
 							// previous pages
 							if (isRecordsetComplete) {
 								TypedQuery<BatchLogOkDtl> qryJobOkDtl = this.job_manager.db.createNamedQuery("BatchLogOkDtl.findByBatchLogId", BatchLogOkDtl.class);
-		//						Query qryJobOkDtl = this.job_manager.db.createQuery("delete from BatchLogOkDtl o " 
-		//				                  + "where o.batchLog = :batchHdr");
-									      
 								qryJobOkDtl.setParameter("batchLogId", this.job_manager.batch_log);	  
 								List<BatchLogOkDtl> lstOkDtl = qryJobOkDtl.getResultList();
 								for (BatchLogOkDtl oldDtl : lstOkDtl) {
 									this.job_manager.db.remove(oldDtl);
 								}
-								//						int okDeleted = qryJobOkDtl.executeUpdate();
 								
 							}
 							
-							if (isRecordsetComplete) {
-						    	this.tempOkDtlList.remove(tempOkDtlList.size() - 1);
-						    }
 							// Todo: roll backwards in this list of ok-dtls until pk1 changes
 							ListIterator<BatchLogOkDtl> it = tempOkDtlList.listIterator(tempOkDtlList.size());
 							boolean deleteAllRemaining = false;
-						    
+							
 							while (it.hasPrevious()) {
 						    	BatchLogOkDtl tempOkDtl = it.previous();
-						    	String rowPK1 = tempOkDtl.getPk1().toString();
+						    	String rowOK1 =  tempOkDtl.getOk1();
 						    	// Get the PK1 to compare this row's pk1 against,
 						    	// to see if it has changed
-						    	String PK1ToCompare;
 						    	// Once the PK1 changes as we go backwards
-						    	if (!rowPK1.equals(PK1AtEndOfCurrentPage)) {
+						    	if (!rowOK1.equals(OK1AtEndOfCurrentPage)) {
 						    		deleteAllRemaining=true;
 						    	}
 						    	
@@ -446,8 +442,6 @@ public class ExtractDBStep extends StepManager {
 							// todo: Page completed, update logs
 						}
 						
-						// end of loop
-						
 						/**  
 						 * Do these things for every row 
 						 ***/
@@ -460,7 +454,7 @@ public class ExtractDBStep extends StepManager {
 							// Remember pk1/ok1 to compare to the next row
 							previousRowPK1Value = rs.getString("PK1");
 							previousRowOK1Value = this.convertDateFieldToString(rs, "OK1");
-						}
+						}	
 		
 						
 						
