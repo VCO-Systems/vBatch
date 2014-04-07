@@ -250,6 +250,7 @@ public class ExtractDBStep extends StepManager {
 		String previousRowOK1Value = new String();
 		String currentRowOK1Value  = new String();
 		String PK1AtEndOfCurrentPage = new String();
+		String OK1AtEndOfCurrentPage = new String();
 		try {
 			// go back to beginning of recordset 
 			boolean isRecordsetEmpty = !rs.first();
@@ -302,6 +303,7 @@ public class ExtractDBStep extends StepManager {
 							// Since this record marks the "end" of a set of records,
 							// remember its PK1 value
 							PK1AtEndOfCurrentPage = rs.getString("PK1");
+							OK1AtEndOfCurrentPage = rs.getString("OK1");
 						}
 						isPageDataAlmostComplete=true;
 					}
@@ -331,7 +333,7 @@ public class ExtractDBStep extends StepManager {
 					// force the "is..Complete" flags true so all data gets written
 					
 					// Ran out of records before reaching the job limit
-					boolean queryExhausted = (isLastRecord) && (rowsIncludedInJob < totalRows);
+					boolean queryExhausted = (isLastRecord);
 					if (queryExhausted) {
 						isPageDataAlmostComplete=false;
 						isPageDataComplete=true;
@@ -365,7 +367,7 @@ public class ExtractDBStep extends StepManager {
 //								processRowOfData(rs);
 //							}
 //						}
-						if (isLastRecord   && !isRecordsetComplete) {
+						if (isLastRecord) {
 							if (!skipThisRecord) {
 								processRowOfData(rs);
 							}
@@ -409,12 +411,11 @@ public class ExtractDBStep extends StepManager {
 							
 							while (it.hasPrevious()) {
 						    	BatchLogOkDtl tempOkDtl = it.previous();
-						    	String rowPK1 = tempOkDtl.getPk1().toString();
+						    	String rowOK1 =  tempOkDtl.getOk1();
 						    	// Get the PK1 to compare this row's pk1 against,
 						    	// to see if it has changed
-						    	String PK1ToCompare;
 						    	// Once the PK1 changes as we go backwards
-						    	if (!rowPK1.equals(PK1AtEndOfCurrentPage)) {
+						    	if (!rowOK1.equals(OK1AtEndOfCurrentPage)) {
 						    		deleteAllRemaining=true;
 						    	}
 						    	
@@ -458,7 +459,7 @@ public class ExtractDBStep extends StepManager {
 							// Remember pk1/ok1 to compare to the next row
 							previousRowPK1Value = rs.getString("PK1");
 							previousRowOK1Value = this.convertDateFieldToString(rs, "OK1");
-						}
+						}	
 		
 						
 						
