@@ -303,7 +303,7 @@ public class ExtractDBStep extends StepManager {
 							// Since this record marks the "end" of a set of records,
 							// remember its PK1 value
 							PK1AtEndOfCurrentPage = rs.getString("PK1");
-							OK1AtEndOfCurrentPage = rs.getString("OK1");
+							OK1AtEndOfCurrentPage = this.convertDateFieldToString(rs, "OK1");
 						}
 						isPageDataAlmostComplete=true;
 					}
@@ -339,6 +339,8 @@ public class ExtractDBStep extends StepManager {
 						isPageDataComplete=true;
 						isRecordsetAlmostComplete=false;
 						isRecordsetComplete=true;
+						PK1AtEndOfCurrentPage = rs.getString("PK1");
+						OK1AtEndOfCurrentPage = this.convertDateFieldToString(rs, "OK1");
 					}
 					
 					
@@ -356,7 +358,7 @@ public class ExtractDBStep extends StepManager {
 					if (!skipThisRecord) {
 						// If first row, log start of job
 						if (rowsIncludedInJob==1) {
-							this.logStart();		
+							this.logStart();
 							this.log_dtl.setMinOk1(currentRowOK1Value);
 						}
 						// If last row, make sure this row gets persisted
@@ -390,21 +392,14 @@ public class ExtractDBStep extends StepManager {
 							// previous pages
 							if (isRecordsetComplete) {
 								TypedQuery<BatchLogOkDtl> qryJobOkDtl = this.job_manager.db.createNamedQuery("BatchLogOkDtl.findByBatchLogId", BatchLogOkDtl.class);
-		//						Query qryJobOkDtl = this.job_manager.db.createQuery("delete from BatchLogOkDtl o " 
-		//				                  + "where o.batchLog = :batchHdr");
-									      
 								qryJobOkDtl.setParameter("batchLogId", this.job_manager.batch_log);	  
 								List<BatchLogOkDtl> lstOkDtl = qryJobOkDtl.getResultList();
 								for (BatchLogOkDtl oldDtl : lstOkDtl) {
 									this.job_manager.db.remove(oldDtl);
 								}
-								//						int okDeleted = qryJobOkDtl.executeUpdate();
 								
 							}
 							
-//							if (isRecordsetComplete) {
-//						    	this.tempOkDtlList.remove(tempOkDtlList.size() - 1);
-//						    }
 							// Todo: roll backwards in this list of ok-dtls until pk1 changes
 							ListIterator<BatchLogOkDtl> it = tempOkDtlList.listIterator(tempOkDtlList.size());
 							boolean deleteAllRemaining = false;
