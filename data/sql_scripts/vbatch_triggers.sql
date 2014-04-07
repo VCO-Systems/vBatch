@@ -65,4 +65,5 @@ begin
 select BATCH_LOG_OK_DTL_ID_SEQ.nextval into :new.id from dual;
 end;
 /
+COMMIT;
 EXIT;
