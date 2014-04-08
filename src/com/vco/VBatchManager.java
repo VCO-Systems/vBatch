@@ -84,7 +84,7 @@ public class VBatchManager {
 		
 		// start the logging
 		log = Logger.getLogger(vbatch_version);	
-		log.debug(MessageFormat.format("ORDER_NUM : {0}", order_num));
+//		log.debug(MessageFormat.format("ORDER_NUM : {0}", order_num));
 	}
 	
 	/**

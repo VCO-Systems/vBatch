@@ -165,9 +165,18 @@ public class ExtractDBStep extends StepManager {
 			}
 
 			// Add minOk1 and maxOk1 to the whereClause
-			whereClause += " AND ptt.create_date_time >= to_date('" + previousRunMinOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
+			whereClause += " ptt.create_date_time >= to_date('" + previousRunMinOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
 			whereClause += " AND ptt.create_date_time <= to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
 			
+			// Remove trailing semicolon which is valid sql but confuses jdbc sometimes
+			if (this.raw_sql.indexOf(";", this.raw_sql.length()-1) != -1) {
+				this.raw_sql = this.raw_sql.substring(0, this.raw_sql.length()-1);
+			}
+			// replace the SQL TOKEN(s) ( /* where */ )
+			int sqlTokensReplaced =  this.replaceSqlToken(this.raw_sql, whereClause); 
+			if (sqlTokensReplaced == 0) {
+				VBatchManager.log.debug(MessageFormat.format("[Extract] QUERY : {0}", this.raw_sql));
+			}
 			// Run the query
 			try {
 				rs = this.sqlQuery(this.raw_sql, totalRows+100);

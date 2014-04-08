@@ -56,7 +56,7 @@ public class JobManager {
 		this.batch_manager = batch_manager;
 		this.db = batch_manager.em;
 		this.job_id = job_id.longValue();
-		VBatchManager.log.debug(MessageFormat.format("JOB ID: {0} JOB DEF: {1} START", this.job_id, this.job_definition));
+		
 	}
 	
 	
@@ -68,6 +68,7 @@ public class JobManager {
 		
 		// We're doing a new run by job id, so just look up the job def by job #
 		if (this.batchMode == VBatchManager.BatchMode_New) {  // new run by job id
+			
 			// Look up the job definition by JobDefinition.order_num (not id)
 			TypedQuery<JobDefinition> qryMyJobDef = this.db.createQuery(
 					"SELECT j from JobDefinition j "
@@ -91,6 +92,7 @@ public class JobManager {
 				breakOutOfThisJob=true;
 			}
 //			this.job_definition = this.db.find(JobDefinition.class, (Object)this.job_id);
+			VBatchManager.log.debug(MessageFormat.format("Initiating new run for Job Id: {0}", ((int)this.job_id)));
 		}
 		// Here we're re-running a previous batch by batch num, so get the last run
 		// of this batch from the logs, and use its job_definition
