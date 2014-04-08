@@ -106,7 +106,6 @@ public class ExtractDBStep extends StepManager {
 			// The user called -b 123, where 123 is a batch_num.  Look up the first run
 			// for that batch Number (ie: with same batchNum, seqNbr=1)
 			
-			
 			// get the initial run of this batch, and pull out the job config info we need
 			TypedQuery<BatchLog> qryInitialRunForThisBatch = this.job_manager.db.createQuery(
 					"SELECT log from BatchLog log WHERE log.batchNum = :batchNumber and log.batchSeqNbr = :batchSeq order by log.id asc", BatchLog.class);
@@ -422,6 +421,7 @@ public class ExtractDBStep extends StepManager {
 								processRowOfData(rs);
 							}
 						}
+						
 						if (isPageDataComplete) {
 							// todo: Mark job started
 							
@@ -544,7 +544,7 @@ public class ExtractDBStep extends StepManager {
 				}
 			} // // end of recordset
 			else {  // initial recordset had 0 entries
-				System.out.println("[Extract] This job has zero records.");
+				System.out.println("[Extract] Aborting job (no records found).");
 				this.running=false;
 				this.failed=false;
 				this.completed=true;

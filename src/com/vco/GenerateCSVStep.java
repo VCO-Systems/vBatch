@@ -213,8 +213,6 @@ public class GenerateCSVStep extends StepManager {
 				// Update the counters
 				this.totalRowsThisFile++;
 				this.totalRowsGenerated++;
-				
-				
 			}
 			
 			int pos = this.currentOutputFilename.length()-5;
