@@ -29,6 +29,7 @@ import org.apache.commons.lang.StringUtils;
 
 import model.BatchLog;
 import model.BatchLogDtl;
+import model.JobDefinition;
 import model.JobStepsXref;
 import model.BatchLogOkDtl;
 import model.Step;
@@ -49,7 +50,7 @@ public class ExtractDBStep extends StepManager {
 	private List<BatchLogOkDtl> tempOkDtlList = new ArrayList<BatchLogOkDtl>();
 	private Map<Integer,String> columnsToSkip;
 	private List<BatchLogOkDtl> previousJobOkDtls = new ArrayList<BatchLogOkDtl>();
-	private String previousRunMaxOk1;
+	private String previousRunMaxOk1,previousRunMinOk1;
 	private int currentRowNum = 0;
 	private int rowsIncludedInJob = 0;
 	
@@ -86,53 +87,84 @@ public class ExtractDBStep extends StepManager {
 		int commit_freq = this.jobStepXref.getStep().getExtractCommitFreq().intValue();
 		ResultSet rs = null;
 		// For an extract run, these values must be set
-		String previousRunMinOk1, previousRunPK1;
+		String previousRunPK1, previousRunExtractSql;
+		int previousRunMaxRec, previousRunMaxRecPerFile;
 		BatchLog previousRunBatchLogHdr = null;
 		int previousRunTotalRecordsExtracted;
 		int totalRows = 0;
 		
 		/**
 		 * Prepare to re-run of previous batch, based on batch_num  
-		 *   - look up minOk1/maxOk1 from last run of batch
+		 *   - look up minOk1/maxOk1 from first run of batch (ie: batch_seq_nbr 1)
 		 *   - look up total rows from previous job
+		 *   - look up ok dtls from the run *before* the previous run
 		 * 
 		 */
 		
 		if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_Repeat) {
 			
-			// The user called -b 123, where 123 is a batch_num.  Look up that job,
-			// to get the min/maxOk1 values
+			// The user called -b 123, where 123 is a batch_num.  Look up the first run
+			// for that batch Number (ie: with same batchNum, seqNbr=1)
 			
-			// Get the BatchLog entry by batch_num
-			TypedQuery<BatchLog> qryPreviousBatch = this.job_manager.db.createQuery(
-					"SELECT log from BatchLog log WHERE log.batchNum = :batchNumber order by log.id asc", BatchLog.class);
-			List<BatchLog> lstPreviousBatch = qryPreviousBatch
+			
+			// get the initial run of this batch, and pull out the job config info we need
+			TypedQuery<BatchLog> qryInitialRunForThisBatch = this.job_manager.db.createQuery(
+					"SELECT log from BatchLog log WHERE log.batchNum = :batchNumber and log.batchSeqNbr = :batchSeq order by log.id asc", BatchLog.class);
+			List<BatchLog> lstInitialRunForThisBatch = qryInitialRunForThisBatch
 		    		.setParameter("batchNumber", this.job_manager.job_id)
+		    		.setParameter("batchSeq", 1)
 		    		.setMaxResults(1)
 		    		.getResultList();
-			if (lstPreviousBatch.size() == 0 ) {
+			if (lstInitialRunForThisBatch.size() == 0 ) {
 				System.out.println("vbatch Error: Batch " + this.job_manager.job_id + " not found.");
-				System.exit(1);
+				return false;
 			}
-			// Use the BatchLog entry to look up Extract steps from this previous run
-			TypedQuery<BatchLogDtl> qryMatchingLogDtl = this.job_manager.db.createQuery(
-					"SELECT dtl from BatchLogDtl dtl WHERE dtl.batchLog = :batchLog AND dtl.stepType = 'Extract' order by dtl.id asc", BatchLogDtl.class);
-			List<BatchLogDtl> lstMatchingLogDtl = qryMatchingLogDtl
-		    		.setParameter("batchLog", lstPreviousBatch.get(0))
+			BatchLog batchLogForInitialRun = lstInitialRunForThisBatch.get(0);
+			// Grab the batch_log_dtls so we can retrieve job settings used whent that job was run
+			TypedQuery<BatchLogDtl> qryInitialRunLogDtl = this.job_manager.db.createQuery(
+					"SELECT dtl from BatchLogDtl dtl WHERE dtl.batchLog = :batchLog order by dtl.id asc", BatchLogDtl.class);
+			List<BatchLogDtl> lstInitialRunLogDtl = qryInitialRunLogDtl
+		    		.setParameter("batchLog", batchLogForInitialRun)
 		    		.getResultList();
-			// lstMatchingLogDtl.size() = number of extract steps for this batch
-			BatchLogDtl extract_log = lstMatchingLogDtl.get(0);
-			// Get the vars we need for min/max to re-run this job with the same records
-			previousRunMinOk1 = extract_log.getMinOk1();
-			previousRunMinOk1 = this.convertDateStringToAnotherDateString(previousRunMinOk1, "MM/d/yy H:mm:ss", "MM/dd/yyyy H:mm:ss");
-			previousRunMaxOk1 = extract_log.getMaxOk1();
-			previousRunMaxOk1 = this.convertDateStringToAnotherDateString(previousRunMaxOk1, "MM/d/yy H:mm:ss", "MM/dd/yyyy H:mm:ss");
+			// Loop over log_dtls for this job, grabbing job parameters
+			for (BatchLogDtl initialRunLogDtl : lstInitialRunLogDtl) {
+				// Depending on step type, grab the job params needed to re-run this job
+				if (initialRunLogDtl.getStepType().equals("Extract")) {
+					// Get the vars we need for min/max to re-run this job with the same records
+					previousRunMinOk1 = initialRunLogDtl.getMinOk1();
+					previousRunMinOk1 = this.convertDateStringToAnotherDateString(previousRunMinOk1, "MM/d/yy H:mm:ss", "MM/dd/yyyy H:mm:ss");
+					previousRunMaxOk1 = initialRunLogDtl.getMaxOk1();
+					previousRunMaxOk1 = this.convertDateStringToAnotherDateString(previousRunMaxOk1, "MM/d/yy H:mm:ss", "MM/dd/yyyy H:mm:ss");
+					totalRows = initialRunLogDtl.getNumRecords().intValue();
+					previousRunExtractSql = initialRunLogDtl.getExtractSql();
+				}
+				else if (initialRunLogDtl.getStepType().equals("CSV")) {
+					previousRunMaxRecPerFile = initialRunLogDtl.getExtractMaxRecsPerFile().intValue();
+				}
+			}
+
+			// Todo: If available, get the ok-dtl records from the last successful run
+			// of this job *prior* to the initial run of this batch
+			JobDefinition jd = batchLogForInitialRun.getJobDefinition();
+			// Find the most recent successful run for this jobDefinition prior to the initial run for this batch
+			TypedQuery<BatchLog> qryRunBeforeThat = this.job_manager.db.createQuery(
+					"SELECT log from BatchLog log WHERE log.jobDefinition = :jd AND log.status = :jobStatus AND log.id < :prevJobId ORDER BY log.id desc", BatchLog.class);
+			List<BatchLog> lstRunBeforeThat = qryRunBeforeThat
+		    		.setParameter("jd", jd)
+		    		.setParameter("jobStatus", "Complete")
+		    		.setParameter("prevJobId", batchLogForInitialRun.getId())
+		    		.setMaxResults(1)
+		    		.getResultList();
 			
-			Long numRecs = extract_log.getNumRecords();
-			totalRows = numRecs.intValue();
-			
-			
-			// Add minOk1 and maxOk1 to startClause to the whereClause
+			if (lstRunBeforeThat.size() > 0 ) {
+				previousRunBatchLogHdr = lstRunBeforeThat.get(0);
+			}
+			else {
+				// No runs of this job found prior to the "previous" run
+				previousRunBatchLogHdr = null;
+			}
+
+			// Add minOk1 and maxOk1 to the whereClause
 			whereClause += " AND ptt.create_date_time >= to_date('" + previousRunMinOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
 			whereClause += " AND ptt.create_date_time <= to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
 			
@@ -158,11 +190,12 @@ public class ExtractDBStep extends StepManager {
 		 */
 		
 		if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_New) {
-			// Look for previous Complete runs of this particular JOB
+			// Look for previous Complete runs of this particular Job
 			TypedQuery<BatchLogDtl> query = this.job_manager.db.createQuery(
 		        "SELECT dtl FROM BatchLogDtl dtl WHERE dtl.stepType = :stepType  and dtl.stepsId = :stepId "  // must match this step's type and id
-				+ " and dtl.batchLog.orderNum = :orderNum "
-				+ " and dtl.batchLog.status = :status"
+				+ " and dtl.batchLog.orderNum = :orderNum "  // the job # passed in at command line
+				+ " and dtl.batchLog.batchSeqNbr = 1 "  // only initial runs, no re-runs
+				+ " and dtl.batchLog.status = :status" //  only runs that completed successfully
 		        + " and dtl.maxOk1 is not null "  // must have max_ok1 value
 		        + " order by dtl.id desc", BatchLogDtl.class);  // most recent match comes first
 		    List<BatchLogDtl> dtls = query
@@ -191,8 +224,6 @@ public class ExtractDBStep extends StepManager {
 				// a query (for instance, forcing the year from 2-digit to 4-digit)
 				previousRunMaxOk1 = this.convertDateStringToAnotherDateString(previousRunMaxOk1, "MM/dd/yy H:mm:ss", "MM/dd/yyyy H:mm:ss");
 				
-				
-				
 				// replace the /* where */ token with our dynamic where clause
 				// however, make sure that if there isn't a WHERE clause that
 				// we add that as well
@@ -216,6 +247,7 @@ public class ExtractDBStep extends StepManager {
 			else {
 				totalRows = this.max_rec;
 			}
+			
 			/**
 			 * 
 			 */
@@ -223,7 +255,6 @@ public class ExtractDBStep extends StepManager {
 			// lastOk1 = '07-May-2013 07:15:21'
 			int endRowsToSkip = 0;
 			int rowCount = 0;
-			
 
 			System.out.println("[Extract] REWRITTEN QUERY: " + this.raw_sql);
 			try {
@@ -234,8 +265,10 @@ public class ExtractDBStep extends StepManager {
 			}  // limit query to max_rec rows
 		}
 		
-		// Store ok-dtls from previous job in this.previousJobOkDtls
-		this.getPreviousJobOkDtls(previousRunBatchLogHdr);
+		// If available, store ok-dtls from previous job in this.previousJobOkDtls
+		if (previousRunBatchLogHdr != null) {
+			this.getPreviousJobOkDtls(previousRunBatchLogHdr);
+		}
 		
 		/**
 		 * Now that we have all variables needed, and the data in 
@@ -320,13 +353,19 @@ public class ExtractDBStep extends StepManager {
 					
 					// todo: Set isRecordsetAlmostComplete
 					if (rowsIncludedInJob > totalRows) {
-						isRecordsetAlmostComplete=true;
-						if (isPageDataComplete) {
-							isRecordsetComplete=true;
+						// For a re-run, we always stop when we reach totalRows
+						if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_Repeat) {
+							isRecordsetAlmostComplete=false;
+							isRecordsetComplete = true;
 						}
-	//					if (rownum >= totalRows+100) {  // last row of query
-	//						isRecordsetComplete=true;
-	//					}
+						else {
+							isRecordsetAlmostComplete=true;
+							if (isPageDataComplete) {
+								isRecordsetComplete=true;
+							}
+						}
+						
+							
 					}
 					
 					// In addition to the above checks, if we're at the end of the recordset,
@@ -353,7 +392,7 @@ public class ExtractDBStep extends StepManager {
 					
 					/** 
 					 * Handle full page of data (which might also be end
-					 * of recordset.
+					 * of recordset)
 					 */
 					if (!skipThisRecord) {
 						// If first row, log start of job
@@ -604,12 +643,15 @@ public class ExtractDBStep extends StepManager {
 			this.dataPageOut.add(rowdata);
 			
 			// log ok-dtl for every row (some will be deleted prior to log commit)
-			BatchLogOkDtl newOkDtl = new BatchLogOkDtl();
-			newOkDtl.setBatchLog(this.job_manager.batch_log);
-			newOkDtl.setOk1(this.convertDateFieldToString(rs, "OK1"));
-			newOkDtl.setPk1(rs.getLong("PK1"));
-			newOkDtl.setPk2(rs.getLong("PK2"));
-			this.tempOkDtlList.add(newOkDtl);
+			// Unless we're repeating a previous job (ie: -b)
+			if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_New) {
+				BatchLogOkDtl newOkDtl = new BatchLogOkDtl();
+				newOkDtl.setBatchLog(this.job_manager.batch_log);
+				newOkDtl.setOk1(this.convertDateFieldToString(rs, "OK1"));
+				newOkDtl.setPk1(rs.getLong("PK1"));
+				newOkDtl.setPk2(rs.getLong("PK2"));
+				this.tempOkDtlList.add(newOkDtl);
+			}
 		}
 	}
 
