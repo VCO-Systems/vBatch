@@ -102,6 +102,45 @@ public class ExtractDBStep extends StepManager {
 		 * 
 		 */
 		
+		// Cleanup raw_sql and parse it for column names
+		// Remove trailing semicolon which is valid sql but confuses jdbc sometimes
+		if (this.raw_sql.indexOf(";", this.raw_sql.length()-1) != -1) {
+			this.raw_sql = this.raw_sql.substring(0, this.raw_sql.length()-1);
+		}
+		//Get the column names corresponding to PK1, PK2 and OK1
+		String pk1ColName = null;
+		String pk2ColName = null;
+		String ok1ColName = null;
+		for (String token : this.raw_sql.split(",")) {
+			if (token.trim().indexOf("PK1") >= 0) {
+				for (String colname : token.split(" ")) {
+					if (colname.trim().equalsIgnoreCase("select") || colname.trim().equals("")) {
+						continue;
+					}
+					pk1ColName = colname;
+					break;
+				}
+			}
+			else if (token.trim().indexOf("PK2") >= 0) {
+				for (String colname : token.split(" ")) {
+					if (colname.trim().equalsIgnoreCase("select") || colname.trim().equals("")) {
+						continue;
+					}
+					pk2ColName = colname;
+					break;
+				}
+			}
+			else if (token.trim().indexOf("OK1") >= 0) {
+				for (String colname : token.split(" ")) {
+					if (colname.trim().equalsIgnoreCase("select") || colname.trim().equals("")) {
+						continue;
+					}
+					ok1ColName = colname;
+					break;
+				}
+			}
+		}
+		
 		if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_Repeat) {
 			
 			// The user called -b 123, where 123 is a batch_num.  Look up the first run
@@ -163,15 +202,11 @@ public class ExtractDBStep extends StepManager {
 				// No runs of this job found prior to the "previous" run
 				previousRunBatchLogHdr = null;
 			}
-
-			// Add minOk1 and maxOk1 to the whereClause
-			whereClause += " ptt.create_date_time >= to_date('" + previousRunMinOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
-			whereClause += " AND ptt.create_date_time <= to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
 			
-			// Remove trailing semicolon which is valid sql but confuses jdbc sometimes
-			if (this.raw_sql.indexOf(";", this.raw_sql.length()-1) != -1) {
-				this.raw_sql = this.raw_sql.substring(0, this.raw_sql.length()-1);
-			}
+			// Add minOk1 and maxOk1 to the whereClause
+			whereClause += ok1ColName + " >= to_date('" + previousRunMinOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
+			whereClause += " AND " + ok1ColName + " <= to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
+						
 			// replace the SQL TOKEN(s) ( /* where */ )
 			int sqlTokensReplaced =  this.replaceSqlToken(this.raw_sql, whereClause); 
 			if (sqlTokensReplaced == 0) {
@@ -215,11 +250,6 @@ public class ExtractDBStep extends StepManager {
 		    		.getResultList();
 			
 			// dtls.size()  is the number of previous executions of this step from log_dtl
-		    
-			// Remove trailing semicolon which is valid sql but confuses jdbc sometimes
-			if (this.raw_sql.indexOf(";", this.raw_sql.length()-1) != -1) {
-				this.raw_sql = this.raw_sql.substring(0, this.raw_sql.length()-1);
-			}
 			
 			// If there's at least one previous run with valid maxOK1
 			if (dtls.size() > 0) {
@@ -238,7 +268,7 @@ public class ExtractDBStep extends StepManager {
 				// we add that as well
 				
 				// Create a WHERE clause that starts after lastOk1
-				whereClause = " ptt.create_date_time >= to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
+				whereClause = ok1ColName + " >= to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
 				// replace the SQL TOKEN(s) ( /* where */ )
 				int sqlTokensReplaced =  this.replaceSqlToken(this.raw_sql, whereClause); 
 				if (sqlTokensReplaced == 0) {
@@ -452,9 +482,10 @@ public class ExtractDBStep extends StepManager {
 							ListIterator<BatchLogOkDtl> it = tempOkDtlList.listIterator(tempOkDtlList.size());
 							boolean deleteAllRemaining = false;
 							
+							SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y H:mm:ss");
 							while (it.hasPrevious()) {
 						    	BatchLogOkDtl tempOkDtl = it.previous();
-						    	String rowOK1 =  tempOkDtl.getOk1();
+						    	String rowOK1 =  outgoingDateFormat.format(tempOkDtl.getOk1());
 						    	// Get the PK1 to compare this row's pk1 against,
 						    	// to see if it has changed
 						    	// Once the PK1 changes as we go backwards
@@ -591,6 +622,7 @@ public class ExtractDBStep extends StepManager {
 	 */
 	private boolean isRowInPreviousRunOkDtl(ResultSet rs) {
 		boolean retval = false;
+		SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y H:mm:ss");
 		try {
 			if (this.previousJobOkDtls.size() > 0 ) {
 				// Get the ok1, pk1 from this row
@@ -601,12 +633,12 @@ public class ExtractDBStep extends StepManager {
 					rowPK2 = rs.getString("PK2");
 				String rowOK1 = this.convertDateFieldToString(rs, "OK1");
 				
-				String previousJobOK1 = this.previousJobOkDtls.get(0).getOk1();
+				String previousJobOK1 = outgoingDateFormat.format(this.previousJobOkDtls.get(0).getOk1());
 				String previousJobPK1 = this.previousJobOkDtls.get(0).getPk1().toString();
 				for (BatchLogOkDtl okDtlEntry : this.previousJobOkDtls) {
 					String thisPk1 = okDtlEntry.getPk1().toString();
 					String thisPk2 = okDtlEntry.getPk2().toString();
-					String thisOk1 = okDtlEntry.getOk1();
+					String thisOk1 = outgoingDateFormat.format(okDtlEntry.getOk1());
 					if ( (thisPk1.equals(rowPK1))
 							&& (thisPk2.equals(rowPK2))
 							&& (thisOk1.equals(rowOK1))
@@ -636,6 +668,7 @@ public class ExtractDBStep extends StepManager {
 	 */
 	private boolean isRowInTempOkDtl(ResultSet rs) {
 		boolean retval = false;
+		SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y H:mm:ss");
 		try {
 			if (this.tempOkDtlList.size() > 0 ) {
 				// Get the ok1, pk1 from this row
@@ -646,7 +679,7 @@ public class ExtractDBStep extends StepManager {
 					rowPK2 = rs.getString("PK2");
 				String rowOK1 = this.convertDateFieldToString(rs, "OK1");
 				
-				String previousJobOK1 = this.tempOkDtlList.get(0).getOk1();
+				String previousJobOK1 = outgoingDateFormat.format(this.tempOkDtlList.get(0).getOk1());
 				String previousJobPK1 = this.tempOkDtlList.get(0).getPk1().toString();
 				for (BatchLogOkDtl okDtlEntry : this.tempOkDtlList) {
 					String thisPk1 = okDtlEntry.getPk1().toString();
@@ -711,7 +744,8 @@ public class ExtractDBStep extends StepManager {
 				if (!(isRowInTempOkDtl(rs))) {
 					BatchLogOkDtl newOkDtl = new BatchLogOkDtl();
 					newOkDtl.setBatchLog(this.job_manager.batch_log);
-					newOkDtl.setOk1(this.convertDateFieldToString(rs, "OK1"));
+					//newOkDtl.setOk1(this.convertDateFieldToString(rs, "OK1"));
+					newOkDtl.setOk1(rs.getDate("OK1"));
 					newOkDtl.setPk1(rs.getLong("PK1"));
 					newOkDtl.setPk2(rs.getLong("PK2"));
 					this.tempOkDtlList.add(newOkDtl);

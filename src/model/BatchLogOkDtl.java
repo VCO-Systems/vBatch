@@ -5,6 +5,7 @@ import java.io.Serializable;
 import javax.persistence.*;
 
 import java.sql.Timestamp;
+import java.util.Date;
 
 
 /**
@@ -28,8 +29,9 @@ public class BatchLogOkDtl implements Serializable {
 	@Column(unique=true, nullable=false)
 	private long id;
 
+	@Temporal(TemporalType.TIMESTAMP)
 	@Column(nullable=false)
-	private String ok1;
+	private Date ok1;
 
 	private Long pk1;
 
@@ -53,11 +55,11 @@ public class BatchLogOkDtl implements Serializable {
 		this.id = id;
 	}
 
-	public String getOk1() {
+	public Date getOk1() {
 		return this.ok1;
 	}
 
-	public void setOk1(String ok1) {
+	public void setOk1(Date ok1) {
 		this.ok1 = ok1;
 	}
 
