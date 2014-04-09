@@ -100,7 +100,7 @@ CREATE TABLE vbatch.batch_log_ok_dtl (
                 pk1 NUMBER,
                 pk2 NUMBER,
                 pk3 NUMBER,
-                ok1 VARCHAR2(150) NOT NULL,
+                ok1 TIMESTAMP NOT NULL,
                 CONSTRAINT BATCH_LOG_OK_DTL_PK PRIMARY KEY (id),
                 CONSTRAINT PK_COL_CONSTRAINT UNIQUE (pk1, pk2, pk3)
 );
@@ -147,4 +147,5 @@ ALTER TABLE vbatch.job_steps_xref ADD CONSTRAINT JOB_STEPS_XREF_STEPS_FK
 FOREIGN KEY (step_id)
 REFERENCES vbatch.steps (id)
 NOT DEFERRABLE;
+COMMIT;
 EXIT;
