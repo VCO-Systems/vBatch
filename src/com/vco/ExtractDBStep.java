@@ -13,6 +13,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -108,38 +109,96 @@ public class ExtractDBStep extends StepManager {
 			this.raw_sql = this.raw_sql.substring(0, this.raw_sql.length()-1);
 		}
 		//Get the column names corresponding to PK1, PK2 and OK1
-		String pk1ColName = null;
-		String pk2ColName = null;
+//		String pk1ColName = null;
+//		String pk2ColName = null;
+//		String ok1ColName = null;
+//		for (String token : this.raw_sql.split(",")) {
+//			if (token.trim().toLowerCase().indexOf("pk1") >= 0) {
+//				for (String colname : token.split(" ")) {
+//					if (colname.trim().equalsIgnoreCase("select") || colname.trim().equals("")) {
+//						continue;
+//					}
+//					pk1ColName = colname;
+//					break;
+//				}
+//			}
+//			else if (token.trim().toLowerCase().indexOf("pk2") >= 0) {
+//				for (String colname : token.split(" ")) {
+//					if (colname.trim().equalsIgnoreCase("select") || colname.trim().equals("")) {
+//						continue;
+//					}
+//					pk2ColName = colname;
+//					break;
+//				}
+//			}
+//			else if (token.trim().toLowerCase().indexOf("ok1") >= 0) {
+//				for (String colname : token.split(" ")) {
+//					if (colname.trim().equalsIgnoreCase("select") || colname.trim().equals("")) {
+//						continue;
+//					}
+//					ok1ColName = colname;
+//					break;
+//				}
+//			}
+//		}
+		String dummyQuery = "select OK1, PK1, PK2, F1, F2,seq_nbr, seq_nbr, tran_nbr, plan_date, F4, plt_id, F5, F6, F7, F8, F9, F10, F11, F12, locn_brcd, F102, F13, F14, F15, F16, F17, F18, F19, F20, F21, F22, F23, F24, F25, F26, F27, F28, F29, F30, F31, F32, user_id, sign_on_time, F33, F34, F35, F36, F37 from (select ptt.create_date_time as OK1, ptt.tran_nbr as PK1, ptt.seq_nbr as PK2, 'CWMS0104' as F1, 'A' as F2,ptt.seq_nbr, '' as F3, ptt.tran_nbr,to_char(ptt.create_date_time,'yyyymmdd') plan_date, '' as F4,ptt.plt_id, '17532' as F5, '' as F6, '' as F7, '' as F8, 'O' as F9, 'INVNMVMT' as F10, '' as F11, '4443' as F12, lh.locn_brcd, '1' as F102, '' as F13, '' as F14, '' as F15, '' as F16, '' as F17, '' as F18,'' as F19, '' as F20, '' as F21, '' as F22,'' as F23, '' as F24, '' as F25, '' as F26,'' as F27, '' as F28, '' as F29, '' as F30, '' as F31, '' as F32, ptt.user_id,to_char(ptt.begin_date,'yyyymmddhh24miss') sign_on_time, '' as F33, '' as F34, '' as F35, '' as F36, '' as F37  from prod_trkg_tran ptt, item_master im, locn_hdr lh, case_hdr ch  where ptt.cntr_nbr = ch.case_nbr and ch.stat_code <= '30' and lh.locn_class = 'R' and ptt.sku_id = im.sku_id  and ptt.from_locn = lh.locn_id  /* and ptt.menu_optn_name  like 'Sort%'*/ AND ptt.create_date_time > to_date('20140201', 'YYYYMMDD') /* where */ union select ptt.create_date_time as OK1, ptt.tran_nbr as PK1, ptt.seq_nbr as PK2 , 'CWMS0104' as F1, 'A' as F2,ptt.seq_nbr + 1000, '' as F3, ptt.tran_nbr,to_char(ptt.create_date_time,'yyyymmdd') plan_date, '' as F4,ptt.plt_id, '17532' as F5, '' as F6, '' as F7, '' as F8, 'P' as F9, 'INVNMVMT' as F10, '' as F11, '4443' as F12, lh.locn_brcd, '' as F102, '1' as F13, '' as F14, '' as F15, '' as F16, '' as F17, '' as F18,'' as F19, '' as F20, '' as F21, '' as F22,'' as F23, '' as F24, '' as F25, '' as F26,'' as F27, '' as F28, '' as F29, '' as F30, '' as F31, '' as F32, ptt.user_id,to_char(ptt.begin_date,'yyyymmddhh24miss') sign_on_time, '' as F33, '' as F34, '' as F35, '' as F36, '' as F37   from prod_trkg_tran ptt, item_master im, locn_hdr lh, case_hdr ch  where ptt.cntr_nbr = ch.case_nbr and ch.stat_code <= '30' and lh.locn_class = 'R' and ptt.sku_id = im.sku_id  and ptt.to_locn = lh.locn_id  /* and ptt.menu_optn_name like 'Sort%'*/ AND ptt.create_date_time > to_date('20140201','YYYYMMDD') /* where */ ) MN order by OK1 asc;";
+		raw_sql=dummyQuery;
+		// Look up original column name for OK1
 		String ok1ColName = null;
-		for (String token : this.raw_sql.split(",")) {
-			if (token.trim().toLowerCase().indexOf("pk1") >= 0) {
-				for (String colname : token.split(" ")) {
-					if (colname.trim().equalsIgnoreCase("select") || colname.trim().equals("")) {
-						continue;
-					}
-					pk1ColName = colname;
-					break;
-				}
-			}
-			else if (token.trim().toLowerCase().indexOf("pk2") >= 0) {
-				for (String colname : token.split(" ")) {
-					if (colname.trim().equalsIgnoreCase("select") || colname.trim().equals("")) {
-						continue;
-					}
-					pk2ColName = colname;
-					break;
-				}
-			}
-			else if (token.trim().toLowerCase().indexOf("ok1") >= 0) {
-				for (String colname : token.split(" ")) {
-					if (colname.trim().equalsIgnoreCase("select") || colname.trim().equals("")) {
-						continue;
-					}
-					ok1ColName = colname;
-					break;
-				}
-			}
+		for (String token : raw_sql.toLowerCase().split(",")) {
+		    //Exs of tokens are "select OK1" and "F37 from (select ptt.create_date_time as OK1"
+		    if ((ok1ColName == null) && token.contains("ok1")) {
+		        String[] reversedTokens = token.split(" ");
+		        Collections.reverse(Arrays.asList(reversedTokens));
+		        for (String colname : reversedTokens) {
+		            if (colname.trim().equalsIgnoreCase("ok1") || colname.trim().equalsIgnoreCase("as") || colname.trim().equals("") || colname.trim().equals("select")) { 
+		                continue; 
+		            } 
+		            else { 
+		                ok1ColName = colname.trim(); 
+		                break;
+		            }
+		        }
+		    }
 		}
+		
+		// Look up original column name for PK1
+		String pk1ColName = null;
+		for (String token : raw_sql.toLowerCase().split(",")) {
+		    if ((pk1ColName == null) && token.endsWith("pk1")) {
+		    	String[] reversedPK1Tokens = token.split(" ");
+		    	Collections.reverse(Arrays.asList(reversedPK1Tokens));
+		        for (String colname : reversedPK1Tokens) { 
+		            if (colname.trim().equalsIgnoreCase("pk1") || colname.trim().equalsIgnoreCase("select") || colname.trim().equalsIgnoreCase("as") || colname.trim().equals("")) { 
+		                continue; 
+		            } 
+		            else { 
+		                pk1ColName = colname.trim(); 
+
+		                break;
+		            } 
+		        }
+		    }
+		}
+		
+		// Look up original column name for PK1
+		String pk2ColName = null;
+		for (String token : raw_sql.toLowerCase().split(",")) {
+		    if ((pk1ColName == null) && token.endsWith("pk2")) {
+		    	String[] reversedPK2Tokens = token.split(" ");
+		    	Collections.reverse(Arrays.asList(reversedPK2Tokens));
+		        for (String colname : reversedPK2Tokens) { 
+		            if (colname.trim().equalsIgnoreCase("pk2") || colname.trim().equalsIgnoreCase("select") || colname.trim().equalsIgnoreCase("as") || colname.trim().equals("")) { 
+		                continue; 
+		            } 
+		            else { 
+		                pk2ColName = colname.trim(); 
+		                break;
+		            } 
+		        }
+		    }
+		}
+		
 		
 		if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_Repeat) {
 			
