@@ -165,8 +165,8 @@ public class ExtractDBStep extends StepManager {
 			}
 
 			// Add minOk1 and maxOk1 to the whereClause
-			whereClause += " OK1 >= to_date('" + previousRunMinOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
-			whereClause += " AND OK1 <= to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
+			whereClause += " ptt.create_date_time >= to_date('" + previousRunMinOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
+			whereClause += " AND ptt.create_date_time <= to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
 			
 			// Remove trailing semicolon which is valid sql but confuses jdbc sometimes
 			if (this.raw_sql.indexOf(";", this.raw_sql.length()-1) != -1) {
@@ -238,7 +238,7 @@ public class ExtractDBStep extends StepManager {
 				// we add that as well
 				
 				// Create a WHERE clause that starts after lastOk1
-				whereClause = " OK1 >= to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
+				whereClause = " ptt.create_date_time >= to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
 				// replace the SQL TOKEN(s) ( /* where */ )
 				int sqlTokensReplaced =  this.replaceSqlToken(this.raw_sql, whereClause); 
 				if (sqlTokensReplaced == 0) {
