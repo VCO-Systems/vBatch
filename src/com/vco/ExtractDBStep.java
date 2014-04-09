@@ -51,6 +51,7 @@ public class ExtractDBStep extends StepManager {
 	private Map<Integer,String> columnsToSkip;
 	private List<BatchLogOkDtl> previousJobOkDtls = new ArrayList<BatchLogOkDtl>();
 	private String previousRunMaxOk1,previousRunMinOk1;
+	private String OK1AtEndOfCurrentPage = new String();
 	private int currentRowNum = 0;
 	private int rowsIncludedInJob = 0;
 	
@@ -291,7 +292,7 @@ public class ExtractDBStep extends StepManager {
 		String previousRowOK1Value = new String();
 		String currentRowOK1Value  = new String();
 		String PK1AtEndOfCurrentPage = new String();
-		String OK1AtEndOfCurrentPage = new String();
+		
 		try {
 			// go back to beginning of recordset 
 			boolean recordsetHasItems = rs.first();
@@ -344,7 +345,6 @@ public class ExtractDBStep extends StepManager {
 							// Since this record marks the "end" of a set of records,
 							// remember its PK1 value
 							PK1AtEndOfCurrentPage = rs.getString("PK1");
-							OK1AtEndOfCurrentPage = this.convertDateFieldToString(rs, "OK1");
 						}
 						isPageDataAlmostComplete=true;
 					}
@@ -715,6 +715,7 @@ public class ExtractDBStep extends StepManager {
 					newOkDtl.setPk1(rs.getLong("PK1"));
 					newOkDtl.setPk2(rs.getLong("PK2"));
 					this.tempOkDtlList.add(newOkDtl);
+					this.OK1AtEndOfCurrentPage = this.convertDateFieldToString(rs, "OK1");
 				}
 			}
 		}
