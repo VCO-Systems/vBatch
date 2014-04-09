@@ -109,7 +109,7 @@ public class JobManager {
 				// The list is sorted most recent first.  Grab the most recent.
 				BatchLog prevRunOfThisBatch = lstBatches.get(0);
 				this.job_definition = prevRunOfThisBatch.getJobDefinition();
-				VBatchManager.log.debug(MessageFormat.format("Initiating re-run of Batch # {0}, Job # {1}", ((int)this.job_id), this.job_definition.getOrderNum()));
+				VBatchManager.log.debug(MessageFormat.format("Initiating re-run of Batch # {0}, Job # {1}", ((int)this.job_id)));
 			}
 			else if (lstBatches.size() == 0) {
 				System.out.println("Could not find any previous runs for batch # " + this.job_id + ".  Aborting job.");

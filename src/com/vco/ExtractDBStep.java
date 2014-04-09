@@ -112,7 +112,7 @@ public class ExtractDBStep extends StepManager {
 		String pk2ColName = null;
 		String ok1ColName = null;
 		for (String token : this.raw_sql.split(",")) {
-			if (token.trim().indexOf("PK1") >= 0) {
+			if (token.trim().toLowerCase().indexOf("pk1") >= 0) {
 				for (String colname : token.split(" ")) {
 					if (colname.trim().equalsIgnoreCase("select") || colname.trim().equals("")) {
 						continue;
@@ -121,7 +121,7 @@ public class ExtractDBStep extends StepManager {
 					break;
 				}
 			}
-			else if (token.trim().indexOf("PK2") >= 0) {
+			else if (token.trim().toLowerCase().indexOf("pk2") >= 0) {
 				for (String colname : token.split(" ")) {
 					if (colname.trim().equalsIgnoreCase("select") || colname.trim().equals("")) {
 						continue;
@@ -130,7 +130,7 @@ public class ExtractDBStep extends StepManager {
 					break;
 				}
 			}
-			else if (token.trim().indexOf("OK1") >= 0) {
+			else if (token.trim().toLowerCase().indexOf("ok1") >= 0) {
 				for (String colname : token.split(" ")) {
 					if (colname.trim().equalsIgnoreCase("select") || colname.trim().equals("")) {
 						continue;
@@ -552,7 +552,7 @@ public class ExtractDBStep extends StepManager {
 								this.dataPageOut = new ArrayList<Object>();
 							}
 							// Update the log_dtl record for this step to show it's completed
-							this.log_dtl.setMaxOk1(previousRowOK1Value);
+							this.log_dtl.setMaxOk1(currentRowOK1Value);
 							this.log_dtl.setEndDt(new Date());
 							this.log_dtl.setStatus(BatchLog.statusComplete);
 							if (!isLastRecord) {
@@ -745,7 +745,7 @@ public class ExtractDBStep extends StepManager {
 					BatchLogOkDtl newOkDtl = new BatchLogOkDtl();
 					newOkDtl.setBatchLog(this.job_manager.batch_log);
 					//newOkDtl.setOk1(this.convertDateFieldToString(rs, "OK1"));
-					newOkDtl.setOk1(rs.getDate("OK1"));
+					newOkDtl.setOk1(rs.getTimestamp("OK1"));
 					newOkDtl.setPk1(rs.getLong("PK1"));
 					newOkDtl.setPk2(rs.getLong("PK2"));
 					this.tempOkDtlList.add(newOkDtl);
