@@ -255,6 +255,9 @@ public class VBatchManager {
 				 * 
 				 */
 				
+				// We check for -db first, because if a valid db settings file
+				// cannot be found, we'll abort the job, since neither -j nor -b 
+				// can work.
 				if (cmd.hasOption("db")) {
 					// Load properties file
 					String db_connect_string_file_path = cmd.getOptionValue("db");
@@ -289,7 +292,7 @@ public class VBatchManager {
 				// -j xx[,xx,xx]
 				// runs one more more jobs with specified job id
 				if (cmd.hasOption("j")) {
-					// System.out.println("in the -t block");
+					System.out.println(VBatchManager.vbatch_version);
 					String[] requested_jobs_ids = cmd.getOptionValue("j").split(",");
 					ArrayList<Integer> job_ids = new ArrayList<Integer>();
 					
@@ -317,6 +320,7 @@ public class VBatchManager {
 				
 				// Handle -b (re-run existing batch)
 				if (cmd.hasOption("b")) {
+					System.out.println(VBatchManager.vbatch_version);
 					// TODO:  Get ready to run the -b job
 					String[] requested_jobs_ids = cmd.getOptionValue("b").split(",");
 					ArrayList<Integer> job_ids = new ArrayList<Integer>();

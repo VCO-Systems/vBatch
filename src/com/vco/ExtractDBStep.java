@@ -164,8 +164,8 @@ public class ExtractDBStep extends StepManager {
 			}
 
 			// Add minOk1 and maxOk1 to the whereClause
-			whereClause += " ptt.create_date_time >= to_date('" + previousRunMinOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
-			whereClause += " AND ptt.create_date_time <= to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
+			whereClause += " OK1 >= to_date('" + previousRunMinOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
+			whereClause += " AND OK1 <= to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
 			
 			// Remove trailing semicolon which is valid sql but confuses jdbc sometimes
 			if (this.raw_sql.indexOf(";", this.raw_sql.length()-1) != -1) {
@@ -237,7 +237,7 @@ public class ExtractDBStep extends StepManager {
 				// we add that as well
 				
 				// Create a WHERE clause that starts after lastOk1
-				whereClause = " ptt.create_date_time >= to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
+				whereClause = " OK1 >= to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
 				// replace the SQL TOKEN(s) ( /* where */ )
 				int sqlTokensReplaced =  this.replaceSqlToken(this.raw_sql, whereClause); 
 				if (sqlTokensReplaced == 0) {
@@ -294,7 +294,7 @@ public class ExtractDBStep extends StepManager {
 		String OK1AtEndOfCurrentPage = new String();
 		try {
 			// go back to beginning of recordset 
-			boolean isRecordsetEmpty = !rs.first();
+			boolean recordsetHasItems = rs.first();
 			
 			this.columnsToSkip = this.prepareSkipColumns(rs);
 			
@@ -314,7 +314,7 @@ public class ExtractDBStep extends StepManager {
 			boolean foundRecordThatEndPage    =false;
 			boolean skipThisRecord            =false;
 			
-			if (!isRecordsetEmpty) {
+			if (recordsetHasItems) {
 				// Process the records in this recordset
 				while (!endOfRecordset) {
 					this.currentRowNum++;
@@ -458,7 +458,7 @@ public class ExtractDBStep extends StepManager {
 						    	// Get the PK1 to compare this row's pk1 against,
 						    	// to see if it has changed
 						    	// Once the PK1 changes as we go backwards
-						    	if (!rowOK1.equals(OK1AtEndOfCurrentPage)) {
+						    	if (!(rowOK1.equals(OK1AtEndOfCurrentPage))) {
 						    		deleteAllRemaining=true;
 						    	}
 						    	
@@ -494,7 +494,7 @@ public class ExtractDBStep extends StepManager {
 						 * Do these things for every row 
 						 ***/
 						
-						if (!isRecordsetComplete) {
+						if (!(isRecordsetComplete)) {
 							// If this row was not in the ok-dtl log for previous run,
 							// then add this data to the csv
 							
@@ -520,10 +520,13 @@ public class ExtractDBStep extends StepManager {
 								// Reset page data
 								this.dataPageOut = new ArrayList<Object>();
 							}
-							// Update the step record to show it's completed
+							// Update the log_dtl record for this step to show it's completed
 							this.log_dtl.setMaxOk1(previousRowOK1Value);
 							this.log_dtl.setEndDt(new Date());
 							this.log_dtl.setStatus(BatchLog.statusComplete);
+							if (!isLastRecord) {
+								this.rowsIncludedInJob--;
+							}
 							this.log_dtl.setNumRecords(new Long(this.rowsIncludedInJob));
 							this.job_manager.db.persist(this.log_dtl);
 							// todo: break out of recordset while
@@ -535,6 +538,9 @@ public class ExtractDBStep extends StepManager {
 					// Move to the next record (or abort if we're past the last row)
 					if (rs.next() == false) {  // moved past the last record
 						endOfRecordset=true;
+						if (this.rowsIncludedInJob==0) {
+							System.out.println("[Extract] Skipping job (no new records found).");
+						}
 					}		
 					
 					// todo: Is endOfRecordset
@@ -620,6 +626,50 @@ public class ExtractDBStep extends StepManager {
 		// TODO Auto-generated method stub
 		return retval;
 	}
+	
+	/**
+	 * Check whether the current row of the recordset
+	 * is already listed in this job's temp ok-dtl list
+	 * 
+	 * @param rs
+	 * @return
+	 */
+	private boolean isRowInTempOkDtl(ResultSet rs) {
+		boolean retval = false;
+		try {
+			if (this.tempOkDtlList.size() > 0 ) {
+				// Get the ok1, pk1 from this row
+				String rowPK1;
+					rowPK1 = rs.getString("PK1");
+				
+				String rowPK2;
+					rowPK2 = rs.getString("PK2");
+				String rowOK1 = this.convertDateFieldToString(rs, "OK1");
+				
+				String previousJobOK1 = this.tempOkDtlList.get(0).getOk1();
+				String previousJobPK1 = this.tempOkDtlList.get(0).getPk1().toString();
+				for (BatchLogOkDtl okDtlEntry : this.tempOkDtlList) {
+					String thisPk1 = okDtlEntry.getPk1().toString();
+					String thisPk2 = okDtlEntry.getPk2().toString();
+					if ( (thisPk1.equals(rowPK1))
+							&& (thisPk2.equals(rowPK2))
+							
+							 ) {
+						retval=true;
+					}
+				}
+			}
+		} catch (SQLException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+	    catch (ParseException e1) {
+	    	// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		// TODO Auto-generated method stub
+		return retval;
+	}
 
 	/**
 	 * @param rs
@@ -654,23 +704,22 @@ public class ExtractDBStep extends StepManager {
 			// log ok-dtl for every row (some will be deleted prior to log commit)
 			// Unless we're repeating a previous job (ie: -b)
 			if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_New) {
-				BatchLogOkDtl newOkDtl = new BatchLogOkDtl();
-				newOkDtl.setBatchLog(this.job_manager.batch_log);
-				newOkDtl.setOk1(this.convertDateFieldToString(rs, "OK1"));
-				newOkDtl.setPk1(rs.getLong("PK1"));
-				newOkDtl.setPk2(rs.getLong("PK2"));
-				this.tempOkDtlList.add(newOkDtl);
+				// If this ok-dtl already exists (based on PK1-3) in this job's temp ok dtl 
+				// list, don't try to write it 
+				// because constraint will be violated, and because the record isn't 
+				// necessarily a dup just because pk1-3 is dup
+				if (!(isRowInTempOkDtl(rs))) {
+					BatchLogOkDtl newOkDtl = new BatchLogOkDtl();
+					newOkDtl.setBatchLog(this.job_manager.batch_log);
+					newOkDtl.setOk1(this.convertDateFieldToString(rs, "OK1"));
+					newOkDtl.setPk1(rs.getLong("PK1"));
+					newOkDtl.setPk2(rs.getLong("PK2"));
+					this.tempOkDtlList.add(newOkDtl);
+				}
 			}
 		}
 	}
 
-	/**
-	 * @param tempOkDtlList
-	 */
-	private void updateOkDtlLogsForThisJob(List<BatchLogOkDtl> tempOkDtlList) {
-		
-	}
-	
 	private int replaceSqlToken(String raw_sql, String tokenReplacement) {
 		int tokensReplaced = 0;
 		// Count instances of /* where */ token
