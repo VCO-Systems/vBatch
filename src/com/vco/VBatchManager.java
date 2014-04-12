@@ -133,6 +133,7 @@ public class VBatchManager {
 			inp = new FileInputStream(db_connect_string_file_path);
 		}
 		catch (FileNotFoundException e) {
+//			log.error(MessageFormat.format("JPA DB Settings file not found: {0}", db_connect_string_file_path));
 			System.out.println("ERROR: JPA DB settings file not found: " + db_connect_string_file_path);
 			System.exit(1);
 		}

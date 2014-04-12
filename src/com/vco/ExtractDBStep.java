@@ -27,6 +27,7 @@ import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
 
 import model.BatchLog;
 import model.BatchLogDtl;
@@ -55,10 +56,12 @@ public class ExtractDBStep extends StepManager {
 	private String OK1AtEndOfCurrentPage = new String();
 	private int currentRowNum = 0;
 	private int rowsIncludedInJob = 0;
+	public static Logger log = null;
 	
 	public ExtractDBStep(JobManager jm, JobStepsXref jobStepXref) {
 		this.job_manager = jm;
 		this.jobStepXref = jobStepXref;
+		log = Logger.getLogger(this.job_manager.batch_manager.vbatch_version);	
 		
 		// Use hard-coded default for max_rec, unless one is defined in the step config table
 		max_rec = this.jobStepXref.getStep().getExtractMaxRec().intValue();
