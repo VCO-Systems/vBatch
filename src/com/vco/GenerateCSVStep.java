@@ -14,6 +14,7 @@ import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.log4j.Logger;
 import org.supercsv.cellprocessor.ift.CellProcessor;
 import org.supercsv.io.CsvListWriter;
 import org.supercsv.io.ICsvListWriter;
@@ -70,6 +71,7 @@ public class GenerateCSVStep extends StepManager {
 	// private vars
 	private String startingDateTimeStr;
 	private Date startingDateTime;
+	public static Logger log = null;
 	
 	// CSV generation
 	ICsvListWriter listWriter = null;
@@ -78,6 +80,7 @@ public class GenerateCSVStep extends StepManager {
 	
 	
 	public GenerateCSVStep(JobManager jm, JobStepsXref jobStepXref) {
+		log = Logger.getLogger(VBatchManager.vbatch_version);	
 		this.job_manager = jm;
 		this.jobStepXref = jobStepXref;
 		
@@ -132,7 +135,7 @@ public class GenerateCSVStep extends StepManager {
 	}
 	
 	@Override
-	public boolean start() {
+	public boolean start() throws Exception {
 		// Previous steps have already passed in data,
 		// even though start() is just now being called.
 		if (this.running) {
@@ -185,17 +188,6 @@ public class GenerateCSVStep extends StepManager {
 		// Prepare to process this page of data
 		this.pageCount++;
 		
-		/*
-		Iterator<Object> data = pageOfData.iterator();
-		while (data.hasNext()) {
-			Object item = data.next();
-			listWriter.write()
-			// GENERATE
-		}
-		*/
-		
-		// System.out.println("\t[CSV] rows to process: " + pageOfData.size());
-		
 		try {
 			// Loop over the rows of data in this page
 			for (int i = 0; i < pageOfData.size(); i++) {
@@ -217,7 +209,7 @@ public class GenerateCSVStep extends StepManager {
 			
 			int pos = this.currentOutputFilename.length()-5;
 			String newFilename = this.currentOutputFilename.substring(0,pos) + this.currentOutputFilename.substring(pos).replaceFirst(".tmp", ".csv");
-			System.out.println("\t[CSV] Generated CSV file: " + newFilename 
+			log.info("[CSV] Generated CSV file: " + newFilename 
 					+ " (" + this.totalRowsThisFile + " rows)");
 			
 			// Close the output file
@@ -412,8 +404,8 @@ public class GenerateCSVStep extends StepManager {
 		// Commit log entry
 		this.job_manager.db.persist(this.log_dtl);
 //		this.job_manager.db.getTransaction().commit();
+		log.info("[TRG] Step started: " + msg);
 		
-		System.out.println("\t[TRG] Step completed.");
 	}
 	
 private void logComplete() {
@@ -430,6 +422,6 @@ private void logComplete() {
 		// Commit log entry
 		this.job_manager.db.persist(this.log_dtl);
 		this.job_manager.db.getTransaction().commit();
-		System.out.println("\t[CSV] Step completed.");
+		log.info("[CSV] Step completed.");
 	}
 }

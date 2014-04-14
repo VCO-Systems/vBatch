@@ -30,7 +30,6 @@ public class GenerateTRGStep extends StepManager {
 	private BatchLogDtl log_dtl;
 	
 	public GenerateTRGStep(JobManager jm, JobStepsXref jobStepXref) {
-		System.out.println("\t[TRG] constructor");
 		this.job_manager = jm;
 		this.jobStepXref = jobStepXref;
 		

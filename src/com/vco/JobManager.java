@@ -120,6 +120,8 @@ public class JobManager {
 				}
 			}
 			
+			
+			
 			/** Load the steps_xref entries for this job,
 			 *  create new instance of each Step's StepManager class,
 			 *  add them to this.stepManagers, and call init() on 
@@ -158,25 +160,9 @@ public class JobManager {
 								this.extract_max_rec_per_file = g.max_rec_per_file.intValue();
 							}
 						}
-						catch ( SecurityException e) {
-							VBatchManager.log.fatal(e);
-							//TODO : Exception Stack Trace should be logged
-							e.printStackTrace();
-						}
-						catch ( ClassNotFoundException e) {
-							VBatchManager.log.fatal(e);
-						}
-						catch ( IllegalAccessException e) {
-							VBatchManager.log.fatal(e);
-						}
-						catch ( InstantiationException e) {
-							VBatchManager.log.fatal(e);
-						}
-						catch ( InvocationTargetException e) {
-							VBatchManager.log.fatal(e);
-						}
-						catch ( NoSuchMethodException e) {
-							VBatchManager.log.fatal(e);
+						
+						catch (Exception e) {
+							VBatchManager.log.fatal(e.getMessage(), e);
 						}
 						
 						
@@ -263,7 +249,7 @@ public class JobManager {
 				//tempBatchNum = new BigDecimal(this.job_id);
 				//this.batch_log.setBatchSeqNbr(new BigDecimal(1));
 				tempBatchSeqNbr = 1L;
-				VBatchManager.log.debug(MessageFormat.format("Initiating new run for Job Id: {0}", ((int)this.job_id)));
+				VBatchManager.log.info(MessageFormat.format("Initiating new run for Job # {0}", ((int)this.job_id)));
 			}
 			// Look up last run of this batch, to get batch/seq nbr for this run.
 			if (this.batchMode == VBatchManager.BatchMode_Repeat) {
@@ -283,17 +269,11 @@ public class JobManager {
 				}
 				else {  // Abort this job: no previous runs with this batch number exist
 					throw new VBatchException("VBatch error:  No previous runs found for batch_id: " + this.job_id);
-	//				log.error("VBatch error:  No previous runs found for batch_id: " + this.job_id);
-					// Todo: abort the job
-	//				System.out.println("VBatch error:  No previous runs found for batch_id: " + this.job_id);
 					
 				}
-	//					this.batch_log.setBatchNum(new BigDecimal(this.batch_log.getId()));
-	//					this.batch_log.setBatchSeqNbr(new BigDecimal(highestBatchSeqNbr+1));
 				tempBatchNum = latestRun.getBatchNum();
 				tempBatchSeqNbr = highestBatchSeqNbr+1L;
 	 		}
-					
 					
 			this.db.getTransaction().begin();
 			
@@ -354,7 +334,7 @@ public class JobManager {
 			*/
 		}
 		catch(VBatchException e) {
-			log.error(e.getMessage() + "\n" + e.getStackTrace());
+			this.logFailed(e);
 		}
 	}
 	
@@ -380,6 +360,16 @@ public class JobManager {
 		
 		this.db.getTransaction().commit();
 //		
+	}
+	
+	private void logFailed(Exception e) {
+		this.log.error(e.getMessage(), e);
+		
+		if (this.db.getTransaction().isActive()) {
+			this.db.getTransaction().commit();
+		}
+		this.batch_log.setStatus(BatchLog.statusError);
+		this.batch_log.setErrorMsg(e.getMessage());
 	}
 	
 	public static void main(String[] args) {

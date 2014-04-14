@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -27,6 +28,8 @@ import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Appender;
+import org.apache.log4j.FileAppender;
 import org.apache.log4j.Logger;
 
 import model.BatchLog;
@@ -78,8 +81,8 @@ public class ExtractDBStep extends StepManager {
 	}
 	
 	@Override
-	public boolean start() {
-		
+	public boolean start() throws Exception {
+		try {
 		/**  Initialize all the vars **/
 		
 		// Set this step to running
@@ -274,12 +277,7 @@ public class ExtractDBStep extends StepManager {
 				VBatchManager.log.debug(MessageFormat.format("[Extract] QUERY : {0}", this.raw_sql));
 			}
 			// Run the query
-			try {
-				rs = this.sqlQuery(this.raw_sql, totalRows+100);
-			} catch (SQLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}  // limit query to max_rec rows
+			rs = this.sqlQuery(this.raw_sql, totalRows+100);
 			
 		}
 		
@@ -356,13 +354,8 @@ public class ExtractDBStep extends StepManager {
 			int endRowsToSkip = 0;
 			int rowCount = 0;
 
-			System.out.println("[Extract] REWRITTEN QUERY: " + this.raw_sql);
-			try {
-				rs = this.sqlQuery(this.raw_sql, totalRows+100);
-			} catch (SQLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}  // limit query to max_rec rows
+			log.info("[Extract] Rewritten query: " + this.raw_sql);
+			rs = this.sqlQuery(this.raw_sql + "asdf", totalRows+100);
 		}
 		
 		// If available, store ok-dtls from previous job in this.previousJobOkDtls
@@ -384,7 +377,7 @@ public class ExtractDBStep extends StepManager {
 		String currentRowOK1Value  = new String();
 		String PK1AtEndOfCurrentPage = new String();
 		
-		try {
+		
 			// go back to beginning of recordset 
 			boolean recordsetHasItems = rs.first();
 			
@@ -631,7 +624,7 @@ public class ExtractDBStep extends StepManager {
 					if (rs.next() == false) {  // moved past the last record
 						endOfRecordset=true;
 						if (this.rowsIncludedInJob==0) {
-							System.out.println("[Extract] Skipping job (no new records found).");
+							log.info("[Extract] Skipping job (no new records found).");
 						}
 					}		
 					
@@ -642,7 +635,7 @@ public class ExtractDBStep extends StepManager {
 				}
 			} // // end of recordset
 			else {  // initial recordset had 0 entries
-				System.out.println("[Extract] Aborting job (no records found).");
+				log.info("[Extract] Aborting job (no records found).");
 				this.running=false;
 				this.failed=false;
 				this.completed=true;
@@ -652,13 +645,10 @@ public class ExtractDBStep extends StepManager {
 			
 			
 			
-		} catch (SQLException  e) {
+		} 
+		catch ( Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		catch ( ParseException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			this.logFailed(e);  // copy this approach from jobmanager
 		}
 			
 		// This step is done.  Clean up, write to logs,
@@ -877,7 +867,6 @@ public class ExtractDBStep extends StepManager {
 		SimpleDateFormat incomingDateFormat  = new SimpleDateFormat("y-MM-d HH:mm:ss.S");
 		SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y H:mm:ss");
 		String ds = rs.getString(columnName);
-		//System.out.println("\t[Extract] Original String dt: " + ds);
 		Date dt = incomingDateFormat.parse(ds);
 		String newDs = outgoingDateFormat.format(dt);
 		return newDs;
@@ -958,7 +947,7 @@ public class ExtractDBStep extends StepManager {
 		this.job_manager.db.persist(this.log_dtl);
 //		this.job_manager.db.getTransaction().commit();
 		
-		System.out.println("\t" + msg);
+		log.info("[Extract] Step starting: " + msg);
 	}
 	
 	// Finished page of data
@@ -988,41 +977,22 @@ public class ExtractDBStep extends StepManager {
 		Statement statement = null;
 		ResultSet rs = null;
  
-		try {
-			dbConnection = getDBConnection();
-			if (dbConnection == null) {
-				System.out.println("ERROR: Could not connect to source database");
-				System.exit(1);
-			}
-			statement = dbConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
-			
-			// 
-			if (maxRecords > 0) {
-				statement.setMaxRows(maxRecords);
-			}
-			
-			// execute select SQL statement
-			rs = statement.executeQuery(sql);
-			
-			
- 
-		} catch (SQLException e) {
-			e.printStackTrace(System.out);
-			//System.out.println(e.getMessage());
- 
-		} finally {
- 
-			if (statement != null) {
-				//statement.close();
-			}
- 
-			if (dbConnection != null) {
-				//dbConnection.close();
-			}
- 
+		
+		dbConnection = getDBConnection();
+		if (dbConnection == null) {
+			System.out.println("ERROR: Could not connect to source database");
+			System.exit(1);
 		}
+		statement = dbConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+		
+		// 
+		if (maxRecords > 0) {
+			statement.setMaxRows(maxRecords);
+		}
+		
+		// execute select SQL statement
+		rs = statement.executeQuery(sql);
 		return rs;
- 
 	}
 	
 	private Connection getDBConnection() {
@@ -1038,7 +1008,7 @@ public class ExtractDBStep extends StepManager {
 //			dbConnection = DriverManager.getConnection(VBatchManager.source_db_connection.get("db")
 //					, VBatchManager.source_db_connection.get("user"),
 //					VBatchManager.source_db_connection.get("password"));
-			System.out.println("\t[Extract] Connecting to oracle server: " + VBatchManager.source_db_connection.get("db"));
+			System.out.println("[Extract] Connecting to oracle server: " + VBatchManager.source_db_connection.get("db"));
 			dbConnection = DriverManager.getConnection(VBatchManager.source_db_connection.get("db"));
 			return dbConnection;
 		} catch (SQLException e) {
@@ -1060,5 +1030,53 @@ public class ExtractDBStep extends StepManager {
 		for (BatchLogOkDtl prevEntry : lstPrevOkDtl) {
 			previousJobOkDtls.add(prevEntry);
 		}
+	}
+	
+	
+	
+	private void logFailed(Exception e) throws Exception {
+		// log this error 
+		this.job_manager.log.error(e.getMessage(), e);
+		// rollback any uncomitted logs, so we don't mistakenly make
+		// it look like this step completed successfully
+		if (this.job_manager.db.getTransaction().isActive()) {
+			this.job_manager.db.getTransaction().rollback();
+		}
+		else {
+			this.job_manager.db.getTransaction().begin();
+		}
+		
+		
+		// Write out log_dtl with error status
+		if (this.log_dtl == null) {
+			this.log_dtl = new BatchLogDtl();
+		}
+		this.log_dtl.setBatchLog(this.job_manager.batch_log);
+		this.log_dtl.setStartDt(new Date());
+		this.log_dtl.setStatus(BatchLog.statusError);
+		this.log_dtl.setErrorMsg(e.getMessage());
+		// required fields to be able to save this log_dtl
+		this.log_dtl.setJobStepsXrefJobStepSeq(this.jobStepXref.getJobStepSeq());
+		this.log_dtl.setStepsId(this.jobStepXref.getId());
+		this.log_dtl.setStepType("Extract");
+		
+		// Get the name of the log file where user can go for more details about error
+//		FileAppender appender = (FileAppender)log.getAppender("r");
+//		String log_filename = appender.getFile();
+//		this.log_dtl.setErrorMsg(log_dtl.getErrorMsg() + " [" + log_filename + "]");
+		Enumeration en = Logger.getRootLogger().getAllAppenders();
+	    while ( en.hasMoreElements() ){
+	      Appender app = (Appender)en.nextElement();
+	      if ( app instanceof FileAppender ){
+	        String logfilename = ((FileAppender) app).getFile();
+	        this.log_dtl.setErrorMsg(log_dtl.getErrorMsg() + " [" + logfilename + "]");
+	      }
+	    }
+		
+		this.job_manager.db.persist(this.log_dtl);
+		this.job_manager.db.getTransaction().commit();
+		
+		// Re-throw this exception so JobManager catches it
+		throw e;
 	}
 }
