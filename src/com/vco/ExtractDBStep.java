@@ -355,7 +355,7 @@ public class ExtractDBStep extends StepManager {
 			int rowCount = 0;
 
 			log.info("[Extract] Rewritten query: " + this.raw_sql);
-			rs = this.sqlQuery(this.raw_sql + "asdf", totalRows+100);
+			rs = this.sqlQuery(this.raw_sql, totalRows+100);
 		}
 		
 		// If available, store ok-dtls from previous job in this.previousJobOkDtls
