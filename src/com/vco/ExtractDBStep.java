@@ -87,7 +87,7 @@ public class ExtractDBStep extends StepManager {
 		// Log the start of this step
 		// this.logStart();
 		// Get the raw sql to run
-		this.raw_sql = this.jobStepXref.getStep().getExtractSql();
+		this.raw_sql = this.jobStepXref.getStep().getExtractSql().trim().toLowerCase();
 		String whereClause = new String();
 		int commit_freq = this.jobStepXref.getStep().getExtractCommitFreq().intValue();
 		ResultSet rs = null;
