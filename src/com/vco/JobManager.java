@@ -9,6 +9,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.List;
 
 import javax.persistence.EntityManager;
@@ -24,6 +25,9 @@ import model.Step;
 import com.VBatchException;
 import com.vco.*;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Appender;
+import org.apache.log4j.FileAppender;
 //file logging
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -206,7 +210,7 @@ public class JobManager {
 			
 		}
 		catch (Exception e) {
-			log.error(e);
+			this.logFailed(e);
 		}
 	}
 	
@@ -333,7 +337,7 @@ public class JobManager {
 			this.db.getTransaction().commit();
 			*/
 		}
-		catch(VBatchException e) {
+		catch(Exception e) {
 			this.logFailed(e);
 		}
 	}
@@ -362,16 +366,39 @@ public class JobManager {
 //		
 	}
 	
+	/**
+	 * Mark this job as failed.  Log appropriately.
+	 * @param e
+	 */
 	private void logFailed(Exception e) {
 		this.log.error(e.getMessage(), e);
 		
-		if (this.db.getTransaction().isActive()) {
-			this.db.getTransaction().commit();
+		if (!(this.db.getTransaction().isActive())) {
+			this.db.getTransaction().begin();
 		}
+		
 		this.batch_log.setStatus(BatchLog.statusError);
-		this.batch_log.setErrorMsg(e.getMessage());
+		String logfilename = this.getJobLogFilename();
+        String errormsg = " [" + logfilename + "] " + e.getMessage();
+        // Limit errorMsg to 150 characters to fit in db field
+        this.batch_log.setErrorMsg(StringUtils.left(errormsg, 150));
+        
+	    this.db.persist(batch_log);
+	    this.db.getTransaction().commit();
 	}
 	
+	public String getJobLogFilename() {
+		String retval = "";
+		// Get the name of the log file where user can go for more details about error
+		Enumeration en = Logger.getRootLogger().getAllAppenders();
+	    while ( en.hasMoreElements() ){
+	      Appender app = (Appender)en.nextElement();
+	      if ( app instanceof FileAppender ){
+	        retval = ((FileAppender) app).getFile();
+	      }
+	    }
+	    return retval;
+	}
 	public static void main(String[] args) {
 		System.out.println("log4j testing");
 		//BasicConfigurator.resetConfiguration();//enough for configuring log4j

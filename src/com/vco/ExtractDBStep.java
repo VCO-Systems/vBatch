@@ -32,6 +32,8 @@ import org.apache.log4j.Appender;
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Logger;
 
+import com.sun.org.apache.xalan.internal.xsltc.compiler.util.ErrorMsg;
+
 import model.BatchLog;
 import model.BatchLogDtl;
 import model.JobDefinition;
@@ -1059,19 +1061,10 @@ public class ExtractDBStep extends StepManager {
 		this.log_dtl.setJobStepsXrefJobStepSeq(this.jobStepXref.getJobStepSeq());
 		this.log_dtl.setStepsId(this.jobStepXref.getId());
 		this.log_dtl.setStepType("Extract");
-		
-		// Get the name of the log file where user can go for more details about error
-//		FileAppender appender = (FileAppender)log.getAppender("r");
-//		String log_filename = appender.getFile();
-//		this.log_dtl.setErrorMsg(log_dtl.getErrorMsg() + " [" + log_filename + "]");
-		Enumeration en = Logger.getRootLogger().getAllAppenders();
-	    while ( en.hasMoreElements() ){
-	      Appender app = (Appender)en.nextElement();
-	      if ( app instanceof FileAppender ){
-	        String logfilename = ((FileAppender) app).getFile();
-	        this.log_dtl.setErrorMsg(log_dtl.getErrorMsg() + " [" + logfilename + "]");
-	      }
-	    }
+		String logfilename = this.job_manager.getJobLogFilename();
+		String errormsg = " [" + logfilename + "] " + log_dtl.getErrorMsg();
+	    // Limit errorMsg to 150 characters to fit in db field
+		this.log_dtl.setErrorMsg(StringUtils.left(errormsg, 150));
 		
 		this.job_manager.db.persist(this.log_dtl);
 		this.job_manager.db.getTransaction().commit();
