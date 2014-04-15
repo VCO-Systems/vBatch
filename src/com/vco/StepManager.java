@@ -34,7 +34,7 @@ public class StepManager implements IStepManager {
 	}
 
 	@Override
-	public boolean start() {
+	public boolean start() throws Exception{
 		// TODO Auto-generated method stub
 		return false;
 	}

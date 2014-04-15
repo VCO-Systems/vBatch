@@ -9,6 +9,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.List;
 
 import javax.persistence.EntityManager;
@@ -24,6 +25,9 @@ import model.Step;
 import com.VBatchException;
 import com.vco.*;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Appender;
+import org.apache.log4j.FileAppender;
 //file logging
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -120,6 +124,8 @@ public class JobManager {
 				}
 			}
 			
+			
+			
 			/** Load the steps_xref entries for this job,
 			 *  create new instance of each Step's StepManager class,
 			 *  add them to this.stepManagers, and call init() on 
@@ -158,25 +164,9 @@ public class JobManager {
 								this.extract_max_rec_per_file = g.max_rec_per_file.intValue();
 							}
 						}
-						catch ( SecurityException e) {
-							VBatchManager.log.fatal(e);
-							//TODO : Exception Stack Trace should be logged
-							e.printStackTrace();
-						}
-						catch ( ClassNotFoundException e) {
-							VBatchManager.log.fatal(e);
-						}
-						catch ( IllegalAccessException e) {
-							VBatchManager.log.fatal(e);
-						}
-						catch ( InstantiationException e) {
-							VBatchManager.log.fatal(e);
-						}
-						catch ( InvocationTargetException e) {
-							VBatchManager.log.fatal(e);
-						}
-						catch ( NoSuchMethodException e) {
-							VBatchManager.log.fatal(e);
+						
+						catch (Exception e) {
+							VBatchManager.log.fatal(e.getMessage(), e);
 						}
 						
 						
@@ -220,7 +210,7 @@ public class JobManager {
 			
 		}
 		catch (Exception e) {
-			log.error(e);
+			this.logFailed(e);
 		}
 	}
 	
@@ -263,7 +253,7 @@ public class JobManager {
 				//tempBatchNum = new BigDecimal(this.job_id);
 				//this.batch_log.setBatchSeqNbr(new BigDecimal(1));
 				tempBatchSeqNbr = 1L;
-				VBatchManager.log.debug(MessageFormat.format("Initiating new run for Job Id: {0}", ((int)this.job_id)));
+				VBatchManager.log.info(MessageFormat.format("Initiating new run for Job # {0}", ((int)this.job_id)));
 			}
 			// Look up last run of this batch, to get batch/seq nbr for this run.
 			if (this.batchMode == VBatchManager.BatchMode_Repeat) {
@@ -283,17 +273,11 @@ public class JobManager {
 				}
 				else {  // Abort this job: no previous runs with this batch number exist
 					throw new VBatchException("VBatch error:  No previous runs found for batch_id: " + this.job_id);
-	//				log.error("VBatch error:  No previous runs found for batch_id: " + this.job_id);
-					// Todo: abort the job
-	//				System.out.println("VBatch error:  No previous runs found for batch_id: " + this.job_id);
 					
 				}
-	//					this.batch_log.setBatchNum(new BigDecimal(this.batch_log.getId()));
-	//					this.batch_log.setBatchSeqNbr(new BigDecimal(highestBatchSeqNbr+1));
 				tempBatchNum = latestRun.getBatchNum();
 				tempBatchSeqNbr = highestBatchSeqNbr+1L;
 	 		}
-					
 					
 			this.db.getTransaction().begin();
 			
@@ -353,8 +337,8 @@ public class JobManager {
 			this.db.getTransaction().commit();
 			*/
 		}
-		catch(VBatchException e) {
-			log.error(e.getMessage() + "\n" + e.getStackTrace());
+		catch(Exception e) {
+			this.logFailed(e);
 		}
 	}
 	
@@ -382,6 +366,39 @@ public class JobManager {
 //		
 	}
 	
+	/**
+	 * Mark this job as failed.  Log appropriately.
+	 * @param e
+	 */
+	private void logFailed(Exception e) {
+		this.log.error(e.getMessage(), e);
+		
+		if (!(this.db.getTransaction().isActive())) {
+			this.db.getTransaction().begin();
+		}
+		
+		this.batch_log.setStatus(BatchLog.statusError);
+		String logfilename = this.getJobLogFilename();
+        String errormsg = " [" + logfilename + "] " + e.getMessage();
+        // Limit errorMsg to 150 characters to fit in db field
+        this.batch_log.setErrorMsg(StringUtils.left(errormsg, 150));
+        
+	    this.db.persist(batch_log);
+	    this.db.getTransaction().commit();
+	}
+	
+	public String getJobLogFilename() {
+		String retval = "";
+		// Get the name of the log file where user can go for more details about error
+		Enumeration en = Logger.getRootLogger().getAllAppenders();
+	    while ( en.hasMoreElements() ){
+	      Appender app = (Appender)en.nextElement();
+	      if ( app instanceof FileAppender ){
+	        retval = ((FileAppender) app).getFile();
+	      }
+	    }
+	    return retval;
+	}
 	public static void main(String[] args) {
 		System.out.println("log4j testing");
 		//BasicConfigurator.resetConfiguration();//enough for configuring log4j
