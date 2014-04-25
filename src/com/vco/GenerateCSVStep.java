@@ -201,7 +201,7 @@ public class GenerateCSVStep extends StepManager {
 				String rowStr = this.generateCSVRow(row);
 				this.currentOutputFile.append(rowStr);
 				this.currentOutputFile.flush();
-				
+				log.debug("Writing CSV row # :" + (i+1) +  ": " + rowStr.trim());
 				// Update the counters
 				this.totalRowsThisFile++;
 				this.totalRowsGenerated++;
@@ -209,13 +209,14 @@ public class GenerateCSVStep extends StepManager {
 			
 			int pos = this.currentOutputFilename.length()-5;
 			String newFilename = this.currentOutputFilename.substring(0,pos) + this.currentOutputFilename.substring(pos).replaceFirst(".tmp", ".csv");
-			log.info("[CSV] Generated CSV file: " + newFilename 
-					+ " (" + this.totalRowsThisFile + " rows)");
 			
-			// Close the output file
-			closeCurrentOutputFile();
 			// Rename the .tmp to .csv
 			renameTMPToCSV();
+			log.info("Generated CSV file: " + newFilename 
+					+ " (" + this.totalRowsThisFile + " rows)");
+			// Close the output file
+			closeCurrentOutputFile();
+			
 			
 			// Send the .tmp file to GenerateTRGStep
 			this.job_manager.submitPageOfData(this.alternateOutputData, this);
@@ -404,7 +405,6 @@ public class GenerateCSVStep extends StepManager {
 		// Commit log entry
 		this.job_manager.db.persist(this.log_dtl);
 //		this.job_manager.db.getTransaction().commit();
-		log.info("[TRG] Step started: " + msg);
 		
 	}
 	
@@ -422,6 +422,6 @@ private void logComplete() {
 		// Commit log entry
 		this.job_manager.db.persist(this.log_dtl);
 		this.job_manager.db.getTransaction().commit();
-		log.info("[CSV] Step completed.");
+		log.info("Step completed.");
 	}
 }

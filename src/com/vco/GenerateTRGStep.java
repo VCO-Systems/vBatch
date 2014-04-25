@@ -80,7 +80,8 @@ public class GenerateTRGStep extends StepManager {
 		
 		for (int i = 0; i < pageOfData.size(); i++) {
 			String csvFilename = (String)pageOfData.get(i);
-			generateTRGFile(csvFilename);
+			String trgFilename = generateTRGFile(csvFilename);
+			this.job_manager.log.debug("Generated TRG file: " + trgFilename);
 		}
 		
 		// Tell job_manager there were no errors
@@ -152,7 +153,6 @@ public class GenerateTRGStep extends StepManager {
 		this.job_manager.db.persist(this.log_dtl);
 //		this.job_manager.db.getTransaction().commit();
 		
-		System.out.println("\t" + msg);
 	}
 	
 	
@@ -168,8 +168,7 @@ public class GenerateTRGStep extends StepManager {
 		
 		// Commit log entry
 		this.job_manager.db.persist(this.log_dtl);
-//		this.job_manager.db.getTransaction().commit();
 		
-//		System.out.println("\t" + msg);
+		this.job_manager.log.debug("Step completed.");
 	}
 }

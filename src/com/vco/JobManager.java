@@ -269,7 +269,7 @@ public class JobManager {
 					// Get the batch_seq_nbr or the latest run
 					latestRun = lstRunsOfThisBatch.get(0);
 					highestBatchSeqNbr = latestRun.getBatchSeqNbr().intValue();
-					VBatchManager.log.info(MessageFormat.format("Initiating re-run of Batch # {0}, Job # {1}", ((int)this.job_id)));
+					VBatchManager.log.info(MessageFormat.format("Initiating re-run of Batch # {0}, Job # {1}", ((int)this.job_id),latestRun.getJobDefinition().getOrderNum()));
 				}
 				else {  // Abort this job: no previous runs with this batch number exist
 					throw new VBatchException("VBatch error:  No previous runs found for batch_id: " + this.job_id);
@@ -347,7 +347,10 @@ public class JobManager {
 	 * and pass control back to VBatchManager.
 	 */
 	public void logComplete() {
-		this.db.getTransaction().begin();
+		if (!(this.db.getTransaction().isActive())) {
+			this.db.getTransaction().begin();
+		}
+		
 		// Set the batch_log entry for this job to status = complete
 		this.batch_log.setEndDt(new Date());
 		this.batch_log.setStatus(BatchLog.statusComplete);
@@ -363,6 +366,7 @@ public class JobManager {
 		*/
 		
 		this.db.getTransaction().commit();
+		this.log.info("Job # " + this.job_id + " completed.");
 //		
 	}
 	

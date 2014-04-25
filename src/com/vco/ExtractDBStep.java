@@ -86,11 +86,8 @@ public class ExtractDBStep extends StepManager {
 	public boolean start() throws Exception {
 		try {
 		/**  Initialize all the vars **/
-		
 		// Set this step to running
 		this.running = true;
-		// Log the start of this step
-		// this.logStart();
 		// Get the raw sql to run
 		this.raw_sql = this.jobStepXref.getStep().getExtractSql().trim().toLowerCase();
 		String whereClause = new String();
@@ -276,7 +273,7 @@ public class ExtractDBStep extends StepManager {
 			// replace the SQL TOKEN(s) ( /* where */ )
 			int sqlTokensReplaced =  this.replaceSqlToken(this.raw_sql, whereClause); 
 			if (sqlTokensReplaced == 0) {
-				VBatchManager.log.debug(MessageFormat.format("[Extract] QUERY : {0}", this.raw_sql));
+				VBatchManager.log.debug(MessageFormat.format("Rewritten query : {0}", this.raw_sql));
 			}
 			// Run the query
 			rs = this.sqlQuery(this.raw_sql, totalRows+100);
@@ -333,7 +330,7 @@ public class ExtractDBStep extends StepManager {
 				// replace the SQL TOKEN(s) ( /* where */ )
 				int sqlTokensReplaced =  this.replaceSqlToken(this.raw_sql, whereClause); 
 				if (sqlTokensReplaced == 0) {
-					VBatchManager.log.debug(MessageFormat.format("[Extract] QUERY : {0}", this.raw_sql));
+					VBatchManager.log.debug(MessageFormat.format("QUERY : {0}", this.raw_sql));
 				}
 			}
 			
@@ -356,7 +353,7 @@ public class ExtractDBStep extends StepManager {
 			int endRowsToSkip = 0;
 			int rowCount = 0;
 
-			log.info("[Extract] Rewritten query: " + this.raw_sql);
+			log.info("Rewritten query: " + this.raw_sql);
 			rs = this.sqlQuery(this.raw_sql, totalRows+100);
 		}
 		
@@ -403,19 +400,29 @@ public class ExtractDBStep extends StepManager {
 			
 			if (recordsetHasItems) {
 				// Process the records in this recordset
+				String msg = "[" + this.jobStepXref.getStep().getType() 
+						+ " : " + this.jobStepXref.getStep().getShortDesc()
+						+ "]";
+				this.log.info("Step started: " + msg);
+				
 				while (!endOfRecordset) {
 					this.currentRowNum++;
 					skipThisRecord=false;
 					currentRowOK1Value = this.convertDateFieldToString(rs, "OK1");
 					currentRowPK1Value = rs.getString("PK1");
 					boolean isLastRecord = rs.isLast();
-					
+					String debugMsg1 = "Evaluating row # " + this.currentRowNum;
+					debugMsg1 += ", OK1 [" + currentRowOK1Value + "]";
+					debugMsg1 += ", PK1 [" + currentRowPK1Value + "]";
+					log.debug(debugMsg1);
 					/** If this row was already in the previous job,
 					 *  completely skip processing this row.
 					 */
 					
 					if (isRowInPreviousRunOkDtl(rs)) {
 						skipThisRecord=true;
+						String debugMsg2 = "Skipping row - in previous run OK Dtl";
+						log.debug(debugMsg2);
 					}
 					else {
 						this.rowsIncludedInJob++;  // Note: rownum starts at 1
@@ -474,6 +481,7 @@ public class ExtractDBStep extends StepManager {
 						isRecordsetComplete=true;
 						PK1AtEndOfCurrentPage = rs.getString("PK1");
 						OK1AtEndOfCurrentPage = this.convertDateFieldToString(rs, "OK1");
+						log.debug("queryExhausted = true");
 					}
 					
 					
@@ -493,6 +501,7 @@ public class ExtractDBStep extends StepManager {
 						if (rowsIncludedInJob==1) {
 							this.logStart();
 							this.log_dtl.setMinOk1(currentRowOK1Value);
+							log.debug("Setting minOK1: " + currentRowOK1Value);
 						}
 						// If last row, make sure this row gets persisted
 //						if (isPageDataComplete && isRecordsetComplete) {
@@ -515,10 +524,12 @@ public class ExtractDBStep extends StepManager {
 							if (isRecordsetComplete) {
 								this.log_dtl.setMaxOk1(currentRowOK1Value);
 								this.log_dtl.setNumRecords(new Long(this.rowsIncludedInJob));
+								this.log.debug("End of recordset.");
 							}
 							else {
 								this.log_dtl.setMaxOk1(previousRowOK1Value);
 								this.log_dtl.setNumRecords(new Long(this.rowsIncludedInJob - 1));
+								this.log.debug("End of page of data.");
 							}
 							
 							
@@ -560,6 +571,7 @@ public class ExtractDBStep extends StepManager {
 						    tempOkDtlList = new ArrayList<BatchLogOkDtl>();
 						    
 						    // todo: submit page of data
+							log.debug("Extract step is submitting page of data (" + dataPageOut.size() + " rows)");
 						    this.job_manager.submitPageOfData(this.dataPageOut, this);
 							
 							// todo: clear dataPageOut
@@ -626,7 +638,7 @@ public class ExtractDBStep extends StepManager {
 					if (rs.next() == false) {  // moved past the last record
 						endOfRecordset=true;
 						if (this.rowsIncludedInJob==0) {
-							log.info("[Extract] Skipping job (no new records found).");
+							log.info("Skipping job (no new records found).");
 						}
 					}		
 					
@@ -637,7 +649,7 @@ public class ExtractDBStep extends StepManager {
 				}
 			} // // end of recordset
 			else {  // initial recordset had 0 entries
-				log.info("[Extract] Aborting job (no records found).");
+				log.info("Aborting job (no records found).");
 				this.running=false;
 				this.failed=false;
 				this.completed=true;
@@ -949,7 +961,7 @@ public class ExtractDBStep extends StepManager {
 		this.job_manager.db.persist(this.log_dtl);
 //		this.job_manager.db.getTransaction().commit();
 		
-		log.info("[Extract] Step starting: " + msg);
+		
 	}
 	
 	// Finished page of data
@@ -1010,7 +1022,7 @@ public class ExtractDBStep extends StepManager {
 //			dbConnection = DriverManager.getConnection(VBatchManager.source_db_connection.get("db")
 //					, VBatchManager.source_db_connection.get("user"),
 //					VBatchManager.source_db_connection.get("password"));
-			System.out.println("[Extract] Connecting to oracle server: " + VBatchManager.source_db_connection.get("db"));
+			System.out.println("Connecting to oracle server: " + VBatchManager.source_db_connection.get("db"));
 			dbConnection = DriverManager.getConnection(VBatchManager.source_db_connection.get("db"));
 			return dbConnection;
 		} catch (SQLException e) {
