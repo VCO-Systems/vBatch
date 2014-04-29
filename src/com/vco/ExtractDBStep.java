@@ -92,7 +92,7 @@ public class ExtractDBStep extends StepManager {
 			// Set this step to running
 			this.running = true;
 			// Get the raw sql to run
-			this.raw_sql = this.jobStepXref.getStep().getExtractSql().trim().toLowerCase();
+			this.raw_sql = this.jobStepXref.getStep().getExtractSql();
 			String whereClause = new String();
 			int commit_freq = this.jobStepXref.getStep().getExtractCommitFreq().intValue();
 			ResultSet rs = null;
@@ -113,10 +113,7 @@ public class ExtractDBStep extends StepManager {
 			
 			// Cleanup raw_sql and parse it for column names
 			
-			// Remove trailing semicolon which is valid sql but confuses jdbc sometimes
-			if (this.raw_sql.indexOf(";", this.raw_sql.length()-1) != -1) {
-				this.raw_sql = this.raw_sql.substring(0, this.raw_sql.length()-1);
-			}
+			this.raw_sql = ExtractDBStep.cleanRawSql(this.raw_sql);
 			
 			/** Get column names for aliases:  OK1, PK1-3  */
 			
@@ -662,6 +659,7 @@ public class ExtractDBStep extends StepManager {
 					this.completed=true;
 				}
 		} 
+		
 		catch ( Exception e) {
 			// TODO Auto-generated catch block
 			this.logFailed(e);  // copy this approach from jobmanager
@@ -678,6 +676,21 @@ public class ExtractDBStep extends StepManager {
 		
 	}
 
+	/**
+	 * Clean up common errors in raw sql that can prevent
+	 * it from executing properly in vBatch.
+	 */
+	public static String cleanRawSql(String raw_sql) {
+		
+		// Remove leading/trailing spaces that can cause sql parsing errors
+		raw_sql = raw_sql.trim();
+		// Remove trailing semicolon which is valid sql but confuses jdbc sometimes
+		if (raw_sql.endsWith(";")){
+			raw_sql.substring(0, raw_sql.length()-1);
+		}
+		return raw_sql;
+	}
+
 	
 	/**
 	 * Check whether the current row of the recordset
@@ -687,7 +700,7 @@ public class ExtractDBStep extends StepManager {
 	 * @param rs
 	 * @return
 	 */
-	private boolean isRowInPreviousRunOkDtl(ResultSet rs) {
+	private boolean isRowInPreviousRunOkDtl(ResultSet rs) throws Exception {
 		boolean retval = false;
 		SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y H:mm:ss");
 		try {
@@ -725,13 +738,9 @@ public class ExtractDBStep extends StepManager {
 					}
 				}
 			}
-		} catch (SQLException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
 		}
-	    catch (ParseException e1) {
-	    	// TODO Auto-generated catch block
-			e1.printStackTrace();
+		catch (Exception e) {
+			this.logFailed(e);
 		}
 		// TODO Auto-generated method stub
 		return retval;
@@ -865,7 +874,7 @@ public class ExtractDBStep extends StepManager {
 		}
 	}
 
-	private int replaceSqlToken(String raw_sql, String tokenReplacement) {
+	private int replaceSqlToken(String raw_sql, String tokenReplacement) throws Exception {
 		int tokensReplaced = 0;
 		// Count instances of /* where */ token
 		Pattern p = Pattern.compile("\\/\\* where \\*\\/");
@@ -878,6 +887,9 @@ public class ExtractDBStep extends StepManager {
 		if (whereTokenCount > 0 ) {
 			this.raw_sql = raw_sql.replaceAll("/\\* where \\*/", " AND " + tokenReplacement);
 			tokensReplaced++;
+		}
+		else {
+			throw new Exception("No vBatch SQL token found.  Aborting job.");
 		}
 		return tokensReplaced;
 	}
