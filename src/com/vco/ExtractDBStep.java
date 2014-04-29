@@ -32,6 +32,7 @@ import org.apache.log4j.Appender;
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Logger;
 
+import com.VBatchException;
 import com.sun.org.apache.xalan.internal.xsltc.compiler.util.ErrorMsg;
 
 import model.BatchLog;
@@ -661,7 +662,6 @@ public class ExtractDBStep extends StepManager {
 		} 
 		
 		catch ( Exception e) {
-			// TODO Auto-generated catch block
 			this.logFailed(e);  // copy this approach from jobmanager
 		}
 			
@@ -699,6 +699,7 @@ public class ExtractDBStep extends StepManager {
 	 * 
 	 * @param rs
 	 * @return
+	 * @throws Exception 
 	 */
 	private boolean isRowInPreviousRunOkDtl(ResultSet rs) throws Exception {
 		boolean retval = false;
@@ -706,41 +707,59 @@ public class ExtractDBStep extends StepManager {
 		try {
 			if (this.previousJobOkDtls.size() > 0 ) {
 				// Get the ok1, pk1 from this row
-				String rowPK1;
-					rowPK1 = rs.getString("PK1");
-				String rowPK2;
-					rowPK2 = rs.getString("PK2");
-				String rowPK3;
-					rowPK3 = rs.getString("PK3");
+				// change the string to numeric either integer or long
+				Long rowPK1 = 0L;
+				Long rowPK2 = 0L;
+				Long rowPK3 = 0L;
 				String rowOK1 = this.convertDateFieldToString(rs, "OK1");
 				
+				if (rs.getString("PK1").isEmpty()) { 
+					throw new VBatchException("PK1 value cannot be empty");
+				}
+				try {
+					// need to valudate if null or empty string is the value of PK, would it be "null" and "" respectively
+					// assuming that this is getting the value of OK and PKs from the current pull
+					if (!(rs.getString("PK1").isEmpty())) { 
+						rowPK1 = Long.parseLong(rs.getString("PK1"));
+					}
+					if (this.pk2ColName!=null && !(rs.getString("PK2").isEmpty()))
+						rowPK2 = Long.parseLong(rs.getString("PK2"));
+					if (this.pk3ColName!=null && !(rs.getString("PK3").isEmpty()))
+						rowPK3 = Long.parseLong(rs.getString("PK3"));
+				}
+				catch (Exception e){
+					// the idea is to catch if there is any error in converting from "ABC" to numeric
+					throw new VBatchException("PK values must be numeric");
+				}
+
 				String previousJobOK1 = outgoingDateFormat.format(this.previousJobOkDtls.get(0).getOk1());
 				String previousJobPK1 = this.previousJobOkDtls.get(0).getPk1().toString();
+				
 				for (BatchLogOkDtl okDtlEntry : this.previousJobOkDtls) {
-					String thisPk1, thisPk2=null, thisPk3 = null;
-					thisPk1 = okDtlEntry.getPk1().toString();
+					// change the default value to 0 instead of null
+					Long thisPk1, thisPk2=0L, thisPk3 = 0L;
+					
+					// need to make sure that getPk1() will return integer or long assuming that pk1 data type is numeric, please change the variable type if it's long
+					thisPk1 = okDtlEntry.getPk1();
 					if (this.pk2ColName!=null && okDtlEntry.getPk2() != null) {
-						thisPk2 = okDtlEntry.getPk2().toString();
+						thisPk2 = okDtlEntry.getPk2();
 					}
 					if (this.pk3ColName!=null && okDtlEntry.getPk3() != null) {
-						thisPk3 = okDtlEntry.getPk3().toString();
+						thisPk3 = okDtlEntry.getPk3();
 					}
 					String thisOk1 = outgoingDateFormat.format(okDtlEntry.getOk1());
 					BatchLog thisBatchLog = okDtlEntry.getBatchLog();
-					
-					if ( (thisPk1.equals(rowPK1))
-						&& ( (pk2ColName!=null) && (thisPk2.equals(rowPK2)) )
-						&& ( (pk3ColName!=null) && (thisPk3.equals(rowPK3)) )
-						&& (thisOk1.equals(rowOK1))
-						&& (thisBatchLog.equals(this.job_manager.batch_log))
-						) {
+
+					// no need to check if column name is null
+					if ( (thisPk1 == rowPK1) && (thisPk2 == rowPK2) && (thisPk3 == rowPK3) && (thisOk1.equals(rowOK1))
+						&& (thisBatchLog.equals(this.job_manager.batch_log)) )
+					{
 							retval=true;
 					}
 				}
 			}
-		}
-		catch (Exception e) {
-			this.logFailed(e);
+		} catch (Exception e1) {
+			throw e1;
 		}
 		// TODO Auto-generated method stub
 		return retval;
@@ -748,7 +767,7 @@ public class ExtractDBStep extends StepManager {
 	
 	/**
 	 * Check whether the current row of the recordset
-	 * is already listed in this job's temp ok-dtl list
+	 * is already listed in this job's temp ok-dtl list.
 	 * 
 	 * @param rs
 	 * @return
@@ -766,8 +785,8 @@ public class ExtractDBStep extends StepManager {
 				String rowPK3;
 					rowPK3 = rs.getString("PK3");
 				String rowOK1 = this.convertDateFieldToString(rs, "OK1");
-				
-				
+
+
 				// Get ok1, pk1-3 from each row in tempOkDtl
 				BatchLogOkDtl firstTempOkDtl = this.tempOkDtlList.get(0);
 				String firstOkDtlOk1 = outgoingDateFormat.format(firstTempOkDtl.getOk1());
@@ -780,7 +799,7 @@ public class ExtractDBStep extends StepManager {
 					firstOkDtlPk3=firstTempOkDtl.getPk3().toString();
 				}
 				BatchLog firstOkDtlBatchLog = firstTempOkDtl.getBatchLog();
-				
+
 				// Loop over tempOkDtlList
 				for (BatchLogOkDtl okDtlEntry : this.tempOkDtlList) {
 					String thisPk1 = okDtlEntry.getPk1().toString();
@@ -790,15 +809,15 @@ public class ExtractDBStep extends StepManager {
 					if (pk2Long != null) {
 						thisPk2= okDtlEntry.getPk2().toString();
 					}
-					
+
 					Long pk3Long = okDtlEntry.getPk3();
 					String thisPk3  = null;
 					if (pk3Long != null) {
 						thisPk3 = okDtlEntry.getPk3().toString();
 					}
-					
+
 					String thisOk1 = this.convertDateStringToAnotherDateString(okDtlEntry.getOk1().toString(), "y-MM-d HH:mm:ss.S", "MM/d/y H:mm:ss");
-					
+
 					// Check for duplicates
 					if ( (thisPk1.equals(rowPK1))
 						&& ( (this.pk2ColName!=null) && (thisPk2.equals(rowPK2)))
@@ -812,7 +831,7 @@ public class ExtractDBStep extends StepManager {
 			}
 		}
 		catch (Exception e) {
-			this.logFailed(e);
+			throw e;
 		}
 		// TODO Auto-generated method stub
 		return retval;
@@ -870,7 +889,7 @@ public class ExtractDBStep extends StepManager {
 			}
 		}
 		catch (Exception e) {
-			this.logFailed(e);
+			throw e;
 		}
 	}
 
@@ -1103,15 +1122,26 @@ public class ExtractDBStep extends StepManager {
 		}
 	}
 	
-	
-	
 	private void logFailed(Exception e) throws Exception {
-		// log this error 
-		this.job_manager.log.error(e.getMessage(), e);
+		if (e instanceof VBatchException && ((VBatchException) e).logged==true) {
+			
+		}
+		else {
+			// log this error 
+			this.job_manager.log.error(e.getMessage(), e);
+			// Let other objects know this exception has already been logged
+			if (e instanceof VBatchException) {
+				((VBatchException) e).logged=true;
+			}
+		}	
+			
 		// rollback any uncomitted logs, so we don't mistakenly make
 		// it look like this step completed successfully
 		if (this.job_manager.db.getTransaction().isActive()) {
 			this.job_manager.db.getTransaction().rollback();
+			if (!(this.job_manager.db.getTransaction().isActive())) {
+				this.job_manager.db.getTransaction().begin();
+			}
 		}
 		else {
 			this.job_manager.db.getTransaction().begin();
@@ -1138,7 +1168,9 @@ public class ExtractDBStep extends StepManager {
 		this.job_manager.db.persist(this.log_dtl);
 		this.job_manager.db.getTransaction().commit();
 		
+		
 		// Re-throw this exception so JobManager catches it
 		throw e;
+		
 	}
 }

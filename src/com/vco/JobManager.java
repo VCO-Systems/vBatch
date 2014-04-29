@@ -66,7 +66,7 @@ public class JobManager {
 	}
 	
 	
-	public void init() {
+	public void init() throws Exception {
 		try {
 			this.start_time = new Date();
 			Boolean breakOutOfThisJob = false;
@@ -238,8 +238,9 @@ public class JobManager {
 	
 	/**
 	 * Log the start of this job to the batchLogDtl table
+	 * @throws Exception 
 	 */
-	private void logStart() {
+	private void logStart() throws Exception {
 		try {
 			// Before opening transaction for batch_log, do any queries
 			// necessary to look up batch_num and batch_seq_nbr
@@ -373,10 +374,21 @@ public class JobManager {
 	/**
 	 * Mark this job as failed.  Log appropriately.
 	 * @param e
+	 * @throws Exception 
 	 */
 	private void logFailed(Exception e) {
-		this.log.error(e.getMessage(), e);
-		
+		// If this VBatchException has already been logged, don't repeat it
+		if (e instanceof VBatchException && ((VBatchException) e).logged==true) {
+			
+		}
+		else {
+			this.log.error(e.getMessage(), e);
+			// Mark this exception as having been logged
+			if (e instanceof VBatchException) {
+				((VBatchException) e).logged=true;
+			}
+		}
+			
 		if (!(this.db.getTransaction().isActive())) {
 			this.db.getTransaction().begin();
 		}
@@ -386,9 +398,12 @@ public class JobManager {
         String errormsg = " [" + logfilename + "] " + e.getMessage();
         // Limit errorMsg to 150 characters to fit in db field
         this.batch_log.setErrorMsg(StringUtils.left(errormsg, 150));
+        this.batch_log.setStatus(BatchLog.statusError);
         
 	    this.db.persist(batch_log);
 	    this.db.getTransaction().commit();
+		
+	    throw e;
 	}
 	
 	public String getJobLogFilename() {

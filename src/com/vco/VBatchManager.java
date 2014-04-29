@@ -92,8 +92,9 @@ public class VBatchManager {
 	 * of each job.
 	 * 
 	 * @param job_ids
+	 * @throws Exception 
 	 */
-	public void init(ArrayList<Integer> job_ids) {
+	public void init(ArrayList<Integer> job_ids) throws Exception {
 		// Make sure we have all necessary configuration information for each job,
 		// 
 		for (Integer job_id : job_ids) {

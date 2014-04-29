@@ -23,7 +23,7 @@ public class Main {
 	private static InputStream config_file_input = null;
 	private static Properties config_properties = new Properties();
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
     	
     	
     	
