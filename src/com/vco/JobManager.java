@@ -376,7 +376,7 @@ public class JobManager {
 	 * @param e
 	 * @throws Exception 
 	 */
-	private void logFailed(Exception e) {
+	private void logFailed(Exception e) throws Exception {
 		// If this VBatchException has already been logged, don't repeat it
 		if (e instanceof VBatchException && ((VBatchException) e).logged==true) {
 			

@@ -717,7 +717,7 @@ public class ExtractDBStep extends StepManager {
 					throw new VBatchException("PK1 value cannot be empty");
 				}
 				try {
-					// need to valudate if null or empty string is the value of PK, would it be "null" and "" respectively
+					// need to validate if null or empty string is the value of PK, would it be "null" and "" respectively
 					// assuming that this is getting the value of OK and PKs from the current pull
 					if (!(rs.getString("PK1").isEmpty())) { 
 						rowPK1 = Long.parseLong(rs.getString("PK1"));
@@ -880,8 +880,13 @@ public class ExtractDBStep extends StepManager {
 						//newOkDtl.setOk1(this.convertDateFieldToString(rs, "OK1"));
 						newOkDtl.setOk1(rs.getTimestamp("OK1"));
 						newOkDtl.setPk1(rs.getLong("PK1"));
-						newOkDtl.setPk2(rs.getLong("PK2"));
-						newOkDtl.setPk3(rs.getLong("PK3"));
+						if (!(pk2ColName.isEmpty())){
+							newOkDtl.setPk2(rs.getLong("PK2"));
+						}
+						if (!(rs.getString("PK3").isEmpty())){
+							newOkDtl.setPk3(rs.getLong("PK3"));
+						}
+						
 						this.tempOkDtlList.add(newOkDtl);
 						this.OK1AtEndOfCurrentPage = this.convertDateFieldToString(rs, "OK1");
 					}
