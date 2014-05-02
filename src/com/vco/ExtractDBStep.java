@@ -399,13 +399,13 @@ public class ExtractDBStep extends StepManager {
 						this.currentRowNum++;
 						skipThisRecord=false;
 						currentRowOK1Value = this.convertDateFieldToString(rs, "OK1");
-						if (this.pk1ColName != null) {
+						if (this.pk1ColName != null && !(this.pk1ColName.isEmpty())) {
 							currentRowPK1Value = rs.getString("PK1");
 						}
-						if (this.pk2ColName != null) {
+						if (this.pk2ColName != null && !(this.pk2ColName.isEmpty())) {
 							currentRowPK2Value = rs.getString("PK2");
 						}
-						if (this.pk3ColName != null) {
+						if (this.pk3ColName != null && !(this.pk3ColName.isEmpty())) {
 							currentRowPK3Value = rs.getString("PK3");
 						}
 						
@@ -413,10 +413,10 @@ public class ExtractDBStep extends StepManager {
 						String debugMsg1 = "Evaluating row # " + this.currentRowNum;
 						debugMsg1 += ", OK1 [" + currentRowOK1Value + "]";
 						debugMsg1 += ", PK1 [" + currentRowPK1Value + "]";
-						if (this.pk2ColName != null) {
+						if (this.pk2ColName != null && !(this.pk2ColName.isEmpty())) {
 							debugMsg1 += ", PK2 [" + currentRowPK2Value + "]";
 						}
-						if (this.pk3ColName != null) {
+						if (this.pk3ColName != null && !(this.pk3ColName.isEmpty())) {
 							debugMsg1 += ", PK3 [" + currentRowPK3Value + "]";
 						}
 						log.debug(debugMsg1);
@@ -722,9 +722,9 @@ public class ExtractDBStep extends StepManager {
 					if (!(rs.getString("PK1").isEmpty())) { 
 						rowPK1 = Long.parseLong(rs.getString("PK1"));
 					}
-					if (this.pk2ColName!=null && !(rs.getString("PK2").isEmpty()))
+					if ((this.pk2ColName!=null && !(this.pk2ColName.isEmpty())  )  && !(rs.getString("PK2").isEmpty()))
 						rowPK2 = Long.parseLong(rs.getString("PK2"));
-					if (this.pk3ColName!=null && !(rs.getString("PK3").isEmpty()))
+					if ((this.pk3ColName!=null &&  !(this.pk3ColName.isEmpty()) )&& !(rs.getString("PK3").isEmpty()))
 						rowPK3 = Long.parseLong(rs.getString("PK3"));
 				}
 				catch (Exception e){
@@ -741,18 +741,17 @@ public class ExtractDBStep extends StepManager {
 					
 					// need to make sure that getPk1() will return integer or long assuming that pk1 data type is numeric, please change the variable type if it's long
 					thisPk1 = okDtlEntry.getPk1();
-					if (this.pk2ColName!=null && okDtlEntry.getPk2() != null) {
+					if ((this.pk2ColName!=null && !(this.pk2ColName.isEmpty())  ) && okDtlEntry.getPk2() != null) {
 						thisPk2 = okDtlEntry.getPk2();
 					}
-					if (this.pk3ColName!=null && okDtlEntry.getPk3() != null) {
+					if ( (this.pk3ColName!=null && !(this.pk3ColName.isEmpty())  ) && okDtlEntry.getPk3() != null) {
 						thisPk3 = okDtlEntry.getPk3();
 					}
 					String thisOk1 = outgoingDateFormat.format(okDtlEntry.getOk1());
 					BatchLog thisBatchLog = okDtlEntry.getBatchLog();
 
 					// no need to check if column name is null
-					if ( (thisPk1 == rowPK1) && (thisPk2 == rowPK2) && (thisPk3 == rowPK3) && (thisOk1.equals(rowOK1))
-						&& (thisBatchLog.equals(this.job_manager.batch_log)) )
+					if ( (thisPk1 == rowPK1) && (thisPk2 == rowPK2) && (thisPk3 == rowPK3) && (thisOk1.equals(rowOK1))  )
 					{
 							retval=true;
 					}
@@ -793,9 +792,9 @@ public class ExtractDBStep extends StepManager {
 					if (!(rs.getString("PK1").isEmpty())) { 
 						rowPK1 = Long.parseLong(rs.getString("PK1"));
 					}
-					if (this.pk2ColName!=null && !(rs.getString("PK2").isEmpty()))
+					if ((this.pk2ColName!=null && !(this.pk2ColName.isEmpty()) ) && !(rs.getString("PK2").isEmpty()))
 						rowPK2 = Long.parseLong(rs.getString("PK2"));
-					if (this.pk3ColName!=null && !(rs.getString("PK3").isEmpty()))
+					if ((this.pk3ColName!=null && !(this.pk3ColName.isEmpty()) ) && !(rs.getString("PK3").isEmpty()))
 						rowPK3 = Long.parseLong(rs.getString("PK3"));
 				}
 				catch (Exception e){
@@ -804,19 +803,6 @@ public class ExtractDBStep extends StepManager {
 				}
 				
 
-//				// Get ok1, pk1-3 from each row in tempOkDtl
-//				BatchLogOkDtl firstTempOkDtl = this.tempOkDtlList.get(0);
-//				String firstOkDtlOk1 = outgoingDateFormat.format(firstTempOkDtl.getOk1());
-//				String firstOkDtlPk2 = null, firstOkDtlPk3 = null;
-//				String previousJobPK1 = firstTempOkDtl.getPk1().toString();
-//				if (this.pk2ColName != null && firstTempOkDtl.getPk2() != null) {
-//					firstOkDtlPk2=firstTempOkDtl.getPk2().toString();
-//				}
-//				if (this.pk3ColName != null && firstTempOkDtl.getPk3() != null) {
-//					firstOkDtlPk3=firstTempOkDtl.getPk3().toString();
-//				}
-//				BatchLog firstOkDtlBatchLog = firstTempOkDtl.getBatchLog();
-
 				// Loop over tempOkDtlList
 				for (BatchLogOkDtl okDtlEntry : this.tempOkDtlList) {
 					// Get OK1 for this entry
@@ -824,20 +810,19 @@ public class ExtractDBStep extends StepManager {
 					// Get PK1-3 for this entry
 					Long thisPk1, thisPk2=0L, thisPk3 = 0L;
 					thisPk1 = okDtlEntry.getPk1();
-					if (this.pk2ColName!=null && okDtlEntry.getPk2() != null) {
+					if ((this.pk2ColName!=null&& !(this.pk2ColName.isEmpty())  ) && okDtlEntry.getPk2() != null) {
 						thisPk2 = okDtlEntry.getPk2();
 					}
-					if (this.pk3ColName!=null && okDtlEntry.getPk3() != null) {
+					if ((this.pk3ColName!=null && !(this.pk3ColName.isEmpty()) ) && okDtlEntry.getPk3() != null) {
 						thisPk3 = okDtlEntry.getPk3();
 					}
 					
 					// Check for duplicates
 					if ( (thisPk1.equals(rowPK1))
-						&& ( (this.pk2ColName!=null) && (thisPk2.equals(rowPK2)))
-						&& ( (this.pk3ColName!=null) && (thisPk3.equals(rowPK3)))
-						&& ( (thisOk1.equals(rowOK1)) )
-						&& ( this.job_manager.batch_log.equals(okDtlEntry.getBatchLog()) )  // batch_log
-							 ) {
+						&& ( thisPk2.equals(rowPK2))
+						&& ( thisPk3.equals(rowPK3))
+						&& ( thisOk1.equals(rowOK1))
+					 ) {
 						retval=true;
 						log.debug("Not writing row to ok-dtl table (duplicate key)");
 					}
@@ -891,10 +876,10 @@ public class ExtractDBStep extends StepManager {
 						//newOkDtl.setOk1(this.convertDateFieldToString(rs, "OK1"));
 						newOkDtl.setOk1(rs.getTimestamp("OK1"));
 						newOkDtl.setPk1(rs.getLong("PK1"));
-						if (!(pk2ColName.isEmpty())){
+						if ((this.pk2ColName != null) && !(pk2ColName.isEmpty()) && !(rs.getString("PK2").isEmpty())   ){
 							newOkDtl.setPk2(rs.getLong("PK2"));
 						}
-						if (!(rs.getString("PK3").isEmpty())){
+						if ((this.pk3ColName != null) &&!(pk3ColName.isEmpty()) && !(rs.getString("PK3").isEmpty())   ){
 							newOkDtl.setPk3(rs.getLong("PK3"));
 						}
 						
@@ -1098,6 +1083,7 @@ public class ExtractDBStep extends StepManager {
 		
 		// execute select SQL statement
 		rs = statement.executeQuery(sql);
+		
 		return rs;
 	}
 	
@@ -1171,7 +1157,7 @@ public class ExtractDBStep extends StepManager {
 		this.log_dtl.setBatchLog(this.job_manager.batch_log);
 		this.log_dtl.setStartDt(new Date());
 		this.log_dtl.setStatus(BatchLog.statusError);
-		this.log_dtl.setErrorMsg(e.getMessage());
+//		this.log_dtl.setErrorMsg(e.getMessage());
 		// required fields to be able to save this log_dtl
 		this.log_dtl.setJobStepsXrefJobStepSeq(this.jobStepXref.getJobStepSeq());
 		this.log_dtl.setStepsId(this.jobStepXref.getId());
