@@ -63,6 +63,9 @@ public class ExtractDBStep extends StepManager {
 	private int currentRowNum = 0;
 	private int rowsIncludedInJob = 0;
 	public static Logger log = null;
+	private Connection dbConnection = null;
+	private Statement statement = null;
+	private ResultSet rs = null;
 	
 	// Row-centric properties
 	String ok1ColName, pk1ColName, pk2ColName, pk3ColName;
@@ -96,7 +99,7 @@ public class ExtractDBStep extends StepManager {
 			this.raw_sql = this.jobStepXref.getStep().getExtractSql();
 			String whereClause = new String();
 			int commit_freq = this.jobStepXref.getStep().getExtractCommitFreq().intValue();
-			ResultSet rs = null;
+			
 			// For an extract run, these values must be set
 			String previousRunPK1, previousRunExtractSql;
 			int previousRunMaxRec, previousRunMaxRecPerFile;
@@ -264,7 +267,7 @@ public class ExtractDBStep extends StepManager {
 					VBatchManager.log.debug(MessageFormat.format("Rewritten query : {0}", this.raw_sql));
 				}
 				// Run the query
-				rs = this.sqlQuery(this.raw_sql, totalRows+100);
+				this.sqlQuery(this.raw_sql, totalRows+100);
 				
 			}
 			
@@ -342,7 +345,7 @@ public class ExtractDBStep extends StepManager {
 				int rowCount = 0;
 	
 				log.info("Rewritten query: " + this.raw_sql);
-				rs = this.sqlQuery(this.raw_sql, totalRows+100);
+				this.sqlQuery(this.raw_sql, totalRows+100);
 			}
 			
 			// If available, store ok-dtls from previous job in this.previousJobOkDtls
@@ -368,9 +371,9 @@ public class ExtractDBStep extends StepManager {
 			
 			
 				// go back to beginning of recordset 
-				boolean recordsetHasItems = rs.first();
+				boolean recordsetHasItems = this.rs.first();
 				
-				this.columnsToSkip = this.prepareSkipColumns(rs);
+				this.columnsToSkip = this.prepareSkipColumns(this.rs);
 				
 				// TODO:  Make sure our required columns are in the query:
 				// ok1, pk1 [pk2-pk3]
@@ -398,18 +401,18 @@ public class ExtractDBStep extends StepManager {
 					while (!endOfRecordset) {
 						this.currentRowNum++;
 						skipThisRecord=false;
-						currentRowOK1Value = this.convertDateFieldToString(rs, "OK1");
+						currentRowOK1Value = this.convertDateFieldToString(this.rs, "OK1");
 						if (this.pk1ColName != null && !(this.pk1ColName.isEmpty())) {
-							currentRowPK1Value = rs.getString("PK1");
+							currentRowPK1Value = this.rs.getString("PK1");
 						}
 						if (this.pk2ColName != null && !(this.pk2ColName.isEmpty())) {
-							currentRowPK2Value = rs.getString("PK2");
+							currentRowPK2Value = this.rs.getString("PK2");
 						}
 						if (this.pk3ColName != null && !(this.pk3ColName.isEmpty())) {
-							currentRowPK3Value = rs.getString("PK3");
+							currentRowPK3Value = this.rs.getString("PK3");
 						}
 						
-						boolean isLastRecord = rs.isLast();
+						boolean isLastRecord = this.rs.isLast();
 						String debugMsg1 = "Evaluating row # " + this.currentRowNum;
 						debugMsg1 += ", OK1 [" + currentRowOK1Value + "]";
 						debugMsg1 += ", PK1 [" + currentRowPK1Value + "]";
@@ -424,7 +427,7 @@ public class ExtractDBStep extends StepManager {
 						 *  completely skip processing this row.
 						 */
 						
-						if (isRowInPreviousRunOkDtl(rs)) {
+						if (isRowInPreviousRunOkDtl(this.rs)) {
 							skipThisRecord=true;
 							String debugMsg2 = "Skipping row - in previous run OK Dtl";
 							log.debug(debugMsg2);
@@ -442,7 +445,7 @@ public class ExtractDBStep extends StepManager {
 							if (!isPageDataAlmostComplete) {
 								// Since this record marks the "end" of a set of records,
 								// remember its PK1 value
-								PK1AtEndOfCurrentPage = rs.getString("PK1");
+								PK1AtEndOfCurrentPage = this.rs.getString("PK1");
 							}
 							isPageDataAlmostComplete=true;
 						}
@@ -484,8 +487,8 @@ public class ExtractDBStep extends StepManager {
 							isPageDataComplete=true;
 							isRecordsetAlmostComplete=false;
 							isRecordsetComplete=true;
-							PK1AtEndOfCurrentPage = rs.getString("PK1");
-							OK1AtEndOfCurrentPage = this.convertDateFieldToString(rs, "OK1");
+							PK1AtEndOfCurrentPage = this.rs.getString("PK1");
+							OK1AtEndOfCurrentPage = this.convertDateFieldToString(this.rs, "OK1");
 							log.debug("queryExhausted = true");
 						}
 						
@@ -508,17 +511,9 @@ public class ExtractDBStep extends StepManager {
 								this.log_dtl.setMinOk1(currentRowOK1Value);
 								log.debug("Setting minOK1: " + currentRowOK1Value);
 							}
-							// If last row, make sure this row gets persisted
-	//						if (isPageDataComplete && isRecordsetComplete) {
-	//							// Since this is the last page of the recordset, 
-	//							// make sure that last row gets saved as well
-	//							if (!skipThisRecord) {
-	//								processRowOfData(rs);
-	//							}
-	//						}
 							if (isLastRecord) {
 								if (!skipThisRecord) {
-									processRowOfData(rs);
+									processRowOfData(this.rs);
 								}
 							}
 							
@@ -602,10 +597,10 @@ public class ExtractDBStep extends StepManager {
 								// If this row was not in the ok-dtl log for previous run,
 								// then add this data to the csv
 								
-								processRowOfData(rs);
+								processRowOfData(this.rs);
 								// Remember pk1/ok1 to compare to the next row
-								previousRowPK1Value = rs.getString("PK1");
-								previousRowOK1Value = this.convertDateFieldToString(rs, "OK1");
+								previousRowPK1Value = this.rs.getString("PK1");
+								previousRowOK1Value = this.convertDateFieldToString(this.rs, "OK1");
 							}	
 			
 							
@@ -640,7 +635,7 @@ public class ExtractDBStep extends StepManager {
 						
 						
 						// Move to the next record (or abort if we're past the last row)
-						if (rs.next() == false) {  // moved past the last record
+						if (this.rs.next() == false) {  // moved past the last record
 							endOfRecordset=true;
 							if (this.rowsIncludedInJob==0) {
 								log.info("Skipping job (no new records found).");
@@ -664,10 +659,10 @@ public class ExtractDBStep extends StepManager {
 		catch ( Exception e) {
 			this.logFailed(e);  // copy this approach from jobmanager
 		}
-			
+		
 		// This step is done.  Clean up, write to logs,
 		// and return control to JobManager.
-		
+		this.closeJDBCConnection();
 		
 		// TODO:  empty data variables
 		// TODO:  log completion of this step
@@ -697,11 +692,11 @@ public class ExtractDBStep extends StepManager {
 	 * is already listed in the previous Job's ok-dtl
 	 * list.
 	 * 
-	 * @param rs
+	 * @param previousRunRecordset
 	 * @return
 	 * @throws Exception 
 	 */
-	private boolean isRowInPreviousRunOkDtl(ResultSet rs) throws Exception {
+	private boolean isRowInPreviousRunOkDtl(ResultSet previousRunRecordset) throws Exception {
 		boolean retval = false;
 		SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y H:mm:ss");
 		try {
@@ -711,21 +706,21 @@ public class ExtractDBStep extends StepManager {
 				Long rowPK1 = 0L;
 				Long rowPK2 = 0L;
 				Long rowPK3 = 0L;
-				String rowOK1 = this.convertDateFieldToString(rs, "OK1");
+				String rowOK1 = this.convertDateFieldToString(previousRunRecordset, "OK1");
 				
-				if (rs.getString("PK1").isEmpty()) { 
+				if (previousRunRecordset.getString("PK1").isEmpty()) { 
 					throw new VBatchException("PK1 value cannot be empty");
 				}
 				try {
 					// need to validate if null or empty string is the value of PK, would it be "null" and "" respectively
 					// assuming that this is getting the value of OK and PKs from the current pull
-					if (!(rs.getString("PK1").isEmpty())) { 
-						rowPK1 = Long.parseLong(rs.getString("PK1"));
+					if (!(previousRunRecordset.getString("PK1").isEmpty())) { 
+						rowPK1 = Long.parseLong(previousRunRecordset.getString("PK1"));
 					}
-					if ((this.pk2ColName!=null && !(this.pk2ColName.isEmpty())  )  && !(rs.getString("PK2").isEmpty()))
-						rowPK2 = Long.parseLong(rs.getString("PK2"));
-					if ((this.pk3ColName!=null &&  !(this.pk3ColName.isEmpty()) )&& !(rs.getString("PK3").isEmpty()))
-						rowPK3 = Long.parseLong(rs.getString("PK3"));
+					if ((this.pk2ColName!=null && !(this.pk2ColName.isEmpty())  )  && !(previousRunRecordset.getString("PK2").isEmpty()))
+						rowPK2 = Long.parseLong(previousRunRecordset.getString("PK2"));
+					if ((this.pk3ColName!=null &&  !(this.pk3ColName.isEmpty()) )&& !(previousRunRecordset.getString("PK3").isEmpty()))
+						rowPK3 = Long.parseLong(previousRunRecordset.getString("PK3"));
 				}
 				catch (Exception e){
 					// the idea is to catch if there is any error in converting from "ABC" to numeric
@@ -768,16 +763,16 @@ public class ExtractDBStep extends StepManager {
 	 * Check whether the current row of the recordset
 	 * is already listed in this job's temp ok-dtl list.
 	 * 
-	 * @param rs
+	 * @param currentRecordset
 	 * @return
 	 */
-	private boolean isRowInTempOkDtl(ResultSet rs) throws Exception {
+	private boolean isRowInTempOkDtl(ResultSet currentRecordset) throws Exception {
 		boolean retval = false;
 		SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y H:mm:ss");
 		try {
 			if (this.tempOkDtlList.size() > 0 ) {
 				
-				if (rs.getString("PK1").isEmpty()) { 
+				if (currentRecordset.getString("PK1").isEmpty()) { 
 					throw new VBatchException("PK1 value cannot be empty");
 				}
 				// Get the ok1, pk1 from this row
@@ -785,17 +780,17 @@ public class ExtractDBStep extends StepManager {
 				Long rowPK1 = 0L;
 				Long rowPK2 = 0L;
 				Long rowPK3 = 0L;
-				String rowOK1 = this.convertDateFieldToString(rs, "OK1");
+				String rowOK1 = this.convertDateFieldToString(currentRecordset, "OK1");
 				try {
 					// need to validate if null or empty string is the value of PK, would it be "null" and "" respectively
 					// assuming that this is getting the value of OK and PKs from the current pull
-					if (!(rs.getString("PK1").isEmpty())) { 
-						rowPK1 = Long.parseLong(rs.getString("PK1"));
+					if (!(currentRecordset.getString("PK1").isEmpty())) { 
+						rowPK1 = Long.parseLong(currentRecordset.getString("PK1"));
 					}
-					if ((this.pk2ColName!=null && !(this.pk2ColName.isEmpty()) ) && !(rs.getString("PK2").isEmpty()))
-						rowPK2 = Long.parseLong(rs.getString("PK2"));
-					if ((this.pk3ColName!=null && !(this.pk3ColName.isEmpty()) ) && !(rs.getString("PK3").isEmpty()))
-						rowPK3 = Long.parseLong(rs.getString("PK3"));
+					if ((this.pk2ColName!=null && !(this.pk2ColName.isEmpty()) ) && !(currentRecordset.getString("PK2").isEmpty()))
+						rowPK2 = Long.parseLong(currentRecordset.getString("PK2"));
+					if ((this.pk3ColName!=null && !(this.pk3ColName.isEmpty()) ) && !(currentRecordset.getString("PK3").isEmpty()))
+						rowPK3 = Long.parseLong(currentRecordset.getString("PK3"));
 				}
 				catch (Exception e){
 					// the idea is to catch if there is any error in converting from "ABC" to numeric
@@ -837,11 +832,11 @@ public class ExtractDBStep extends StepManager {
 	}
 
 	/**
-	 * @param rs
+	 * @param currentRowRecordset
 	 * @throws SQLException
 	 * @throws ParseException
 	 */
-	private void processRowOfData(ResultSet rs) throws SQLException,
+	private void processRowOfData(ResultSet currentRowRecordset) throws SQLException,
 			ParseException, Exception {
 		try {
 			/**
@@ -849,7 +844,7 @@ public class ExtractDBStep extends StepManager {
 			 * list.  If so, we'll skip it.
 			 */
 			boolean skipThisRow = false;
-			skipThisRow=isRowInPreviousRunOkDtl(rs);
+			skipThisRow=isRowInPreviousRunOkDtl(currentRowRecordset);
 			
 			if (!skipThisRow) {
 			
@@ -861,7 +856,7 @@ public class ExtractDBStep extends StepManager {
 					}
 					else {
 						// Add this column to the output data
-						rowdata.add(rs.getString(ci));
+						rowdata.add(currentRowRecordset.getString(ci));
 					}
 				}
 				this.dataPageOut.add(rowdata);
@@ -870,21 +865,21 @@ public class ExtractDBStep extends StepManager {
 				// Unless we're repeating a previous job (ie: -b)
 				if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_New) {
 					// If this row already exists in ok-dtl table, don't write it again.
-					if (!(isRowInTempOkDtl(rs))) {
+					if (!(isRowInTempOkDtl(currentRowRecordset))) {
 						BatchLogOkDtl newOkDtl = new BatchLogOkDtl();
 						newOkDtl.setBatchLog(this.job_manager.batch_log);
 						//newOkDtl.setOk1(this.convertDateFieldToString(rs, "OK1"));
-						newOkDtl.setOk1(rs.getTimestamp("OK1"));
-						newOkDtl.setPk1(rs.getLong("PK1"));
-						if ((this.pk2ColName != null) && !(pk2ColName.isEmpty()) && !(rs.getString("PK2").isEmpty())   ){
-							newOkDtl.setPk2(rs.getLong("PK2"));
+						newOkDtl.setOk1(currentRowRecordset.getTimestamp("OK1"));
+						newOkDtl.setPk1(currentRowRecordset.getLong("PK1"));
+						if ((this.pk2ColName != null) && !(pk2ColName.isEmpty()) && !(currentRowRecordset.getString("PK2").isEmpty())   ){
+							newOkDtl.setPk2(currentRowRecordset.getLong("PK2"));
 						}
-						if ((this.pk3ColName != null) &&!(pk3ColName.isEmpty()) && !(rs.getString("PK3").isEmpty())   ){
-							newOkDtl.setPk3(rs.getLong("PK3"));
+						if ((this.pk3ColName != null) &&!(pk3ColName.isEmpty()) && !(currentRowRecordset.getString("PK3").isEmpty())   ){
+							newOkDtl.setPk3(currentRowRecordset.getLong("PK3"));
 						}
 						
 						this.tempOkDtlList.add(newOkDtl);
-						this.OK1AtEndOfCurrentPage = this.convertDateFieldToString(rs, "OK1");
+						this.OK1AtEndOfCurrentPage = this.convertDateFieldToString(currentRowRecordset, "OK1");
 					}
 				}
 			}
@@ -914,7 +909,7 @@ public class ExtractDBStep extends StepManager {
 		return tokensReplaced;
 	}
 
-	private Map<Integer,String> prepareSkipColumns(ResultSet rs) {
+	private Map<Integer,String> prepareSkipColumns(ResultSet resultset) {
 		Map<Integer, String> columnsToSkip = new HashMap<Integer,String>();
 		try {
 			// List of columns to suppress in output data
@@ -925,7 +920,7 @@ public class ExtractDBStep extends StepManager {
 			namesOfColumnsToSkip.add("ok1");
 			
 			// Find the colNum/colName of each of the skip columns
-			ResultSetMetaData meta = rs.getMetaData();
+			ResultSetMetaData meta = resultset.getMetaData();
 			this.col_count = meta.getColumnCount();
 			String colType, colName;
 			
@@ -947,19 +942,27 @@ public class ExtractDBStep extends StepManager {
 	}
 
 	/**
-	 * @param rs
+	 * @param resultset
 	 * @param columnName TODO
 	 * @return
 	 * @throws SQLException
 	 * @throws ParseException
 	 */
-	private String convertDateFieldToString(ResultSet rs, String columnName) throws SQLException,
+	private String convertDateFieldToString(ResultSet resultset, String columnName) throws SQLException,
 			ParseException {
-		SimpleDateFormat incomingDateFormat  = new SimpleDateFormat("y-MM-d HH:mm:ss.S");
-		SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y H:mm:ss");
-		String ds = rs.getString(columnName);
-		Date dt = incomingDateFormat.parse(ds);
-		String newDs = outgoingDateFormat.format(dt);
+		String newDs;
+		try {
+			SimpleDateFormat incomingDateFormat  = new SimpleDateFormat("y-MM-d HH:mm:ss.S");
+			SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y H:mm:ss");
+			String ds = resultset.getString(columnName);
+			Date dt = incomingDateFormat.parse(ds);
+			newDs = outgoingDateFormat.format(dt);
+		} catch (ParseException e) {
+			// TODO Auto-generated catch block
+			this.log.error(e.getMessage(), e);
+			throw e;
+		}
+		
 		return newDs;
 	}
 	
@@ -968,9 +971,10 @@ public class ExtractDBStep extends StepManager {
 	 * @param originalDateString
 	 * @param newDateFormat
 	 * @return
+	 * @throws Exception 
 	 */
 	
-	private String convertDateStringToAnotherDateString(String originalDateString, String incomingDateFormat, String outgoingDateFormat) {
+	private String convertDateStringToAnotherDateString(String originalDateString, String incomingDateFormat, String outgoingDateFormat) throws Exception {
 		String newlyFormattedDateString = new String();
 		SimpleDateFormat incomingDateFormatter  = new SimpleDateFormat(incomingDateFormat);
 		SimpleDateFormat outgoingDateFormatter = new SimpleDateFormat(outgoingDateFormat);
@@ -982,7 +986,8 @@ public class ExtractDBStep extends StepManager {
 			
 		} catch (ParseException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			this.log.error(e.getMessage(), e);
+			throw e;
 		}
 		
 		return newlyFormattedDateString;
@@ -1018,7 +1023,7 @@ public class ExtractDBStep extends StepManager {
 		String msg = "Step [" + this.jobStepXref.getStep().getType() 
 				+ " : " + this.jobStepXref.getStep().getShortDesc()
 				+ "]";
-		this.log_dtl.setLongDesc(msg);
+		this.log_dtl.setLongDesc(StringUtils.left(msg,150));
 		this.log_dtl.setStepsId(this.jobStepXref.getId());
 		this.log_dtl.setJobStepsXrefJobStepSeq(this.jobStepXref.getJobStepSeq());
 		this.log_dtl.setStepsShortDesc(this.jobStepXref.getStep().getShortDesc());
@@ -1041,76 +1046,65 @@ public class ExtractDBStep extends StepManager {
 		
 	}
 	
-	// Finished page of data
-	// Finished processing
-	// Step complete
-	
+	/**
+	 * Perform a JDBC query, using this step's JDBC connection;
+	 * @param sql
+	 * @param maxRecords
+	 * @throws SQLException
+	 */
+	private void sqlQuery(String sql, int maxRecords) throws SQLException,Exception {
+		this.getDBConnection();
+		if (this.dbConnection == null) {
+			this.log.info("ERROR: Could not connect to source database");
+			throw new VBatchException("Could not connect to source database");
+		}
+		this.statement = this.dbConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+		if (maxRecords > 0) {
+			this.statement.setMaxRows(maxRecords);
+		}
+		// execute select SQL statement
+		this.rs = this.statement.executeQuery(sql);
+	}
 	
 	/**
-	 * Returns a ResultSet for a raw SQL query.
-	 * @param sql
-	 * @return
+	 * Close the JDBC connection (to be called when this step is done)
 	 */
-	private ResultSet sqlQuery(String sql) {
-		ResultSet rs = null;
-		try {
-			rs = this.sqlQuery(sql, -1);
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return rs;
+	private void closeJDBCConnection() {
+			try {
+				if (this.rs != null) {
+					this.rs.close();
+				}
+				if (this.statement != null) {
+					this.statement.close();
+				}
+				if (this.dbConnection != null) {
+					this.dbConnection.close();
+				}
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				this.log.info(e.getMessage());
+			}
+			
 	}
-	
-	private ResultSet sqlQuery(String sql, int maxRecords) throws SQLException {
-		 
-		Connection dbConnection = null;
-		Statement statement = null;
-		ResultSet rs = null;
- 
-		
-		dbConnection = getDBConnection();
-		if (dbConnection == null) {
-			System.out.println("ERROR: Could not connect to source database");
-			System.exit(1);
-		}
-		statement = dbConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
-		
-		// 
-		if (maxRecords > 0) {
-			statement.setMaxRows(maxRecords);
-		}
-		
-		// execute select SQL statement
-		rs = statement.executeQuery(sql);
-		
-		return rs;
-	}
-	
-	private Connection getDBConnection() {
-		 
-		Connection dbConnection = null;
- 
+	/**
+	 * Open a JDBC Connection.
+	 */
+	private void getDBConnection() {
 		try {
 			Class.forName("oracle.jdbc.driver.OracleDriver");
 		} catch (ClassNotFoundException e) {
 			System.out.println(e.getMessage());
 		}
 		try {
-//			dbConnection = DriverManager.getConnection(VBatchManager.source_db_connection.get("db")
-//					, VBatchManager.source_db_connection.get("user"),
-//					VBatchManager.source_db_connection.get("password"));
 			System.out.println("Connecting to oracle server: " + VBatchManager.source_db_connection.get("db"));
-			dbConnection = DriverManager.getConnection(VBatchManager.source_db_connection.get("db"));
-			return dbConnection;
+			this.dbConnection = DriverManager.getConnection(VBatchManager.source_db_connection.get("db"));
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
 		}
-		return dbConnection;
 	}
 	
 	/**
-	 * Get a list of the pk1/ok1 values from the last successful run 
+	 * Get a list of the max pk1/ok1 values from the last successful run 
 	 * of this job, so we can skip those records in this run.
 	 * 
 	 * @param previousRunBatchLogId
@@ -1121,6 +1115,7 @@ public class ExtractDBStep extends StepManager {
 		List<BatchLogOkDtl> lstPrevOkDtl = qryPrevOkDtl.getResultList();
 		for (BatchLogOkDtl prevEntry : lstPrevOkDtl) {
 			previousJobOkDtls.add(prevEntry);
+			this.log.debug("Previous job ok-dtl id: " + prevEntry.getId());
 		}
 	}
 	
@@ -1170,7 +1165,7 @@ public class ExtractDBStep extends StepManager {
 		this.job_manager.db.persist(this.log_dtl);
 		this.job_manager.db.getTransaction().commit();
 		
-		
+		this.closeJDBCConnection();
 		// Re-throw this exception so JobManager catches it
 		throw e;
 		
