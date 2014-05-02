@@ -839,6 +839,7 @@ public class ExtractDBStep extends StepManager {
 						&& ( this.job_manager.batch_log.equals(okDtlEntry.getBatchLog()) )  // batch_log
 							 ) {
 						retval=true;
+						log.debug("Not writing row to ok-dtl table (duplicate key)");
 					}
 				}
 			}
@@ -883,10 +884,7 @@ public class ExtractDBStep extends StepManager {
 				// log ok-dtl for every row (some will be deleted prior to log commit)
 				// Unless we're repeating a previous job (ie: -b)
 				if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_New) {
-					// If this ok-dtl already exists (based on PK1-3) in this job's temp ok dtl 
-					// list, don't try to write it 
-					// because constraint will be violated, and because the record isn't 
-					// necessarily a dup just because pk1-3 is dup
+					// If this row already exists in ok-dtl table, don't write it again.
 					if (!(isRowInTempOkDtl(rs))) {
 						BatchLogOkDtl newOkDtl = new BatchLogOkDtl();
 						newOkDtl.setBatchLog(this.job_manager.batch_log);
