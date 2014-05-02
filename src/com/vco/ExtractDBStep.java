@@ -777,53 +777,66 @@ public class ExtractDBStep extends StepManager {
 		SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y H:mm:ss");
 		try {
 			if (this.tempOkDtlList.size() > 0 ) {
-				// Get the ok1, pk1-3 from this row
-				String rowPK1;
-					rowPK1 = rs.getString("PK1");
-				String rowPK2;
-					rowPK2 = rs.getString("PK2");
-				String rowPK3;
-					rowPK3 = rs.getString("PK3");
+				
+				if (rs.getString("PK1").isEmpty()) { 
+					throw new VBatchException("PK1 value cannot be empty");
+				}
+				// Get the ok1, pk1 from this row
+				// change the string to numeric either integer or long
+				Long rowPK1 = 0L;
+				Long rowPK2 = 0L;
+				Long rowPK3 = 0L;
 				String rowOK1 = this.convertDateFieldToString(rs, "OK1");
-
-
-				// Get ok1, pk1-3 from each row in tempOkDtl
-				BatchLogOkDtl firstTempOkDtl = this.tempOkDtlList.get(0);
-				String firstOkDtlOk1 = outgoingDateFormat.format(firstTempOkDtl.getOk1());
-				String firstOkDtlPk2 = null, firstOkDtlPk3 = null;
-				String previousJobPK1 = firstTempOkDtl.getPk1().toString();
-				if (this.pk2ColName != null && firstTempOkDtl.getPk2() != null) {
-					firstOkDtlPk2=firstTempOkDtl.getPk2().toString();
+				try {
+					// need to validate if null or empty string is the value of PK, would it be "null" and "" respectively
+					// assuming that this is getting the value of OK and PKs from the current pull
+					if (!(rs.getString("PK1").isEmpty())) { 
+						rowPK1 = Long.parseLong(rs.getString("PK1"));
+					}
+					if (this.pk2ColName!=null && !(rs.getString("PK2").isEmpty()))
+						rowPK2 = Long.parseLong(rs.getString("PK2"));
+					if (this.pk3ColName!=null && !(rs.getString("PK3").isEmpty()))
+						rowPK3 = Long.parseLong(rs.getString("PK3"));
 				}
-				if (this.pk3ColName != null && firstTempOkDtl.getPk3() != null) {
-					firstOkDtlPk3=firstTempOkDtl.getPk3().toString();
+				catch (Exception e){
+					// the idea is to catch if there is any error in converting from "ABC" to numeric
+					throw new VBatchException("PK values must be numeric");
 				}
-				BatchLog firstOkDtlBatchLog = firstTempOkDtl.getBatchLog();
+				
+
+//				// Get ok1, pk1-3 from each row in tempOkDtl
+//				BatchLogOkDtl firstTempOkDtl = this.tempOkDtlList.get(0);
+//				String firstOkDtlOk1 = outgoingDateFormat.format(firstTempOkDtl.getOk1());
+//				String firstOkDtlPk2 = null, firstOkDtlPk3 = null;
+//				String previousJobPK1 = firstTempOkDtl.getPk1().toString();
+//				if (this.pk2ColName != null && firstTempOkDtl.getPk2() != null) {
+//					firstOkDtlPk2=firstTempOkDtl.getPk2().toString();
+//				}
+//				if (this.pk3ColName != null && firstTempOkDtl.getPk3() != null) {
+//					firstOkDtlPk3=firstTempOkDtl.getPk3().toString();
+//				}
+//				BatchLog firstOkDtlBatchLog = firstTempOkDtl.getBatchLog();
 
 				// Loop over tempOkDtlList
 				for (BatchLogOkDtl okDtlEntry : this.tempOkDtlList) {
-					String thisPk1 = okDtlEntry.getPk1().toString();
-					// Check pk2-3 directly first, as toString() on a null would throw exception
-					Long pk2Long = okDtlEntry.getPk2();
-					String thisPk2 = null;
-					if (pk2Long != null) {
-						thisPk2= okDtlEntry.getPk2().toString();
-					}
-
-					Long pk3Long = okDtlEntry.getPk3();
-					String thisPk3  = null;
-					if (pk3Long != null) {
-						thisPk3 = okDtlEntry.getPk3().toString();
-					}
-
+					// Get OK1 for this entry
 					String thisOk1 = this.convertDateStringToAnotherDateString(okDtlEntry.getOk1().toString(), "y-MM-d HH:mm:ss.S", "MM/d/y H:mm:ss");
-
+					// Get PK1-3 for this entry
+					Long thisPk1, thisPk2=0L, thisPk3 = 0L;
+					thisPk1 = okDtlEntry.getPk1();
+					if (this.pk2ColName!=null && okDtlEntry.getPk2() != null) {
+						thisPk2 = okDtlEntry.getPk2();
+					}
+					if (this.pk3ColName!=null && okDtlEntry.getPk3() != null) {
+						thisPk3 = okDtlEntry.getPk3();
+					}
+					
 					// Check for duplicates
 					if ( (thisPk1.equals(rowPK1))
 						&& ( (this.pk2ColName!=null) && (thisPk2.equals(rowPK2)))
 						&& ( (this.pk3ColName!=null) && (thisPk3.equals(rowPK3)))
 						&& ( (thisOk1.equals(rowOK1)) )
-						&& ( firstOkDtlBatchLog.equals(okDtlEntry.getBatchLog()) )  // batch_log
+						&& ( this.job_manager.batch_log.equals(okDtlEntry.getBatchLog()) )  // batch_log
 							 ) {
 						retval=true;
 					}
