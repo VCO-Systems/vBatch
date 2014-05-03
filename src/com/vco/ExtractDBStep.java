@@ -62,7 +62,7 @@ public class ExtractDBStep extends StepManager {
 	private String OK1AtEndOfCurrentPage = new String();
 	private int currentRowNum = 0;
 	private int rowsIncludedInJob = 0;
-	public static Logger log = null;
+	public Logger log = null;
 	private Connection dbConnection = null;
 	private Statement statement = null;
 	private ResultSet rs = null;
@@ -549,10 +549,10 @@ public class ExtractDBStep extends StepManager {
 								ListIterator<BatchLogOkDtl> it = tempOkDtlList.listIterator(tempOkDtlList.size());
 								boolean deleteAllRemaining = false;
 								
-								SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y H:mm:ss");
 								while (it.hasPrevious()) {
 							    	BatchLogOkDtl tempOkDtl = it.previous();
-							    	String rowOK1 =  outgoingDateFormat.format(tempOkDtl.getOk1());
+							    	String rowOK1 = new SimpleDateFormat("MM/d/y H:mm:ss").format(tempOkDtl.getOk1());  
+//							    			outgoingDateFormat.format(tempOkDtl.getOk1());
 							    	// Get the PK1 to compare this row's pk1 against,
 							    	// to see if it has changed
 							    	// Once the PK1 changes as we go backwards
@@ -692,13 +692,12 @@ public class ExtractDBStep extends StepManager {
 	 * is already listed in the previous Job's ok-dtl
 	 * list.
 	 * 
-	 * @param previousRunRecordset
+	 * @param currentResultSet
 	 * @return
 	 * @throws Exception 
 	 */
-	private boolean isRowInPreviousRunOkDtl(ResultSet previousRunRecordset) throws Exception {
+	private boolean isRowInPreviousRunOkDtl(ResultSet currentResultSet) throws Exception {
 		boolean retval = false;
-		SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y H:mm:ss");
 		try {
 			if (this.previousJobOkDtls.size() > 0 ) {
 				// Get the ok1, pk1 from this row
@@ -706,30 +705,27 @@ public class ExtractDBStep extends StepManager {
 				Long rowPK1 = 0L;
 				Long rowPK2 = 0L;
 				Long rowPK3 = 0L;
-				String rowOK1 = this.convertDateFieldToString(previousRunRecordset, "OK1");
+				String rowOK1 = this.convertDateFieldToString(currentResultSet, "OK1");
 				
-				if (previousRunRecordset.getString("PK1").isEmpty()) { 
+				if (currentResultSet.getString("PK1").isEmpty()) { 
 					throw new VBatchException("PK1 value cannot be empty");
 				}
 				try {
 					// need to validate if null or empty string is the value of PK, would it be "null" and "" respectively
 					// assuming that this is getting the value of OK and PKs from the current pull
-					if (!(previousRunRecordset.getString("PK1").isEmpty())) { 
-						rowPK1 = Long.parseLong(previousRunRecordset.getString("PK1"));
+					if (!(currentResultSet.getString("PK1").isEmpty())) { 
+						rowPK1 = currentResultSet.getLong("PK1");
 					}
-					if ((this.pk2ColName!=null && !(this.pk2ColName.isEmpty())  )  && !(previousRunRecordset.getString("PK2").isEmpty()))
-						rowPK2 = Long.parseLong(previousRunRecordset.getString("PK2"));
-					if ((this.pk3ColName!=null &&  !(this.pk3ColName.isEmpty()) )&& !(previousRunRecordset.getString("PK3").isEmpty()))
-						rowPK3 = Long.parseLong(previousRunRecordset.getString("PK3"));
+					if ((this.pk2ColName!=null && !(this.pk2ColName.isEmpty())  )  && !(currentResultSet.getString("PK2").isEmpty()))
+						rowPK2 = currentResultSet.getLong("PK2");
+					if ((this.pk3ColName!=null &&  !(this.pk3ColName.isEmpty()) )&& !(currentResultSet.getString("PK3").isEmpty()))
+						rowPK3 = currentResultSet.getLong("PK3");
 				}
 				catch (Exception e){
 					// the idea is to catch if there is any error in converting from "ABC" to numeric
 					throw new VBatchException("PK values must be numeric");
 				}
 
-				String previousJobOK1 = outgoingDateFormat.format(this.previousJobOkDtls.get(0).getOk1());
-				String previousJobPK1 = this.previousJobOkDtls.get(0).getPk1().toString();
-				
 				for (BatchLogOkDtl okDtlEntry : this.previousJobOkDtls) {
 					// change the default value to 0 instead of null
 					Long thisPk1, thisPk2=0L, thisPk3 = 0L;
@@ -742,13 +738,16 @@ public class ExtractDBStep extends StepManager {
 					if ( (this.pk3ColName!=null && !(this.pk3ColName.isEmpty())  ) && okDtlEntry.getPk3() != null) {
 						thisPk3 = okDtlEntry.getPk3();
 					}
-					String thisOk1 = outgoingDateFormat.format(okDtlEntry.getOk1());
-					BatchLog thisBatchLog = okDtlEntry.getBatchLog();
-
+//					String thisOk1 = this.convertDateStringToAnotherDateString(okDtlEntry.getOk1()  "y-MM-d HH:mm:ss.S", "MM/d/y H:mm:ss");
+					String thisOk1 = new SimpleDateFormat("MM/d/y H:mm:ss").format(okDtlEntry.getOk1()); 
+					
+					this.log.debug("[ok1:" + thisOk1 + "," + rowOK1 + "] [pk1:" + thisPk1 + ", " + rowPK1 + "] [pk2: "
+							+ thisPk2 + ", " + rowPK2 + " [pk3:" + thisPk3 + "," + rowPK3 +  "]");
 					// no need to check if column name is null
 					if ( (thisPk1 == rowPK1) && (thisPk2 == rowPK2) && (thisPk3 == rowPK3) && (thisOk1.equals(rowOK1))  )
 					{
 							retval=true;
+							
 					}
 				}
 			}
@@ -768,10 +767,8 @@ public class ExtractDBStep extends StepManager {
 	 */
 	private boolean isRowInTempOkDtl(ResultSet currentRecordset) throws Exception {
 		boolean retval = false;
-		SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y H:mm:ss");
 		try {
 			if (this.tempOkDtlList.size() > 0 ) {
-				
 				if (currentRecordset.getString("PK1").isEmpty()) { 
 					throw new VBatchException("PK1 value cannot be empty");
 				}
@@ -785,12 +782,12 @@ public class ExtractDBStep extends StepManager {
 					// need to validate if null or empty string is the value of PK, would it be "null" and "" respectively
 					// assuming that this is getting the value of OK and PKs from the current pull
 					if (!(currentRecordset.getString("PK1").isEmpty())) { 
-						rowPK1 = Long.parseLong(currentRecordset.getString("PK1"));
+						rowPK1 = currentRecordset.getLong("PK1");
 					}
 					if ((this.pk2ColName!=null && !(this.pk2ColName.isEmpty()) ) && !(currentRecordset.getString("PK2").isEmpty()))
-						rowPK2 = Long.parseLong(currentRecordset.getString("PK2"));
+						rowPK2 = currentRecordset.getLong("PK2");
 					if ((this.pk3ColName!=null && !(this.pk3ColName.isEmpty()) ) && !(currentRecordset.getString("PK3").isEmpty()))
-						rowPK3 = Long.parseLong(currentRecordset.getString("PK3"));
+						rowPK3 = currentRecordset.getLong("PK3");
 				}
 				catch (Exception e){
 					// the idea is to catch if there is any error in converting from "ABC" to numeric
@@ -801,7 +798,8 @@ public class ExtractDBStep extends StepManager {
 				// Loop over tempOkDtlList
 				for (BatchLogOkDtl okDtlEntry : this.tempOkDtlList) {
 					// Get OK1 for this entry
-					String thisOk1 = this.convertDateStringToAnotherDateString(okDtlEntry.getOk1().toString(), "y-MM-d HH:mm:ss.S", "MM/d/y H:mm:ss");
+//					String thisOk1 = this.convertDateStringToAnotherDateString(okDtlEntry.getOk1().toString(), "y-MM-d HH:mm:ss.S", "MM/d/y H:mm:ss");
+					String thisOk1 = new SimpleDateFormat("MM/d/y H:mm:ss").format(okDtlEntry.getOk1()); 
 					// Get PK1-3 for this entry
 					Long thisPk1, thisPk2=0L, thisPk3 = 0L;
 					thisPk1 = okDtlEntry.getPk1();
@@ -819,12 +817,13 @@ public class ExtractDBStep extends StepManager {
 						&& ( thisOk1.equals(rowOK1))
 					 ) {
 						retval=true;
-						log.debug("Not writing row to ok-dtl table (duplicate key)");
+						this.log.debug("Not writing row to ok-dtl table (duplicate key)");
 					}
 				}
 			}
 		}
 		catch (Exception e) {
+			this.log.error(e.getMessage(),e);
 			throw e;
 		}
 		// TODO Auto-generated method stub
@@ -836,8 +835,7 @@ public class ExtractDBStep extends StepManager {
 	 * @throws SQLException
 	 * @throws ParseException
 	 */
-	private void processRowOfData(ResultSet currentRowRecordset) throws SQLException,
-			ParseException, Exception {
+	private void processRowOfData(ResultSet currentRowRecordset) throws Exception {
 		try {
 			/**
 			 * Check to see if this row was in the previous run's ok-dtl
@@ -888,7 +886,15 @@ public class ExtractDBStep extends StepManager {
 			throw e;
 		}
 	}
-
+	
+	/**
+	 * Replace vBatch SQL token with the proper max statement.
+	 * 
+	 * @param raw_sql
+	 * @param tokenReplacement
+	 * @return
+	 * @throws Exception
+	 */
 	private int replaceSqlToken(String raw_sql, String tokenReplacement) throws Exception {
 		int tokensReplaced = 0;
 		// Count instances of /* where */ token
@@ -904,12 +910,20 @@ public class ExtractDBStep extends StepManager {
 			tokensReplaced++;
 		}
 		else {
-			throw new Exception("No vBatch SQL token found.  Aborting job.");
+			throw new VBatchException("No vBatch SQL token found.  Aborting job.");
 		}
 		return tokensReplaced;
 	}
 
-	private Map<Integer,String> prepareSkipColumns(ResultSet resultset) {
+	/**
+	 * Returns the list of columns from raw query that should not be 
+	 * included in the export.
+	 * 
+	 * @param resultset
+	 * @return
+	 * @throws Exception 
+	 */
+	private Map<Integer,String> prepareSkipColumns(ResultSet resultset) throws Exception {
 		Map<Integer, String> columnsToSkip = new HashMap<Integer,String>();
 		try {
 			// List of columns to suppress in output data
@@ -936,7 +950,8 @@ public class ExtractDBStep extends StepManager {
 			}
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			this.log.error(e.getMessage(),e);
+			throw e;
 		}
 		return columnsToSkip;
 	}
@@ -948,8 +963,7 @@ public class ExtractDBStep extends StepManager {
 	 * @throws SQLException
 	 * @throws ParseException
 	 */
-	private String convertDateFieldToString(ResultSet resultset, String columnName) throws SQLException,
-			ParseException {
+	private String convertDateFieldToString(ResultSet resultset, String columnName) throws Exception {
 		String newDs;
 		try {
 			SimpleDateFormat incomingDateFormat  = new SimpleDateFormat("y-MM-d HH:mm:ss.S");
