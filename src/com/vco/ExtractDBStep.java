@@ -429,8 +429,6 @@ public class ExtractDBStep extends StepManager {
 						
 						if (isRowInPreviousRunOkDtl(this.rs)) {
 							skipThisRecord=true;
-							String debugMsg2 = "Skipping row - in previous run OK Dtl";
-							log.debug(debugMsg2);
 						}
 						else {
 							this.rowsIncludedInJob++;  // Note: rownum starts at 1
@@ -513,7 +511,10 @@ public class ExtractDBStep extends StepManager {
 							}
 							if (isLastRecord) {
 								if (!skipThisRecord) {
+									log.debug("Process row (very last record).  OK1:" + currentRowOK1Value + ", PK1: " + currentRowPK1Value +
+											", PK2: " +currentRowPK2Value + ", PK3: " + currentRowPK3Value);
 									processRowOfData(this.rs);
+									
 								}
 							}
 							
@@ -596,7 +597,8 @@ public class ExtractDBStep extends StepManager {
 							if (!(isRecordsetComplete)) {
 								// If this row was not in the ok-dtl log for previous run,
 								// then add this data to the csv
-								
+								log.debug("Process row:  OK1:" + currentRowOK1Value + ", PK1: " + currentRowPK1Value +
+										", PK2: " +currentRowPK2Value + ", PK3: " + currentRowPK3Value);
 								processRowOfData(this.rs);
 								// Remember pk1/ok1 to compare to the next row
 								previousRowPK1Value = this.rs.getString("PK1");
@@ -728,7 +730,7 @@ public class ExtractDBStep extends StepManager {
 
 				for (BatchLogOkDtl okDtlEntry : this.previousJobOkDtls) {
 					// change the default value to 0 instead of null
-					Long thisPk1, thisPk2=0L, thisPk3 = 0L;
+					Long thisPk1=0L, thisPk2=0L, thisPk3 = 0L;
 					
 					// need to make sure that getPk1() will return integer or long assuming that pk1 data type is numeric, please change the variable type if it's long
 					thisPk1 = okDtlEntry.getPk1();
@@ -740,14 +742,16 @@ public class ExtractDBStep extends StepManager {
 					}
 //					String thisOk1 = this.convertDateStringToAnotherDateString(okDtlEntry.getOk1()  "y-MM-d HH:mm:ss.S", "MM/d/y H:mm:ss");
 					String thisOk1 = new SimpleDateFormat("MM/d/y H:mm:ss").format(okDtlEntry.getOk1()); 
-					
 					this.log.debug("[ok1:" + thisOk1 + "," + rowOK1 + "] [pk1:" + thisPk1 + ", " + rowPK1 + "] [pk2: "
 							+ thisPk2 + ", " + rowPK2 + " [pk3:" + thisPk3 + "," + rowPK3 +  "]");
+					this.log.debug("[ok: " + thisOk1.equals(rowOK1) + "], [pk1: " + (thisPk1.equals(rowPK1)) + "], "
+							+ "[pk2: " + (thisPk2.equals(rowPK2)) + "], "  +" [pk3: " + (thisPk3.equals(rowPK3)) + "] ");
 					// no need to check if column name is null
-					if ( (thisPk1 == rowPK1) && (thisPk2 == rowPK2) && (thisPk3 == rowPK3) && (thisOk1.equals(rowOK1))  )
+					if ( (thisPk1.equals(rowPK1)) && (thisPk2.equals(rowPK2)) && (thisPk3.equals(rowPK3)) && (thisOk1.equals(rowOK1))  )
 					{
 							retval=true;
-							
+							this.log.debug("Found duplicate row from previous run -  skipping row.");
+							break;
 					}
 				}
 			}
@@ -801,7 +805,7 @@ public class ExtractDBStep extends StepManager {
 //					String thisOk1 = this.convertDateStringToAnotherDateString(okDtlEntry.getOk1().toString(), "y-MM-d HH:mm:ss.S", "MM/d/y H:mm:ss");
 					String thisOk1 = new SimpleDateFormat("MM/d/y H:mm:ss").format(okDtlEntry.getOk1()); 
 					// Get PK1-3 for this entry
-					Long thisPk1, thisPk2=0L, thisPk3 = 0L;
+					Long thisPk1=0L, thisPk2=0L, thisPk3 = 0L;
 					thisPk1 = okDtlEntry.getPk1();
 					if ((this.pk2ColName!=null&& !(this.pk2ColName.isEmpty())  ) && okDtlEntry.getPk2() != null) {
 						thisPk2 = okDtlEntry.getPk2();
@@ -809,6 +813,11 @@ public class ExtractDBStep extends StepManager {
 					if ((this.pk3ColName!=null && !(this.pk3ColName.isEmpty()) ) && okDtlEntry.getPk3() != null) {
 						thisPk3 = okDtlEntry.getPk3();
 					}
+					
+					this.log.debug("[ok1:" + thisOk1 + "," + rowOK1 + "] [pk1:" + thisPk1 + ", " + rowPK1 + "] [pk2: "
+							+ thisPk2 + ", " + rowPK2 + " [pk3:" + thisPk3 + "," + rowPK3 +  "]");
+					this.log.debug("[ok: " + thisOk1.equals(rowOK1) + "], [pk1: " + (thisPk1.equals(rowPK1)) + "], "
+							+ "[pk2: " + (thisPk2.equals(rowPK2)) + "], "  +" [pk3: " + (thisPk3.equals(rowPK3)) + "] ");
 					
 					// Check for duplicates
 					if ( (thisPk1.equals(rowPK1))
@@ -818,6 +827,7 @@ public class ExtractDBStep extends StepManager {
 					 ) {
 						retval=true;
 						this.log.debug("Not writing row to ok-dtl table (duplicate key)");
+						break;
 					}
 				}
 			}
