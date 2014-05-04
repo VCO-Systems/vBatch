@@ -7,6 +7,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.MessageFormat;
 import java.text.ParseException;
@@ -228,7 +229,7 @@ public class ExtractDBStep extends StepManager {
 						previousRunMinOk1 = this.convertDateStringToAnotherDateString(previousRunMinOk1, "MM/d/yy H:mm:ss", "MM/dd/yyyy H:mm:ss");
 						previousRunMaxOk1 = initialRunLogDtl.getMaxOk1();
 						previousRunMaxOk1 = this.convertDateStringToAnotherDateString(previousRunMaxOk1, "MM/d/yy H:mm:ss", "MM/dd/yyyy H:mm:ss");
-						totalRows = initialRunLogDtl.getNumRecords().intValue();
+						totalRows = initialRunLogDtl.getExtractMaxRecs().intValue();
 						previousRunExtractSql = initialRunLogDtl.getExtractSql();
 					}
 					else if (initialRunLogDtl.getStepType().equals("CSV")) {
@@ -263,11 +264,10 @@ public class ExtractDBStep extends StepManager {
 							
 				// replace the SQL TOKEN(s) ( /* where */ )
 				int sqlTokensReplaced =  this.replaceSqlToken(this.raw_sql, whereClause); 
-				if (sqlTokensReplaced == 0) {
-					VBatchManager.log.debug(MessageFormat.format("Rewritten query : {0}", this.raw_sql));
-				}
 				// Run the query
-				this.sqlQuery(this.raw_sql, totalRows+100);
+//				this.sqlQuery(this.raw_sql, totalRows+100);
+				log.info("Rewritten query: " + this.raw_sql);
+				this.sqlQuery(this.raw_sql, totalRows);
 				
 			}
 			
@@ -320,9 +320,6 @@ public class ExtractDBStep extends StepManager {
 					whereClause = this.ok1ColName + " >= to_date('" + previousRunMaxOk1 + "', 'mm/dd/yyyy hh24:mi:ss') ";
 					// replace the SQL TOKEN(s) ( /* where */ )
 					int sqlTokensReplaced =  this.replaceSqlToken(this.raw_sql, whereClause); 
-					if (sqlTokensReplaced == 0) {
-						VBatchManager.log.debug(MessageFormat.format("QUERY : {0}", this.raw_sql));
-					}
 				}
 				
 				// Get total_rows from the previous run (if set in record)
@@ -345,7 +342,8 @@ public class ExtractDBStep extends StepManager {
 				int rowCount = 0;
 	
 				log.info("Rewritten query: " + this.raw_sql);
-				this.sqlQuery(this.raw_sql, totalRows+100);
+//				this.sqlQuery(this.raw_sql, totalRows+100);
+				this.sqlQuery(this.raw_sql, totalRows);
 			}
 			
 			// If available, store ok-dtls from previous job in this.previousJobOkDtls
@@ -708,6 +706,7 @@ public class ExtractDBStep extends StepManager {
 				Long rowPK2 = 0L;
 				Long rowPK3 = 0L;
 				String rowOK1 = this.convertDateFieldToString(currentResultSet, "OK1");
+				Timestamp rowOK1TS = currentResultSet.getTimestamp("OK1");
 				
 				if (currentResultSet.getString("PK1").isEmpty()) { 
 					throw new VBatchException("PK1 value cannot be empty");
@@ -742,10 +741,13 @@ public class ExtractDBStep extends StepManager {
 					}
 //					String thisOk1 = this.convertDateStringToAnotherDateString(okDtlEntry.getOk1()  "y-MM-d HH:mm:ss.S", "MM/d/y H:mm:ss");
 					String thisOk1 = new SimpleDateFormat("MM/d/y H:mm:ss").format(okDtlEntry.getOk1()); 
+//					Timestamp thisOk1TS = (Timestamp)okDtlEntry.getOk1();
 					this.log.debug("[ok1:" + thisOk1 + "," + rowOK1 + "] [pk1:" + thisPk1 + ", " + rowPK1 + "] [pk2: "
-							+ thisPk2 + ", " + rowPK2 + " [pk3:" + thisPk3 + "," + rowPK3 +  "]");
+							+ thisPk2 + ", " + rowPK2 + " [pk3:" + thisPk3 + "," + rowPK3 +  "]"); // + ",[OK1TS: " 
+//							+ thisOk1TS + ", " + rowOK1TS + "]");
 					this.log.debug("[ok: " + thisOk1.equals(rowOK1) + "], [pk1: " + (thisPk1.equals(rowPK1)) + "], "
 							+ "[pk2: " + (thisPk2.equals(rowPK2)) + "], "  +" [pk3: " + (thisPk3.equals(rowPK3)) + "] ");
+//							+ ",[ok1TS: " + (thisOk1TS.equals(rowOK1TS)));
 					// no need to check if column name is null
 					if ( (thisPk1.equals(rowPK1)) && (thisPk2.equals(rowPK2)) && (thisPk3.equals(rowPK3)) && (thisOk1.equals(rowOK1))  )
 					{
@@ -851,10 +853,10 @@ public class ExtractDBStep extends StepManager {
 			 * Check to see if this row was in the previous run's ok-dtl
 			 * list.  If so, we'll skip it.
 			 */
-			boolean skipThisRow = false;
-			skipThisRow=isRowInPreviousRunOkDtl(currentRowRecordset);
+//			boolean skipThisRow = false;
+//			skipThisRow=isRowInPreviousRunOkDtl(currentRowRecordset);
 			
-			if (!skipThisRow) {
+//			if (!skipThisRow) {
 			
 				// Add this row to dataPageOut, to be sent to the next step
 				List<Object> rowdata = new ArrayList<Object>();
@@ -890,7 +892,7 @@ public class ExtractDBStep extends StepManager {
 						this.OK1AtEndOfCurrentPage = this.convertDateFieldToString(currentRowRecordset, "OK1");
 					}
 				}
-			}
+//			}
 		}
 		catch (Exception e) {
 			throw e;
@@ -976,12 +978,13 @@ public class ExtractDBStep extends StepManager {
 	private String convertDateFieldToString(ResultSet resultset, String columnName) throws Exception {
 		String newDs;
 		try {
-			SimpleDateFormat incomingDateFormat  = new SimpleDateFormat("y-MM-d HH:mm:ss.S");
+//			SimpleDateFormat incomingDateFormat  = new SimpleDateFormat("y-MM-d H:mm:ss.S");
 			SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y H:mm:ss");
 			String ds = resultset.getString(columnName);
-			Date dt = incomingDateFormat.parse(ds);
+//			Date dt = incomingDateFormat.parse(ds);
+			Timestamp dt = resultset.getTimestamp(columnName);
 			newDs = outgoingDateFormat.format(dt);
-		} catch (ParseException e) {
+		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			this.log.error(e.getMessage(), e);
 			throw e;
