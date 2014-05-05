@@ -63,6 +63,7 @@ public class ExtractDBStep extends StepManager {
 	private String OK1AtEndOfCurrentPage = new String();
 	private int currentRowNum = 0;
 	private int rowsIncludedInJob = 0;
+	private int rowsInPreviousJobOutput = 0;
 	public Logger log = null;
 	private Connection dbConnection = null;
 	private Statement statement = null;
@@ -230,10 +231,12 @@ public class ExtractDBStep extends StepManager {
 						previousRunMaxOk1 = initialRunLogDtl.getMaxOk1();
 						previousRunMaxOk1 = this.convertDateStringToAnotherDateString(previousRunMaxOk1, "MM/d/yy H:mm:ss", "MM/dd/yyyy H:mm:ss");
 						totalRows = initialRunLogDtl.getExtractMaxRecs().intValue();
+						this.rowsInPreviousJobOutput = initialRunLogDtl.getNumRecords().intValue();
 						previousRunExtractSql = initialRunLogDtl.getExtractSql();
 					}
 					else if (initialRunLogDtl.getStepType().equals("CSV")) {
 						previousRunMaxRecPerFile = initialRunLogDtl.getExtractMaxRecsPerFile().intValue();
+						
 					}
 				}
 	
@@ -446,7 +449,7 @@ public class ExtractDBStep extends StepManager {
 							isPageDataAlmostComplete=true;
 						}
 						
-						// todo: Set isPageDataComplete
+						// Set isPageDataComplete
 						if (isPageDataAlmostComplete && !isPageDataComplete) {
 							boolean pk1IsTheSame = currentRowPK1Value.equals(PK1AtEndOfCurrentPage);
 							boolean pk1IsBlank = StringUtils.isBlank(PK1AtEndOfCurrentPage);
@@ -486,6 +489,20 @@ public class ExtractDBStep extends StepManager {
 							PK1AtEndOfCurrentPage = this.rs.getString("PK1");
 							OK1AtEndOfCurrentPage = this.convertDateFieldToString(this.rs, "OK1");
 							log.debug("queryExhausted = true");
+						}
+						
+						// If this is a rerun, and we've reached the number of output row from
+						// the original run, then make this the last row
+						if (this.job_manager.batch_manager.batchMode==VBatchManager.BatchMode_Repeat
+								&& rowsIncludedInJob == this.rowsInPreviousJobOutput) {
+							isPageDataAlmostComplete=false;
+							isPageDataComplete=true;
+							isRecordsetAlmostComplete=false;
+							isRecordsetComplete=true;
+							PK1AtEndOfCurrentPage = this.rs.getString("PK1");
+							isLastRecord=true;
+							OK1AtEndOfCurrentPage = this.convertDateFieldToString(this.rs, "OK1");
+							log.debug("Batch re-run row-count has reach the total rows of the original run.");
 						}
 						
 						
