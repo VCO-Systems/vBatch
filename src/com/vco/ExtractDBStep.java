@@ -136,6 +136,7 @@ public class ExtractDBStep extends StepManager {
 			            } 
 			            else { 
 			                this.ok1ColName = colname.trim(); 
+			                log.debug("OK1 column name: " + this.ok1ColName);
 			                break;
 			            }
 			        }
@@ -154,6 +155,7 @@ public class ExtractDBStep extends StepManager {
 			            } 
 			            else { 
 			                this.pk1ColName = colname.trim(); 
+			                log.debug("PK1 column name: " + this.pk1ColName);
 			                break;
 			            } 
 			        }
@@ -172,6 +174,7 @@ public class ExtractDBStep extends StepManager {
 			            } 
 			            else { 
 			                this.pk2ColName = colname.trim(); 
+			                log.debug("PK2 column name: " + this.pk2ColName);
 			                break;
 			            } 
 			        }
@@ -190,6 +193,7 @@ public class ExtractDBStep extends StepManager {
 			            } 
 			            else { 
 			                this.pk3ColName = colname.trim(); 
+			                log.debug("PK3 column name: " + this.pk3ColName);
 			                break;
 			            } 
 			        }
@@ -268,9 +272,10 @@ public class ExtractDBStep extends StepManager {
 				// replace the SQL TOKEN(s) ( /* where */ )
 				int sqlTokensReplaced =  this.replaceSqlToken(this.raw_sql, whereClause); 
 				// Run the query
-//				this.sqlQuery(this.raw_sql, totalRows+100);
+				
 				log.info("Rewritten query: " + this.raw_sql);
-				this.sqlQuery(this.raw_sql, totalRows);
+//				this.sqlQuery(this.raw_sql, totalRows);
+				this.sqlQuery(this.raw_sql, totalRows+100);
 				
 			}
 			
@@ -345,8 +350,8 @@ public class ExtractDBStep extends StepManager {
 				int rowCount = 0;
 	
 				log.info("Rewritten query: " + this.raw_sql);
-//				this.sqlQuery(this.raw_sql, totalRows+100);
-				this.sqlQuery(this.raw_sql, totalRows);
+				this.sqlQuery(this.raw_sql, totalRows+100);
+//				this.sqlQuery(this.raw_sql, totalRows);
 			}
 			
 			// If available, store ok-dtls from previous job in this.previousJobOkDtls
@@ -935,7 +940,7 @@ public class ExtractDBStep extends StepManager {
 		}
 		// Replace all /* where */ tokens with the startClause
 		if (whereTokenCount > 0 ) {
-			this.raw_sql = raw_sql.replaceAll("/\\* where \\*/", " AND " + tokenReplacement);
+			this.raw_sql = raw_sql.replaceAll("/\\* where \\*/", " AND " + tokenReplacement + " ");
 			tokensReplaced++;
 		}
 		else {

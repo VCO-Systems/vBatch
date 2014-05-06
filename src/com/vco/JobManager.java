@@ -134,7 +134,7 @@ public class JobManager {
 			if (!breakOutOfThisJob) {
 				// Load this job's steps xref entries
 				String queryString = "SELECT a FROM JobStepsXref a " +
-		                "WHERE a.jobDefinition = :jid";	
+		                "WHERE a.jobDefinition = :jid order by a.jobStepSeq";	
 				Query query = this.db.createQuery(queryString);
 				query.setParameter("jid", this.job_definition);
 				List<JobStepsXref> step_xrefs = query.getResultList();
