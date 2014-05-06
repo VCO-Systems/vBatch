@@ -1,4 +1,5 @@
 *.class
+output/*
 output/*.csv
 output/*.trg
 output/*.tmp
@@ -6,3 +7,4 @@ build/staging/*
 build/classes
 build/*.zip
 logs/*
+deploy/*
