@@ -703,7 +703,7 @@ public class ExtractDBStep extends StepManager {
 		raw_sql = raw_sql.trim();
 		// Remove trailing semicolon which is valid sql but confuses jdbc sometimes
 		if (raw_sql.endsWith(";")){
-			raw_sql.substring(0, raw_sql.length()-1);
+			raw_sql = raw_sql.substring(0, raw_sql.length()-1);
 		}
 		return raw_sql;
 	}
