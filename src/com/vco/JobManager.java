@@ -216,15 +216,15 @@ public class JobManager {
 	
 	/**
 	 * Receive a page of data from a step, pass it on to the next step.
+	 * @throws Exception 
 	 */
 	
-	public void submitPageOfData(List pageOfData, StepManager originatingStep) {
+	public void submitPageOfData(List pageOfData, StepManager originatingStep) throws Exception {
 		// Find the next step, since that's where the data needs to be sent
 		int nextStepId = this.stepManagers.indexOf(originatingStep) + 1;
 		StepManager targetStep = (StepManager) this.stepManagers.get(nextStepId);
 //		System.out.println("\t[JobManager] Sending page of data to step: " + targetStep.step_record.getLongDesc());
 		targetStep.processPageOfData(pageOfData);
-		
 	}
 	
 	/**

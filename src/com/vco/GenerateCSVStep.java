@@ -174,7 +174,7 @@ public class GenerateCSVStep extends StepManager {
 	}
 	
 	@Override
-	public boolean processPageOfData(List<Object> pageOfData) {
+	public boolean processPageOfData(List<Object> pageOfData) throws Exception {
 		// If this is the first page of data we've received,
 		// and log the start of the job
 		if (!this.running) {
@@ -211,7 +211,7 @@ public class GenerateCSVStep extends StepManager {
 			String newFilename = this.currentOutputFilename.substring(0,pos) + this.currentOutputFilename.substring(pos).replaceFirst(".tmp", ".csv");
 			
 			// Rename the .tmp to .csv
-			renameTMPToCSV();
+			
 			log.info("Generated CSV file: " + newFilename 
 					+ " (" + this.totalRowsThisFile + " rows)");
 			// Close the output file
@@ -226,6 +226,7 @@ public class GenerateCSVStep extends StepManager {
 		}
 		catch( Exception e) {
 			e.printStackTrace();
+			throw e;
 		}
 		finally {
 			
@@ -237,25 +238,24 @@ public class GenerateCSVStep extends StepManager {
 	/**
 	 * 
 	 */
-	private boolean renameTMPToCSV() {
+	private boolean renameTMPToCSV() throws Exception {
+		
+		boolean success = false;
 		int pos = this.currentOutputFilename.length()-5;
 		String newFilename = this.currentOutputFilename.substring(0,pos) + this.currentOutputFilename.substring(pos).replaceFirst(".tmp", ".csv");
 		// Open the tmp file
 		File tmpFile = new File("output/" + this.currentOutputFilename);
 		File csvFile = new File("output/" + newFilename);
 		// Make sure the csv file doesn't already exist
-		if (csvFile.exists())
-			try {
-				throw new java.io.IOException("Cannot rename .tmp to .csv (file already exists): " + this.currentOutputFilename);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		boolean success = tmpFile.renameTo(csvFile);
+		csvFile.delete();
 		
+		success = tmpFile.renameTo(csvFile);
+		this.log.debug("Renamed .tmp file to: " + newFilename + " (" + success + ")");
 		// Update this filename in this.alternateOutputData as well,
 		// since that will be sent to the trg step
 		this.alternateOutputData.set(0,	this.alternateOutputData.get(0).replace(".tmp", ".csv"));
+		
+		
 		
 		return success;
 		
@@ -266,7 +266,7 @@ public class GenerateCSVStep extends StepManager {
 	 * in batch_log_file_output table.
 	 * @throws IOException
 	 */
-	private void closeCurrentOutputFile() throws IOException {
+	private void closeCurrentOutputFile() throws Exception {
 		// rows
 		Long rows = this.totalRowsThisFile;
 		
@@ -290,6 +290,8 @@ public class GenerateCSVStep extends StepManager {
 		log_entry.setCreateDt(this.startingDateTime);
 		this.job_manager.db.persist(log_entry);
 //		this.job_manager.db.getTransaction().commit();
+		
+		renameTMPToCSV();
 		
 		
 	}

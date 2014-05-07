@@ -40,7 +40,8 @@ public class StepManager implements IStepManager {
 	}
 
 	@Override
-	public boolean processPageOfData(List<Object> pageOfData) {
+	public boolean processPageOfData(List<Object> pageOfData) throws Exception
+	{
 		// TODO Auto-generated method stub
 		return false;
 	}
