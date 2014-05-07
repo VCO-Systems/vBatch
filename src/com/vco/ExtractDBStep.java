@@ -127,8 +127,8 @@ public class ExtractDBStep extends StepManager {
 			this.ok1ColName = null;
 			for (String token : raw_sql.toLowerCase().split(",")) {
 			    //Exs of tokens are "select OK1" and "F37 from (select ptt.create_date_time as OK1"
-			    if ((this.ok1ColName == null) && token.endsWith("ok1")) {
-			        String[] reversedTokens = token.split(" ");
+			    if ((this.ok1ColName == null) && token.trim().endsWith("ok1")) {
+			        String[] reversedTokens = token.trim().split(" ");
 			        Collections.reverse(Arrays.asList(reversedTokens));
 			        for (String colname : reversedTokens) {
 			            if (colname.trim().equalsIgnoreCase("ok1") || colname.trim().equalsIgnoreCase("as") || colname.trim().equals("") || colname.trim().equals("select")) { 
@@ -146,8 +146,8 @@ public class ExtractDBStep extends StepManager {
 			// Look up original column name for PK1
 			this.pk1ColName = null;
 			for (String token : raw_sql.toLowerCase().split(",")) {
-			    if ((this.pk1ColName == null) && token.endsWith("pk1")) {
-			    	String[] reversedPK1Tokens = token.split(" ");
+			    if ((this.pk1ColName == null) && token.trim().endsWith("pk1")) {
+			    	String[] reversedPK1Tokens = token.trim().split(" ");
 			    	Collections.reverse(Arrays.asList(reversedPK1Tokens));
 			        for (String colname : reversedPK1Tokens) { 
 			            if (colname.trim().equalsIgnoreCase("pk1") || colname.trim().equalsIgnoreCase("select") || colname.trim().equalsIgnoreCase("as") || colname.trim().equals("")) { 
@@ -165,8 +165,8 @@ public class ExtractDBStep extends StepManager {
 			// Look up original column name for PK1
 			this.pk2ColName = null;
 			for (String token : raw_sql.toLowerCase().split(",")) {
-			    if ((this.pk2ColName == null) && token.endsWith("pk2")) {
-			    	String[] reversedPK2Tokens = token.split(" ");
+			    if ((this.pk2ColName == null) && token.trim().endsWith("pk2")) {
+			    	String[] reversedPK2Tokens = token.trim().split(" ");
 			    	Collections.reverse(Arrays.asList(reversedPK2Tokens));
 			        for (String colname : reversedPK2Tokens) { 
 			            if (colname.trim().equalsIgnoreCase("pk2") || colname.trim().equalsIgnoreCase("select") || colname.trim().equalsIgnoreCase("as") || colname.trim().equals("")) { 
@@ -184,8 +184,8 @@ public class ExtractDBStep extends StepManager {
 			// Look up original column name for PK1
 			this.pk3ColName = null;
 			for (String token : raw_sql.toLowerCase().split(",")) {
-			    if ((this.pk3ColName == null) && token.endsWith("pk3")) {
-			    	String[] reversedPK3Tokens = token.split(" ");
+			    if ((this.pk3ColName == null) && token.trim().endsWith("pk3")) {
+			    	String[] reversedPK3Tokens = token.trim().split(" ");
 			    	Collections.reverse(Arrays.asList(reversedPK3Tokens));
 			        for (String colname : reversedPK3Tokens) { 
 			            if (colname.trim().equalsIgnoreCase("pk3") || colname.trim().equalsIgnoreCase("select") || colname.trim().equalsIgnoreCase("as") || colname.trim().equals("")) { 
