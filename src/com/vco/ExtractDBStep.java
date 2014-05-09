@@ -236,6 +236,7 @@ public class ExtractDBStep extends StepManager {
 						previousRunMaxOk1 = this.convertDateStringToAnotherDateString(previousRunMaxOk1, "MM/d/yy H:mm:ss", "MM/dd/yyyy H:mm:ss");
 						totalRows = initialRunLogDtl.getExtractMaxRecs().intValue();
 						this.rowsInPreviousJobOutput = initialRunLogDtl.getNumRecords().intValue();
+						log.debug("Rows in previous job: " + rowsInPreviousJobOutput);
 						previousRunExtractSql = initialRunLogDtl.getExtractSql();
 					}
 					else if (initialRunLogDtl.getStepType().equals("CSV")) {
@@ -422,6 +423,7 @@ public class ExtractDBStep extends StepManager {
 						String debugMsg1 = "Evaluating row # " + this.currentRowNum;
 						debugMsg1 += ", OK1 [" + currentRowOK1Value + "]";
 						debugMsg1 += ", PK1 [" + currentRowPK1Value + "]";
+						
 						if (this.pk2ColName != null && !(this.pk2ColName.isEmpty())) {
 							debugMsg1 += ", PK2 [" + currentRowPK2Value + "]";
 						}
@@ -433,7 +435,7 @@ public class ExtractDBStep extends StepManager {
 						 *  completely skip processing this row.
 						 */
 						
-						if (isRowInPreviousRunOkDtl(this.rs)) {
+						if (this.job_manager.batchMode==VBatchManager.BatchMode_New && isRowInPreviousRunOkDtl(this.rs)) {
 							skipThisRecord=true;
 						}
 						else {
@@ -465,21 +467,35 @@ public class ExtractDBStep extends StepManager {
 						}
 						
 						// todo: Set isRecordsetAlmostComplete
-						if (rowsIncludedInJob > totalRows) {
-							// For a re-run, we always stop when we reach totalRows
-							if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_Repeat) {
+						if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_Repeat) {
+							if (rowsIncludedInJob > this.rowsInPreviousJobOutput) {
 								isRecordsetAlmostComplete=false;
 								isRecordsetComplete = true;
 							}
-							else {
+						}
+						else if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_New) {
+							if (rowsIncludedInJob > totalRows) {
 								isRecordsetAlmostComplete=true;
 								if (isPageDataComplete) {
 									isRecordsetComplete=true;
 								}
 							}
-							
-								
 						}
+//						if (rowsIncludedInJob > totalRows) {
+//							// For a re-run, we always stop when we reach totalRows
+//							if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_Repeat) {
+//								isRecordsetAlmostComplete=false;
+//								isRecordsetComplete = true;
+//							}
+//							else {
+//								isRecordsetAlmostComplete=true;
+//								if (isPageDataComplete) {
+//									isRecordsetComplete=true;
+//								}
+//							}
+//							
+//								
+//						}
 						
 						// In addition to the above checks, if we're at the end of the recordset,
 						// force the "is..Complete" flags true so all data gets written
@@ -558,7 +574,7 @@ public class ExtractDBStep extends StepManager {
 								// previous pages
 								if (isRecordsetComplete) {
 									TypedQuery<BatchLogOkDtl> qryJobOkDtl = this.job_manager.db.createNamedQuery("BatchLogOkDtl.findByBatchLogId", BatchLogOkDtl.class);
-									qryJobOkDtl.setParameter("batchLogId", this.job_manager.batch_log);	  
+									qryJobOkDtl.setParameter("batchLogId", this.job_manager.batch_log);
 									List<BatchLogOkDtl> lstOkDtl = qryJobOkDtl.getResultList();
 									for (BatchLogOkDtl oldDtl : lstOkDtl) {
 										this.job_manager.db.remove(oldDtl);
