@@ -91,7 +91,7 @@ done
 if [ "$proceedWithJob" == false ]; then
     echo "*** Job not scheduled ***"
 else
-    java -jar vBatch.jar $@
+    java -jar vbatch.jar $@
     echo "Job $currJobIDs scheduled successfully!"
 fi
 
