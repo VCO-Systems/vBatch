@@ -14,7 +14,7 @@ IFS=" "
 echo "Starting vBatch process at $(date)"
 
 for eachArgument in $allParameters; do
-    case `echo $eachArgument | cut -d '-' -f 2` i 
+    case `echo $eachArgument | cut -d '-' -f 2` in
     
     j)
         jArgs=${allParameters/*-j/}
@@ -27,8 +27,8 @@ for eachArgument in $allParameters; do
         echo "Job IDs: $jobs"
         ;;
 
-    d)  
-                dArgs=${allParameters/*-d/}
+    db) 
+                dArgs=${allParameters/*-db/}
 
                 for eachArg in $dArgs; do
                         dbConfig="$eachArg"
@@ -91,8 +91,8 @@ done
 if [ "$proceedWithJob" == false ]; then
     echo "*** Job not scheduled ***"
 else
+    java -jar vBatch.jar $@
     echo "Job $currJobIDs scheduled successfully!"
-    java -jar vbatch.jar "$@"
 fi
 
 #Reset IFS back to the original value
