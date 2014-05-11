@@ -100,7 +100,6 @@ public class ExtractDBStep extends StepManager {
 			// Get the raw sql to run
 			this.raw_sql = this.jobStepXref.getStep().getExtractSql();
 			String whereClause = new String();
-			int commit_freq = this.jobStepXref.getStep().getExtractCommitFreq().intValue();
 			
 			// For an extract run, these values must be set
 			String previousRunPK1, previousRunExtractSql;
@@ -341,18 +340,9 @@ public class ExtractDBStep extends StepManager {
 				else {
 					totalRows = this.max_rec;
 				}
-				
-				/**
-				 * 
-				 */
-				
-				// lastOk1 = '07-May-2013 07:15:21'
-				int endRowsToSkip = 0;
-				int rowCount = 0;
 	
 				log.info("Rewritten query: " + this.raw_sql);
 				this.sqlQuery(this.raw_sql, totalRows+100);
-//				this.sqlQuery(this.raw_sql, totalRows);
 			}
 			
 			// If available, store ok-dtls from previous job in this.previousJobOkDtls
@@ -395,8 +385,10 @@ public class ExtractDBStep extends StepManager {
 				boolean isPageDataComplete        =false;
 				boolean isRecordsetAlmostComplete =false;
 				boolean isRecordsetComplete       =false;
-				boolean foundRecordThatEndPage    =false;
-				boolean skipThisRecord            =false;
+				boolean skipThisRecord            =false; //To skip records when it exists in previous batch run OK_DTL table
+				
+				this.currentRowNum = 0;
+				this.rowsIncludedInJob = 0;
 				
 				if (recordsetHasItems) {
 					// Process the records in this recordset
@@ -435,11 +427,11 @@ public class ExtractDBStep extends StepManager {
 						 *  completely skip processing this row.
 						 */
 						
-						if (this.job_manager.batchMode==VBatchManager.BatchMode_New && isRowInPreviousRunOkDtl(this.rs)) {
+						if (isRowInPreviousRunOkDtl(this.rs)) {
 							skipThisRecord=true;
 						}
 						else {
-							this.rowsIncludedInJob++;  // Note: rownum starts at 1
+							this.rowsIncludedInJob++;
 						}
 						/** Set flags that determine how to handle this row **/
 						
@@ -462,7 +454,7 @@ public class ExtractDBStep extends StepManager {
 							boolean pk1IsBlank = StringUtils.isBlank(PK1AtEndOfCurrentPage);
 							if ( !(pk1IsTheSame) && !(pk1IsBlank)) {
 								isPageDataComplete=true;
-								isPageDataAlmostComplete=false;  // reset until next time we hit commit_freq
+								isPageDataAlmostComplete=false;
 							}
 						}
 						
@@ -558,7 +550,7 @@ public class ExtractDBStep extends StepManager {
 								// todo: Mark job started
 								
 								// todo: Start step log_dtl, if not started
-								if (isRecordsetComplete) {
+								if (isRecordsetComplete && isLastRecord) {
 									this.log_dtl.setMaxOk1(currentRowOK1Value);
 									this.log_dtl.setNumRecords(new Long(this.rowsIncludedInJob));
 									this.log.debug("End of recordset.");
@@ -658,13 +650,21 @@ public class ExtractDBStep extends StepManager {
 									this.dataPageOut = new ArrayList<Object>();
 								}
 								// Update the log_dtl record for this step to show it's completed
-								this.log_dtl.setMaxOk1(currentRowOK1Value);
+								
 								this.log_dtl.setEndDt(new Date());
 								this.log_dtl.setStatus(BatchLog.statusComplete);
-								if (!isLastRecord) {
-									this.rowsIncludedInJob--;
+								
+								
+								if (isLastRecord) {
+									this.log_dtl.setMaxOk1(currentRowOK1Value);
+									this.log_dtl.setNumRecords(new Long(this.rowsIncludedInJob));
 								}
-								this.log_dtl.setNumRecords(new Long(this.rowsIncludedInJob));
+								else {
+									this.log_dtl.setMaxOk1(previousRowOK1Value);
+									this.log_dtl.setNumRecords(new Long(this.rowsIncludedInJob-1));
+								}
+								
+								
 								this.job_manager.db.persist(this.log_dtl);
 								// todo: break out of recordset while
 								endOfRecordset=true;
@@ -744,7 +744,6 @@ public class ExtractDBStep extends StepManager {
 				Long rowPK2 = 0L;
 				Long rowPK3 = 0L;
 				String rowOK1 = this.convertDateFieldToString(currentResultSet, "OK1");
-				Timestamp rowOK1TS = currentResultSet.getTimestamp("OK1");
 				
 				if (currentResultSet.getString("PK1").isEmpty()) { 
 					throw new VBatchException("PK1 value cannot be empty");
@@ -777,15 +776,14 @@ public class ExtractDBStep extends StepManager {
 					if ( (this.pk3ColName!=null && !(this.pk3ColName.isEmpty())  ) && okDtlEntry.getPk3() != null) {
 						thisPk3 = okDtlEntry.getPk3();
 					}
-//					String thisOk1 = this.convertDateStringToAnotherDateString(okDtlEntry.getOk1()  "y-MM-d HH:mm:ss.S", "MM/d/y H:mm:ss");
 					String thisOk1 = new SimpleDateFormat("MM/d/y H:mm:ss").format(okDtlEntry.getOk1()); 
-//					Timestamp thisOk1TS = (Timestamp)okDtlEntry.getOk1();
+					
+					//Logging
 					this.log.debug("[ok1:" + thisOk1 + "," + rowOK1 + "] [pk1:" + thisPk1 + ", " + rowPK1 + "] [pk2: "
 							+ thisPk2 + ", " + rowPK2 + " [pk3:" + thisPk3 + "," + rowPK3 +  "]"); // + ",[OK1TS: " 
-//							+ thisOk1TS + ", " + rowOK1TS + "]");
 					this.log.debug("[ok: " + thisOk1.equals(rowOK1) + "], [pk1: " + (thisPk1.equals(rowPK1)) + "], "
 							+ "[pk2: " + (thisPk2.equals(rowPK2)) + "], "  +" [pk3: " + (thisPk3.equals(rowPK3)) + "] ");
-//							+ ",[ok1TS: " + (thisOk1TS.equals(rowOK1TS)));
+					
 					// no need to check if column name is null
 					if ( (thisPk1.equals(rowPK1)) && (thisPk2.equals(rowPK2)) && (thisPk3.equals(rowPK3)) && (thisOk1.equals(rowOK1))  )
 					{
@@ -1016,10 +1014,7 @@ public class ExtractDBStep extends StepManager {
 	private String convertDateFieldToString(ResultSet resultset, String columnName) throws Exception {
 		String newDs;
 		try {
-//			SimpleDateFormat incomingDateFormat  = new SimpleDateFormat("y-MM-d H:mm:ss.S");
 			SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y H:mm:ss");
-			String ds = resultset.getString(columnName);
-//			Date dt = incomingDateFormat.parse(ds);
 			Timestamp dt = resultset.getTimestamp(columnName);
 			newDs = outgoingDateFormat.format(dt);
 		} catch (Exception e) {

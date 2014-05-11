@@ -40,7 +40,9 @@ for eachArgument in $allParameters; do
         ;;
 
     b)
-        echo "Re-batch not supported yet."
+        java -jar vbatch.jar $@
+        IFS=$OIFS
+        exit 1
         ;;
     esac
 done
