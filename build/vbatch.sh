@@ -3,6 +3,7 @@
 
 # initialize vars
 abort_job=false
+PROBLEMS=()
 
 #Save the default IFS into a variable
 OIFS=$IFS
@@ -77,11 +78,13 @@ for eachProcess in $psCommandOutput; do
     done
 
     IFS=","
-
+    
     for eachPrevJob in $prevJobIDs; do
             for eachCurrJob in $currJobIDs; do
                     if [ "$eachCurrJob" == "$eachPrevJob" ]; then
-                            echo "Job $eachPrevJob is already running, cannot schedule this job!"
+                            prob="Job $eachPrevJob is already running."
+                            echo $prob
+                            PROBLEMS="${PROBLEMS[@]} $prob"
                             proceedWithJob=false
                     fi
             done
@@ -89,10 +92,19 @@ for eachProcess in $psCommandOutput; do
 done
 
 if [ "$proceedWithJob" == false ]; then
+    FNAME_DATE=$(date +"d%Y%m%d_t%H%M%S")
+    LOG_ENTRY_DATE=$(date +"%H-%M-%S - %H:%M:%S")
+    log_contents=()
+    FNAME="logs/vbatch_fatal_$FNAME_DATE.log"
     echo "*** Job not scheduled ***"
+    for probl in $PROBLEMS; do
+        msg="$LOG_ENTRY_DATE - vBatch - $probl"
+        log_contents="${log_contents[@]} $msg" 
+    done
+    echo "$log_contents" > $FNAME
+    
 else
     java -jar vbatch.jar $@
-    echo "Job $currJobIDs scheduled successfully!"
 fi
 
 #Reset IFS back to the original value
