@@ -210,13 +210,10 @@ public class GenerateCSVStep extends StepManager {
 			int pos = this.currentOutputFilename.length()-5;
 			String newFilename = this.currentOutputFilename.substring(0,pos) + this.currentOutputFilename.substring(pos).replaceFirst(".tmp", ".csv");
 			
-			// Rename the .tmp to .csv
-			
 			log.info("Generated CSV file: " + newFilename 
 					+ " (" + this.totalRowsThisFile + " rows)");
 			// Close the output file
 			closeCurrentOutputFile();
-			
 			
 			// Send the .tmp file to GenerateTRGStep
 			this.job_manager.submitPageOfData(this.alternateOutputData, this);
@@ -254,7 +251,7 @@ public class GenerateCSVStep extends StepManager {
 		// Update this filename in this.alternateOutputData as well,
 		// since that will be sent to the trg step
 		this.alternateOutputData.set(0,	this.alternateOutputData.get(0).replace(".tmp", ".csv"));
-		
+		this.currentOutputFilename = "output/" + newFilename;
 		
 		
 		return success;
@@ -277,22 +274,18 @@ public class GenerateCSVStep extends StepManager {
 			this.currentOutputFile = null;
 		}
 		
-		
+		// Rename .tmp file to .csv
+		renameTMPToCSV();
 		// Update counters
 		this.totalRowsThisFile=0L;
 		
 		// Create new entry in batch_log_file_output log table for this file
-//		this.job_manager.db.getTransaction().begin();
 		BatchLogFileOutput log_entry = new BatchLogFileOutput();
 		log_entry.setBatchLog(this.job_manager.batch_log);
-		log_entry.setFilename(this.alternateOutputData.get(this.alternateOutputData.size()-1));
+		log_entry.setFilename(this.currentOutputFilename);
 		log_entry.setNumRecords(rows);
 		log_entry.setCreateDt(this.startingDateTime);
 		this.job_manager.db.persist(log_entry);
-//		this.job_manager.db.getTransaction().commit();
-		
-		renameTMPToCSV();
-		
 		
 	}
 	
@@ -312,6 +305,7 @@ public class GenerateCSVStep extends StepManager {
 			
 			newFileName = newFileName.replace("{dt}", this.startingDateTimeStr);
 			newFileName = newFileName.replace("{seq}", Integer.toString(this.totalFilesGenerated));
+		
 			newFileName = newFileName.replace("{batch_num}",  this.job_manager.batch_log.getBatchNum().toString());
 			
 			
