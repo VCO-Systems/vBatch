@@ -42,7 +42,7 @@ for eachArgument in $allParameters; do
     b)
         java -jar vbatch.jar $@
         IFS=$OIFS
-        exit 1
+        exit
         ;;
     esac
 done
