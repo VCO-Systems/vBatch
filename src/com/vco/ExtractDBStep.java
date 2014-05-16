@@ -604,7 +604,7 @@ public class ExtractDBStep extends StepManager {
 								
 								while (it.hasPrevious()) {
 							    	BatchLogOkDtl tempOkDtl = it.previous();
-							    	String rowOK1 = new SimpleDateFormat("MM/d/y H:mm:ss").format(tempOkDtl.getOk1());  
+							    	String rowOK1 = new SimpleDateFormat("MM/dd/yyyy H:mm:ss").format(tempOkDtl.getOk1());  
 //							    			outgoingDateFormat.format(tempOkDtl.getOk1());
 							    	// Get the PK1 to compare this row's pk1 against,
 							    	// to see if it has changed
@@ -805,7 +805,7 @@ public class ExtractDBStep extends StepManager {
 					if ( (this.pk3ColName!=null && !(this.pk3ColName.isEmpty())  ) && okDtlEntry.getPk3() != null) {
 						thisPk3 = okDtlEntry.getPk3();
 					}
-					String thisOk1 = new SimpleDateFormat("MM/d/y H:mm:ss").format(okDtlEntry.getOk1()); 
+					String thisOk1 = new SimpleDateFormat("MM/dd/yyyy H:mm:ss").format(okDtlEntry.getOk1()); 
 					
 					// DEBUG Logging
 					this.log.debug("[ok1:" + thisOk1 + "," + rowOK1 + "] [pk1:" + thisPk1 + ", " + rowPK1 + "] [pk2: "
@@ -870,7 +870,7 @@ public class ExtractDBStep extends StepManager {
 				for (BatchLogOkDtl okDtlEntry : this.tempOkDtlList) {
 					/** Get the OK/PK values from this ok-dtl entry **/
 //					String thisOk1 = this.convertDateStringToAnotherDateString(okDtlEntry.getOk1().toString(), "y-MM-d HH:mm:ss.S", "MM/d/y H:mm:ss");
-					String thisOk1 = new SimpleDateFormat("MM/d/y H:mm:ss").format(okDtlEntry.getOk1()); 
+					String thisOk1 = new SimpleDateFormat("MM/dd/yyyy H:mm:ss").format(okDtlEntry.getOk1()); 
 					Long thisPk1=0L, thisPk2=0L, thisPk3 = 0L;
 					thisPk1 = okDtlEntry.getPk1();
 					if ((this.pk2ColName!=null&& !(this.pk2ColName.isEmpty())  ) && okDtlEntry.getPk2() != null) {
@@ -1050,7 +1050,7 @@ public class ExtractDBStep extends StepManager {
 	private String convertDateFieldToString(ResultSet resultset, String columnName) throws Exception {
 		String newDs;
 		try {
-			SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/d/y H:mm:ss");
+			SimpleDateFormat outgoingDateFormat = new SimpleDateFormat("MM/dd/yyyy H:mm:ss");
 			Timestamp dt = resultset.getTimestamp(columnName);
 			newDs = outgoingDateFormat.format(dt);
 		} catch (Exception e) {
