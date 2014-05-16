@@ -40,24 +40,28 @@ import java.text.SimpleDateFormat;
 
 public class JobManager {
 	
-	public VBatchManager batch_manager;
-	public JobDefinition job_definition;
-	public EntityManager db;
-	public long job_id;
-	public long batch_num;
-	public BatchLog batch_log;
-	private BatchLogDtl log_dtl;
+	public VBatchManager batch_manager;  // the Batch manager that initiated this job
+	public JobDefinition job_definition; // the job_definition record for this job
+	public EntityManager db;             // JPA object used to perform logging transactions
+	public long job_id;                  // The job id for this job
+	public long batch_num;               // The batch number for this job
+	public BatchLog batch_log;           // Log entry for this job in BATCH_LOG table
 	private List steps = new ArrayList<Step>();
-	private List stepManagers = new ArrayList<StepManager>();
+	private List stepManagers = new ArrayList<StepManager>();  // Managers for the steps of this job
 	private boolean atLeastOneStepFailed = false;
-	private int extract_max_rec_per_file = -1;
-	public static Logger log = null;
-	
+	private int extract_max_rec_per_file = -1;  // Max # of rows per CSV file
+	public static Logger log = null;     // Used to write log entries to the log file for this job
 	private Date start_time;
+	public String batchMode;             // New or Repeat job?
 	
-
-	public String batchMode;  // New or Repeat job?
-	
+	/**
+	 * JobManager is responsible for executing the steps of a job,
+	 * passing data between the steps, and handling any errors that
+	 * occur during execution of the job.
+	 * 
+	 * @param batch_manager
+	 * @param job_id
+	 */
 	public  JobManager(VBatchManager batch_manager, Integer job_id)  {
 		this.batch_manager = batch_manager;
 		this.db = batch_manager.em;
@@ -65,15 +69,19 @@ public class JobManager {
 		log = Logger.getLogger(this.batch_manager.vbatch_version);	
 	}
 	
-	
+	/**
+	 * Called once by VBatchManager to begin processing of the job.
+	 * @throws Exception
+	 */
 	public void init() throws Exception {
 		try {
 			this.start_time = new Date();
 			Boolean breakOutOfThisJob = false;
 			
-			/** Populate this.job_definition with the correct job def record**/
 			
-			// We're doing a new run by job id, so just look up the job def by job #
+			/** For a new run, look up the job_definition record, or (if not found)
+			 *  abort the job and log it.
+			 */
 			if (this.batchMode == VBatchManager.BatchMode_New) {  // new run by job id
 				
 				// Look up the job definition by JobDefinition.order_num (not id)
@@ -88,18 +96,15 @@ public class JobManager {
 					this.job_definition = lstMyJobDefs.get(0);
 				}
 				else if (lstMyJobDefs.size() == 0) { // Didn't find any matching job
-					// TODO: Report that no job with this id was found.  Abort job.
+					// Log that no job with this id was found.  Abort job.
 					log.error("Job # " + this.job_id + " not found.");
-	//				return;
-	//				System.out.println("Job # " + this.job_id + " not found.");
 					breakOutOfThisJob=true;
 				}
 				else if (lstMyJobDefs.size() > 1 ) {  // Found more than one matching job
-					// TODO:  Report that more than one job with this id has been defined,
-					// inform user that job will not run.  Abort job.
+					// More than one job with this id has been defined,
+					// so abort the job.
 					breakOutOfThisJob=true;
 				}
-	//			this.job_definition = this.db.find(JobDefinition.class, (Object)this.job_id);
 			}
 			// Here we're re-running a previous batch by batch num, so get the last run
 			// of this batch from the logs, and use its job_definition
@@ -112,13 +117,13 @@ public class JobManager {
 				List<BatchLog> lstBatches = qryPreviousBatch
 			    		.setParameter("batchNumber", this.job_id)
 			    		.getResultList();
-				if (lstBatches.size() > 0) {  // Found at least on prev run with this batch num
+				// Found at least on prev run with this batch num
+				if (lstBatches.size() > 0) {  
 					// The list is sorted most recent first.  Grab the most recent.
 					BatchLog prevRunOfThisBatch = lstBatches.get(0);
 					this.job_definition = prevRunOfThisBatch.getJobDefinition();
 				}
 				else if (lstBatches.size() == 0) {
-//					System.out.println("Could not find any previous runs for batch # " + this.job_id + ".  Aborting job.");
 					breakOutOfThisJob=true;
 					throw new VBatchException("Could not find any previous runs for batch # " + this.job_id + ".  Aborting job.");
 				}
@@ -196,26 +201,20 @@ public class JobManager {
 					
 				}
 				
-				// Once this Job has done its work, call complete() 
+				// Once this Job has done its work, call logComplete() 
 				// to make the appropriate log entries, etc
 				this.logComplete();
-				
 			}
-			else {
-				// TODO: Log: Error loading this job (job or steps missing)
-//				log.error(MessageFormat.format("Did not find job #: {0}", this.job_id));
-				
-			}
-			
-			
 		}
 		catch (Exception e) {
+			// Gracefully abort this job.
 			this.logFailed(e);
 		}
 	}
 	
 	/**
-	 * Receive a page of data from a step, pass it on to the next step.
+	 * Receive a pageOfData from a step, pass it on to originatingStep.
+	 * This is the primary mechanism used to pass data between steps.
 	 * @throws Exception 
 	 */
 	
@@ -223,7 +222,6 @@ public class JobManager {
 		// Find the next step, since that's where the data needs to be sent
 		int nextStepId = this.stepManagers.indexOf(originatingStep) + 1;
 		StepManager targetStep = (StepManager) this.stepManagers.get(nextStepId);
-//		System.out.println("\t[JobManager] Sending page of data to step: " + targetStep.step_record.getLongDesc());
 		targetStep.processPageOfData(pageOfData);
 	}
 	
@@ -233,8 +231,6 @@ public class JobManager {
 	public int getMaxRecPerFile() {
 		return this.extract_max_rec_per_file;
 	}
-	
-	
 	
 	/**
 	 * Log the start of this job to the batchLogDtl table
@@ -250,9 +246,6 @@ public class JobManager {
 			// If this is a new run for this job, set batch_num to batch_log_id,
 			// and batch_seq_nbr to 1
 			if (this.batchMode == VBatchManager.BatchMode_New) {
-	//					this.batch_log.setBatchNum(new BigDecimal(this.batch_log.getId()));
-				//tempBatchNum = new BigDecimal(this.job_id);
-				//this.batch_log.setBatchSeqNbr(new BigDecimal(1));
 				tempBatchSeqNbr = 1L;
 				VBatchManager.log.info(MessageFormat.format("Initiating new run for Job # {0}", ((int)this.job_id)));
 			}
@@ -318,25 +311,6 @@ public class JobManager {
 			
 			this.db.persist(this.batch_log);
 			this.db.getTransaction().commit();
-			
-			/* This Logging for BATCHLogDtl will be done for each Step
-			// Create the batch_log_dtl entry showing this job started
-			// TODO : This should really be logged in StepManager
-			this.db.getTransaction().begin();
-			this.log_dtl = new BatchLogDtl();
-			this.log_dtl.setBatchLog(this.batch_log);
-			String msg = "Starting batch " + this.batch_log.getBatchNum();
-			msg += ": " + this.job_definition.getLongDesc();
-			this.log_dtl.setLongDesc(logMsg);
-			this.log_dtl.setStartDt(new Date());
-			this.log_dtl.setStatus("Started");
-			//this.log_dtl.setJobStepsXrefJobStepSeq(this.job_definition.getJobStepsXrefs());
-			System.out.println("Batch " + this.batch_log.getBatchNum() + " started.");
-			
-			// Commit the batch_log_dtl entry
-			this.db.persist(this.log_dtl);
-			this.db.getTransaction().commit();
-			*/
 		}
 		catch(Exception e) {
 			this.logFailed(e);
@@ -345,7 +319,7 @@ public class JobManager {
 	
 	/**
 	 * The job has completed successfully.  make the appropriate log entries, 
-	 * and pass control back to VBatchManager.
+	 * and the control will be passed back to VBatchManager.
 	 */
 	public void logComplete() {
 		if (!(this.db.getTransaction().isActive())) {
@@ -356,16 +330,6 @@ public class JobManager {
 		this.batch_log.setEndDt(new Date());
 		this.batch_log.setStatus(BatchLog.statusComplete);
 		
-		// Show this job complete in the log_dtl table
-		// Create the batch_log_dtl entry showing this job started
-		//this.log_dtl = new BatchLogDtl();
-		/*
-		this.log_dtl.setBatchLog(this.batch_log);
-		this.log_dtl.setEndDt(new Date());
-		this.log_dtl.setStatus(BatchLog.statusComplete);
-		this.db.persist(this.log_dtl);
-		*/
-		
 		this.db.getTransaction().commit();
 		this.log.info("Job # " + this.job_id + " completed.");
 //		
@@ -373,6 +337,7 @@ public class JobManager {
 	
 	/**
 	 * Mark this job as failed.  Log appropriately.
+	 * 
 	 * @param e
 	 * @throws Exception 
 	 */
@@ -406,6 +371,11 @@ public class JobManager {
 	    throw e;
 	}
 	
+	/**
+	 * Returns the filename of the log4j file.
+	 * 
+	 * @return
+	 */
 	public String getJobLogFilename() {
 		String retval = "";
 		// Get the name of the log file where user can go for more details about error
@@ -418,26 +388,4 @@ public class JobManager {
 	    }
 	    return retval;
 	}
-	public static void main(String[] args) {
-		System.out.println("log4j testing");
-		//BasicConfigurator.resetConfiguration();//enough for configuring log4j
-		//BasicConfigurator.configure();
-	      
-        //Logger.getRootLogger().setLevel(Level.TRACE); //changing log level
-
-		System.setProperty("logfile","SAMPLE1.log");
-		VBatchManager.log = Logger.getLogger("vBatch v0.1");
-		
-		//PropertyConfigurator.configure("/tmp/log4j.properties");
-		VBatchManager.log.error("Critical message, almost fatal");
-		VBatchManager.log.warn("Warnings, which may lead to system impact");
-		VBatchManager.log.info("Information");
-		VBatchManager.log.debug("Debugging information ");
-		VBatchManager.log.debug(MessageFormat.format("TEST {0,number,long}, string {1}", 1,"Chris"));
-
-		//log.info("hello world!");
-		System.out.println ("log4j done");
-	}
-	
-	
 }

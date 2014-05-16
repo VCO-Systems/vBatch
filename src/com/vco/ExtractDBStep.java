@@ -65,12 +65,13 @@ public class ExtractDBStep extends StepManager {
 	private int rowsIncludedInJob = 0;
 	private int rowsInPreviousJobOutput = 0;
 	public Logger log = null;
+	// JDBC variables
 	private Connection dbConnection = null;
 	private Statement statement = null;
-	private ResultSet rs = null;
+	private ResultSet rs = null;  // JDBC results of raw query
 	
 	// Row-centric properties
-	String ok1ColName, pk1ColName, pk2ColName, pk3ColName;
+	String ok1ColName, pk1ColName, pk2ColName, pk3ColName;  // native column names for OK/PK column aliases
 	
 	public ExtractDBStep(JobManager jm, JobStepsXref jobStepXref) {
 		this.job_manager = jm;
@@ -101,7 +102,8 @@ public class ExtractDBStep extends StepManager {
 			this.raw_sql = this.jobStepXref.getStep().getExtractSql();
 			String whereClause = new String();
 			
-			// For an extract run, these values must be set
+			// For an extract run, these variables are used to keep track
+			// of settings from the previous run of this job
 			String previousRunPK1, previousRunExtractSql;
 			int previousRunMaxRec, previousRunMaxRecPerFile;
 			BatchLog previousRunBatchLogHdr = null;
@@ -120,9 +122,12 @@ public class ExtractDBStep extends StepManager {
 			
 			this.raw_sql = ExtractDBStep.cleanRawSql(this.raw_sql);
 			
-			/** Get column names for aliases:  OK1, PK1-3  */
+			/** For ok1 and pk1-3, we need to know the original, native column names
+			 *  for these aliased columns.  JDBC doesn't reliably give us this information
+			 *  in all cases, so we parse the raw sql for it instead.
+			 */
 			
-			// Look up original column name for OK1
+			
 			this.ok1ColName = null;
 			for (String token : raw_sql.toLowerCase().split(",")) {
 			    //Exs of tokens are "select OK1" and "F37 from (select ptt.create_date_time as OK1"
@@ -202,7 +207,8 @@ public class ExtractDBStep extends StepManager {
 			
 			if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_Repeat) {
 				
-				// The user called -b 123, where 123 is a batch_num.  Look up the first run
+				// vBatch was instantiated like this:  "vbatch -b 123" , where 123 
+				//is a batch_number.  Look up the first run
 				// for that batch Number (ie: with same batchNum, seqNbr=1)
 				
 				// get the initial run of this batch, and pull out the job config info we need
@@ -358,40 +364,54 @@ public class ExtractDBStep extends StepManager {
 			
 			// Vars for keeping track of ok/pk values for each row
 			
+			String previousRowOK1Value = new String();
 			String previousRowPK1Value = new String();
+			// As we load each row of the JDBC recordset,
+			// use these vars to keep track of the OK/PK values.
 			String currentRowPK1Value  = new String();
 			String currentRowPK2Value  = new String();
 			String currentRowPK3Value  = new String();
-			String previousRowOK1Value = new String();
 			String currentRowOK1Value  = new String();
-			String PK1AtEndOfCurrentPage = new String();
+			// As we hit isPageDataAlmostComplete, remember the PK1
+			// at this row so we can keep comparing each new row
+			// (rolling forward) until PK1 changes.
+			String PK1AtEndOfCurrentPage = new String(); 
 			
 			
-				// go back to beginning of recordset 
+				// Go back to beginning of jdbc recordset,
+			    // and return false if there are no records
 				boolean recordsetHasItems = this.rs.first();
 				
+				// From all valid OK/PK columns, prepare a list of the columns
+				// present in this raw query, because we need to make sure
+				// none of these columns are exported in the data
 				this.columnsToSkip = this.prepareSkipColumns(this.rs);
 				
-				// TODO:  Make sure our required columns are in the query:
-				// ok1, pk1 [pk2-pk3]
-				
-				// Todo:  Check which of the OK1 and PK1-3 columns are present in the query
-				
 				// Iterate over all the rows of the ResultSet
-				boolean endOfRecordset=false;
+				boolean endOfRecordset=false; 
 				boolean endOfPage = false;
 				
-				boolean isPageDataAlmostComplete  =false;
+				// This gets set each time we reach a multiple of extract_max_recs_per_page
+				boolean isPageDataAlmostComplete  =false;  
+				// After isPageDataAlmostComplete is true, roll forward until pk1 changes, then set this to true.
+				// This signals the Extract step to send page of data to the next step
 				boolean isPageDataComplete        =false;
+				// This gets set when rows processed reaches the max records for this job
 				boolean isRecordsetAlmostComplete =false;
+				// After isRecordsetAlmostComplete, this gets set to true once
+				// we run out of records, or reach end of job.  
 				boolean isRecordsetComplete       =false;
 				boolean skipThisRecord            =false; //To skip records when it exists in previous batch run OK_DTL table
 				
-				this.currentRowNum = 0;
+				// These two counters keep track of which row we're currently looking at
+				// Current row in recordset, regardless of whether it's exported or not
+				this.currentRowNum = 0; 
+				// Only get incremented for rows that are exported
 				this.rowsIncludedInJob = 0;
 				
+				// If there's at least one row, then begin processing row(s)
 				if (recordsetHasItems) {
-					// Process the records in this recordset
+					// Display the start of the step in the logs
 					String msg = "[" + this.jobStepXref.getStep().getType() 
 							+ " : " + this.jobStepXref.getStep().getShortDesc()
 							+ "]";
@@ -411,7 +431,7 @@ public class ExtractDBStep extends StepManager {
 							currentRowPK3Value = this.rs.getString("PK3");
 						}
 						
-						boolean isLastRecord = this.rs.isLast();
+						boolean isLastRecord = this.rs.isLast();  // Is the last row in jdbc recordset
 						String debugMsg1 = "Evaluating row # " + this.currentRowNum;
 						debugMsg1 += ", OK1 [" + currentRowOK1Value + "]";
 						debugMsg1 += ", PK1 [" + currentRowPK1Value + "]";
@@ -423,6 +443,12 @@ public class ExtractDBStep extends StepManager {
 							debugMsg1 += ", PK3 [" + currentRowPK3Value + "]";
 						}
 						log.debug(debugMsg1);
+						
+						/** Before processing this row, we set the state of the main boolean
+						 *  flags that determine what to do with this row.   
+						 *  **/
+						
+						
 						/** If this row was already in the previous job,
 						 *  completely skip processing this row.
 						 */
@@ -433,8 +459,12 @@ public class ExtractDBStep extends StepManager {
 						else {
 							this.rowsIncludedInJob++;
 						}
-						/** Set flags that determine how to handle this row **/
 						
+						/** If this row (number) is a multiple of extract_max_rec_per_file,
+						 *  then set isPageDataAlmostComplete, and remember the PK1 of this
+						 *  row.  Once this is set, we start 'rolling forward' and checking
+						 *  eac row until PK1 changes.
+						 */
 						int jobMaxRecPerFile = this.job_manager.getMaxRecPerFile();
 						if ( (rowsIncludedInJob != 0 ) && (rowsIncludedInJob % jobMaxRecPerFile == 0)) { 
 							// If we hit this mark, but pageDataComplete is already set,
@@ -448,7 +478,11 @@ public class ExtractDBStep extends StepManager {
 							isPageDataAlmostComplete=true;
 						}
 						
-						// Set isPageDataComplete
+						/**  If isPageDataAlmostComplete is currently true, check each row
+						 *   here to see if PK1 has changed.  If it has, set isPageDataComplete,
+						 *   which means we now have a full page of data ready to be sent
+						 *   to the next step for processing.
+						 */
 						if (isPageDataAlmostComplete && !isPageDataComplete) {
 							boolean pk1IsTheSame = currentRowPK1Value.equals(PK1AtEndOfCurrentPage);
 							boolean pk1IsBlank = StringUtils.isBlank(PK1AtEndOfCurrentPage);
@@ -458,14 +492,21 @@ public class ExtractDBStep extends StepManager {
 							}
 						}
 						
-						// todo: Set isRecordsetAlmostComplete
+						/**
+						 * If we've also exceeded extract_max_rec, then we know we're almost at
+						 * the end of the job - we just need to roll forward until PK1 changes
+						 * or we run out of data.
+						 */
+						
 						if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_Repeat) {
+							// For a re-run, compare actual rows in this job to the exact num rows in original run
 							if (rowsIncludedInJob > this.rowsInPreviousJobOutput) {
 								isRecordsetAlmostComplete=false;
 								isRecordsetComplete = true;
 							}
 						}
 						else if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_New) {
+							// For a new run, compare actual rows in this job to extract_max_rec from job definition
 							if (rowsIncludedInJob > totalRows) {
 								isRecordsetAlmostComplete=true;
 								if (isPageDataComplete) {
@@ -473,26 +514,12 @@ public class ExtractDBStep extends StepManager {
 								}
 							}
 						}
-//						if (rowsIncludedInJob > totalRows) {
-//							// For a re-run, we always stop when we reach totalRows
-//							if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_Repeat) {
-//								isRecordsetAlmostComplete=false;
-//								isRecordsetComplete = true;
-//							}
-//							else {
-//								isRecordsetAlmostComplete=true;
-//								if (isPageDataComplete) {
-//									isRecordsetComplete=true;
-//								}
-//							}
-//							
-//								
-//						}
 						
-						// In addition to the above checks, if we're at the end of the recordset,
-						// force the "is..Complete" flags true so all data gets written
+						/**
+						 * If we've run out of rows in the jdbc recordset, then treat this row as the last,
+						 * regardless of the above state.  Set the flags, and remember the PK1/OK1.
+						 */
 						
-						// Ran out of records before reaching the job limit
 						boolean queryExhausted = (isLastRecord);
 						if (queryExhausted) {
 							isPageDataAlmostComplete=false;
@@ -515,15 +542,12 @@ public class ExtractDBStep extends StepManager {
 							PK1AtEndOfCurrentPage = this.rs.getString("PK1");
 							isLastRecord=true;
 							OK1AtEndOfCurrentPage = this.convertDateFieldToString(this.rs, "OK1");
-							log.debug("Batch re-run row-count has reach the total rows of the original run.");
+							log.debug("Batch re-run row count has reach the total rows of the original run.");
 						}
 						
 						
-						// Todo: for above, only do the pk1-3 that are in the query
-						
-						
 						/**
-						 * Process this row
+						 * Now that all state vars are set, begin the processing of this row.
 						 */
 						
 						/** 
@@ -537,6 +561,7 @@ public class ExtractDBStep extends StepManager {
 								this.log_dtl.setMinOk1(currentRowOK1Value);
 								log.debug("Setting minOK1: " + currentRowOK1Value);
 							}
+							/** If this is the last jdbc row, force this row to be included in job.  **/
 							if (isLastRecord) {
 								if (!skipThisRecord) {
 									log.debug("Process row (very last record).  OK1:" + currentRowOK1Value + ", PK1: " + currentRowPK1Value +
@@ -545,11 +570,9 @@ public class ExtractDBStep extends StepManager {
 									
 								}
 							}
-							
+							/**  Handle a complete page of data **/
 							if (isPageDataComplete) {
-								// todo: Mark job started
-								
-								// todo: Start step log_dtl, if not started
+								/**  Log the values that only get written at the end of each page. **/
 								if (isRecordsetComplete && isLastRecord) {
 									this.log_dtl.setMaxOk1(currentRowOK1Value);
 									this.log_dtl.setNumRecords(new Long(this.rowsIncludedInJob));
@@ -562,8 +585,7 @@ public class ExtractDBStep extends StepManager {
 								}
 								
 								
-								// Todo: If this is end of recordset, remove ok-dtl entries from 
-								// previous pages
+								/** At the end of the job, delete any ok-dtl entries for this batch.  **/
 								if (isRecordsetComplete) {
 									TypedQuery<BatchLogOkDtl> qryJobOkDtl = this.job_manager.db.createNamedQuery("BatchLogOkDtl.findByBatchLogId", BatchLogOkDtl.class);
 									qryJobOkDtl.setParameter("batchLogId", this.job_manager.batch_log);
@@ -574,7 +596,9 @@ public class ExtractDBStep extends StepManager {
 									
 								}
 								
-								// Todo: roll backwards in this list of ok-dtls until pk1 changes
+								/** tempOkDtlList contains ok-dtl for every row of data.  Before persisting,
+								 *  remove all except the ones for the last OK1.
+								 */
 								ListIterator<BatchLogOkDtl> it = tempOkDtlList.listIterator(tempOkDtlList.size());
 								boolean deleteAllRemaining = false;
 								
@@ -599,18 +623,18 @@ public class ExtractDBStep extends StepManager {
 							    }
 							    tempOkDtlList = new ArrayList<BatchLogOkDtl>();
 							    
-							    // todo: submit page of data
+							    /**  Submit this page of data to the next step for processing. **/
 								log.debug("Extract step is submitting page of data (" + dataPageOut.size() + " rows)");
 							    this.job_manager.submitPageOfData(this.dataPageOut, this);
 								
-								// todo: clear dataPageOut
+								// Clear out page-related variables
 								isPageDataComplete=false; 
 								this.dataPageOut = new ArrayList<Object>();
 								
-								// Update logs for this step, since we just successfully wrote some data
 								
 								
-								// We successfully saved some data, commit the logs for all steps and job manager
+								
+								/**  We successfully saved a page of data.  Commit the logs.  **/
 								this.job_manager.db.getTransaction().commit();
 								// Start a new transaction
 								this.job_manager.db.getTransaction().begin();
@@ -618,9 +642,10 @@ public class ExtractDBStep extends StepManager {
 								// todo: Page completed, update logs
 							}
 							
-							/**  
-							 * Do these things for every row 
-							 ***/
+							/** Now that we saved a page of data, we want to process the row of data
+							 *  that was being evaluated (but not included in that page) so it is
+							 *  included in the next page.  Also remember ok1/pk1 values.
+							 */
 							
 							if (!(isRecordsetComplete)) {
 								// If this row was not in the ok-dtl log for previous run,
@@ -654,7 +679,6 @@ public class ExtractDBStep extends StepManager {
 								this.log_dtl.setEndDt(new Date());
 								this.log_dtl.setStatus(BatchLog.statusComplete);
 								
-								
 								if (isLastRecord) {
 									this.log_dtl.setMaxOk1(currentRowOK1Value);
 									this.log_dtl.setNumRecords(new Long(this.rowsIncludedInJob));
@@ -672,20 +696,18 @@ public class ExtractDBStep extends StepManager {
 						}
 						
 						
-						// Move to the next record (or abort if we're past the last row)
+						/**  Attempt to load the next jdbc record.  If false, we're out of data.
+						 */
 						if (this.rs.next() == false) {  // moved past the last record
 							endOfRecordset=true;
+							// If we didn't process any rows, log the fact that there was no records to process
 							if (this.rowsIncludedInJob==0) {
 								log.info("Skipping job (no new records found).");
 							}
 						}		
 						
-						// todo: Is endOfRecordset
-							// todo: Abandon remaining records
-							// 
-						
 					}
-				} // // end of recordset
+				} // // end of main recordset loop
 				else {  // initial recordset had 0 entries
 					log.info("Aborting job (no records found).");
 					this.running=false;
@@ -693,20 +715,25 @@ public class ExtractDBStep extends StepManager {
 					this.completed=true;
 				}
 		} 
-		
+		/** This was the main loop for this step.  If any exceptions were thrown from here,
+		 *  catch them, gracefully abort the step, and re-throw so the JobManager can gracefully
+		 *  abort the job.
+		 */
 		catch ( Exception e) {
-			this.logFailed(e);  // copy this approach from jobmanager
+			this.logFailed(e);  
 		}
 		
 		// This step is done.  Clean up, write to logs,
 		// and return control to JobManager.
 		this.closeJDBCConnection();
 		
-		// TODO:  empty data variables
-		// TODO:  log completion of this step
-		
+		/** Return true, indicating to JobManager that this step is done. 
+		 *  Note: it's the class vars like running, failed, completed that tell
+		 *  JobManager whether this step was successful or not, this is just
+		 *  to indicate to the JobManager that it can move on to executing
+		 *  the next step.
+		 */
 		return true;
-		
 	}
 
 	/**
@@ -728,7 +755,8 @@ public class ExtractDBStep extends StepManager {
 	/**
 	 * Check whether the current row of the recordset
 	 * is already listed in the previous Job's ok-dtl
-	 * list.
+	 * list.  This is used to determine whether to skip
+	 * this row.
 	 * 
 	 * @param currentResultSet
 	 * @return
@@ -738,19 +766,21 @@ public class ExtractDBStep extends StepManager {
 		boolean retval = false;
 		try {
 			if (this.previousJobOkDtls.size() > 0 ) {
-				// Get the ok1, pk1 from this row
-				// change the string to numeric either integer or long
+				// We default all the vars to be compared to 0, to get consistent comparisons.
 				Long rowPK1 = 0L;
 				Long rowPK2 = 0L;
 				Long rowPK3 = 0L;
 				String rowOK1 = this.convertDateFieldToString(currentResultSet, "OK1");
 				
+				// PK1 must be provided in every row, in order to guarantee data integrity.
+				// If not, abort job.
 				if (currentResultSet.getString("PK1").isEmpty()) { 
 					throw new VBatchException("PK1 value cannot be empty");
 				}
+				/** PK1-3 must be numeric.  If any of them cannot be cast to Long, then abort
+				 *  the job.
+				 */
 				try {
-					// need to validate if null or empty string is the value of PK, would it be "null" and "" respectively
-					// assuming that this is getting the value of OK and PKs from the current pull
 					if (!(currentResultSet.getString("PK1").isEmpty())) { 
 						rowPK1 = currentResultSet.getLong("PK1");
 					}
@@ -760,15 +790,14 @@ public class ExtractDBStep extends StepManager {
 						rowPK3 = currentResultSet.getLong("PK3");
 				}
 				catch (Exception e){
-					// the idea is to catch if there is any error in converting from "ABC" to numeric
 					throw new VBatchException("PK values must be numeric");
 				}
-
+				
+				// Loop over ok-dtls from the previous job, comparing to the values from this row
 				for (BatchLogOkDtl okDtlEntry : this.previousJobOkDtls) {
-					// change the default value to 0 instead of null
+					
 					Long thisPk1=0L, thisPk2=0L, thisPk3 = 0L;
 					
-					// need to make sure that getPk1() will return integer or long assuming that pk1 data type is numeric, please change the variable type if it's long
 					thisPk1 = okDtlEntry.getPk1();
 					if ((this.pk2ColName!=null && !(this.pk2ColName.isEmpty())  ) && okDtlEntry.getPk2() != null) {
 						thisPk2 = okDtlEntry.getPk2();
@@ -778,7 +807,7 @@ public class ExtractDBStep extends StepManager {
 					}
 					String thisOk1 = new SimpleDateFormat("MM/d/y H:mm:ss").format(okDtlEntry.getOk1()); 
 					
-					//Logging
+					// DEBUG Logging
 					this.log.debug("[ok1:" + thisOk1 + "," + rowOK1 + "] [pk1:" + thisPk1 + ", " + rowPK1 + "] [pk2: "
 							+ thisPk2 + ", " + rowPK2 + " [pk3:" + thisPk3 + "," + rowPK3 +  "]"); // + ",[OK1TS: " 
 					this.log.debug("[ok: " + thisOk1.equals(rowOK1) + "], [pk1: " + (thisPk1.equals(rowPK1)) + "], "
@@ -814,15 +843,15 @@ public class ExtractDBStep extends StepManager {
 				if (currentRecordset.getString("PK1").isEmpty()) { 
 					throw new VBatchException("PK1 value cannot be empty");
 				}
-				// Get the ok1, pk1 from this row
-				// change the string to numeric either integer or long
+				/** Default PK values to 0, to ensure consistent comparison
+				 *  to PK values from tempOkDtl
+				 */
 				Long rowPK1 = 0L;
 				Long rowPK2 = 0L;
 				Long rowPK3 = 0L;
 				String rowOK1 = this.convertDateFieldToString(currentRecordset, "OK1");
+				/** PK values must be numeric.  If not, abort the job.  **/
 				try {
-					// need to validate if null or empty string is the value of PK, would it be "null" and "" respectively
-					// assuming that this is getting the value of OK and PKs from the current pull
 					if (!(currentRecordset.getString("PK1").isEmpty())) { 
 						rowPK1 = currentRecordset.getLong("PK1");
 					}
@@ -839,10 +868,9 @@ public class ExtractDBStep extends StepManager {
 
 				// Loop over tempOkDtlList
 				for (BatchLogOkDtl okDtlEntry : this.tempOkDtlList) {
-					// Get OK1 for this entry
+					/** Get the OK/PK values from this ok-dtl entry **/
 //					String thisOk1 = this.convertDateStringToAnotherDateString(okDtlEntry.getOk1().toString(), "y-MM-d HH:mm:ss.S", "MM/d/y H:mm:ss");
 					String thisOk1 = new SimpleDateFormat("MM/d/y H:mm:ss").format(okDtlEntry.getOk1()); 
-					// Get PK1-3 for this entry
 					Long thisPk1=0L, thisPk2=0L, thisPk3 = 0L;
 					thisPk1 = okDtlEntry.getPk1();
 					if ((this.pk2ColName!=null&& !(this.pk2ColName.isEmpty())  ) && okDtlEntry.getPk2() != null) {
@@ -852,12 +880,13 @@ public class ExtractDBStep extends StepManager {
 						thisPk3 = okDtlEntry.getPk3();
 					}
 					
+					// DEBUG Logging
 					this.log.debug("[ok1:" + thisOk1 + "," + rowOK1 + "] [pk1:" + thisPk1 + ", " + rowPK1 + "] [pk2: "
 							+ thisPk2 + ", " + rowPK2 + " [pk3:" + thisPk3 + "," + rowPK3 +  "]");
 					this.log.debug("[ok: " + thisOk1.equals(rowOK1) + "], [pk1: " + (thisPk1.equals(rowPK1)) + "], "
 							+ "[pk2: " + (thisPk2.equals(rowPK2)) + "], "  +" [pk3: " + (thisPk3.equals(rowPK3)) + "] ");
 					
-					// Check for duplicates
+					/** Compare the values from this row of data to the values from the ok-dtl entry  **/
 					if ( (thisPk1.equals(rowPK1))
 						&& ( thisPk2.equals(rowPK2))
 						&& ( thisPk3.equals(rowPK3))
@@ -879,6 +908,10 @@ public class ExtractDBStep extends StepManager {
 	}
 
 	/**
+	 * - Add this row of data from the JDBC recordset to the cache (that will be sent
+	 *   to the next step) 
+     * - create a new ok-dtl entry for the row.
+	 * 
 	 * @param currentRowRecordset
 	 * @throws SQLException
 	 * @throws ParseException
@@ -889,46 +922,44 @@ public class ExtractDBStep extends StepManager {
 			 * Check to see if this row was in the previous run's ok-dtl
 			 * list.  If so, we'll skip it.
 			 */
-//			boolean skipThisRow = false;
-//			skipThisRow=isRowInPreviousRunOkDtl(currentRowRecordset);
 			
-//			if (!skipThisRow) {
+			// Add this row to dataPageOut, to be sent to the next step
+			List<Object> rowdata = new ArrayList<Object>();
+			for (int ci = 1; ci <= this.col_count; ci++) {
+				/** Add this column of data to the page cache, unless it's one of the
+				 *  columns that's marked to be skipped (ie:  OK1, PK1-3)
+				 */
+				if (this.columnsToSkip.containsKey(ci)) {  
+					// Do not export this column
+				}
+				else {
+					// Add this column to the output data
+					rowdata.add(currentRowRecordset.getString(ci));
+				}
+			}
+			this.dataPageOut.add(rowdata);
 			
-				// Add this row to dataPageOut, to be sent to the next step
-				List<Object> rowdata = new ArrayList<Object>();
-				for (int ci = 1; ci <= this.col_count; ci++) {
-					if (this.columnsToSkip.containsKey(ci)) {  // is this column in columnsToSkip?
-						// Do not export this column
+			/** Log this row to the ok-dtl cache, as long as this job is a "new" run,
+			 *  and not a re-run.
+			 */
+			if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_New) {
+				// If this row already exists in ok-dtl table, don't write it again.
+				if (!(isRowInTempOkDtl(currentRowRecordset))) {
+					BatchLogOkDtl newOkDtl = new BatchLogOkDtl();
+					newOkDtl.setBatchLog(this.job_manager.batch_log);
+					newOkDtl.setOk1(currentRowRecordset.getTimestamp("OK1"));
+					newOkDtl.setPk1(currentRowRecordset.getLong("PK1"));
+					if ((this.pk2ColName != null) && !(pk2ColName.isEmpty()) && !(currentRowRecordset.getString("PK2").isEmpty())   ){
+						newOkDtl.setPk2(currentRowRecordset.getLong("PK2"));
 					}
-					else {
-						// Add this column to the output data
-						rowdata.add(currentRowRecordset.getString(ci));
+					if ((this.pk3ColName != null) &&!(pk3ColName.isEmpty()) && !(currentRowRecordset.getString("PK3").isEmpty())   ){
+						newOkDtl.setPk3(currentRowRecordset.getLong("PK3"));
 					}
+					
+					this.tempOkDtlList.add(newOkDtl);
+					this.OK1AtEndOfCurrentPage = this.convertDateFieldToString(currentRowRecordset, "OK1");
 				}
-				this.dataPageOut.add(rowdata);
-				
-				// log ok-dtl for every row (some will be deleted prior to log commit)
-				// Unless we're repeating a previous job (ie: -b)
-				if (this.job_manager.batch_manager.batchMode == VBatchManager.BatchMode_New) {
-					// If this row already exists in ok-dtl table, don't write it again.
-					if (!(isRowInTempOkDtl(currentRowRecordset))) {
-						BatchLogOkDtl newOkDtl = new BatchLogOkDtl();
-						newOkDtl.setBatchLog(this.job_manager.batch_log);
-						//newOkDtl.setOk1(this.convertDateFieldToString(rs, "OK1"));
-						newOkDtl.setOk1(currentRowRecordset.getTimestamp("OK1"));
-						newOkDtl.setPk1(currentRowRecordset.getLong("PK1"));
-						if ((this.pk2ColName != null) && !(pk2ColName.isEmpty()) && !(currentRowRecordset.getString("PK2").isEmpty())   ){
-							newOkDtl.setPk2(currentRowRecordset.getLong("PK2"));
-						}
-						if ((this.pk3ColName != null) &&!(pk3ColName.isEmpty()) && !(currentRowRecordset.getString("PK3").isEmpty())   ){
-							newOkDtl.setPk3(currentRowRecordset.getLong("PK3"));
-						}
-						
-						this.tempOkDtlList.add(newOkDtl);
-						this.OK1AtEndOfCurrentPage = this.convertDateFieldToString(currentRowRecordset, "OK1");
-					}
-				}
-//			}
+			}
 		}
 		catch (Exception e) {
 			throw e;
@@ -936,7 +967,7 @@ public class ExtractDBStep extends StepManager {
 	}
 	
 	/**
-	 * Replace vBatch SQL token with the proper max statement.
+	 * Replace vBatch SQL token with the proper SQL statement for this run.
 	 * 
 	 * @param raw_sql
 	 * @param tokenReplacement
@@ -952,7 +983,9 @@ public class ExtractDBStep extends StepManager {
 		while (m.find()) {
 			whereTokenCount += 1;
 		}
-		// Replace all /* where */ tokens with the startClause
+		/** If we found 1+ SQL token(s), then replace them.  If not,
+		 *  abort the job.
+		 **/
 		if (whereTokenCount > 0 ) {
 			this.raw_sql = raw_sql.replaceAll("/\\* where \\*/", " AND " + tokenReplacement + " ");
 			tokensReplaced++;
@@ -964,8 +997,10 @@ public class ExtractDBStep extends StepManager {
 	}
 
 	/**
-	 * Returns the list of columns from raw query that should not be 
-	 * included in the export.
+	 * vBatch requires certain columns to be present in the job query that are
+	 * for data integrity purposes only, and should never be exported with job
+	 * data.  This function returns a list of those internal columns that are
+	 * present in the resultset, so they can be skipped during data export.
 	 * 
 	 * @param resultset
 	 * @return
@@ -974,7 +1009,7 @@ public class ExtractDBStep extends StepManager {
 	private Map<Integer,String> prepareSkipColumns(ResultSet resultset) throws Exception {
 		Map<Integer, String> columnsToSkip = new HashMap<Integer,String>();
 		try {
-			// List of columns to suppress in output data
+			// List of columns that should always be skipped
 			List<String> namesOfColumnsToSkip = new ArrayList<String>();
 			namesOfColumnsToSkip.add("pk1");
 			namesOfColumnsToSkip.add("pk2");
@@ -986,18 +1021,19 @@ public class ExtractDBStep extends StepManager {
 			this.col_count = meta.getColumnCount();
 			String colType, colName;
 			
+			// Look at each column in resultset, looking for matches
 			for (int colIdx = 1; colIdx <= col_count; colIdx++) {
 				colType = "";
 				colName = "";
 				colType  = meta.getColumnTypeName(colIdx);
 				colName = meta.getColumnName(colIdx);
 				String j = meta.getColumnLabel(colIdx);
+				// When we find a match, add it to columnsToSkip
 				if (namesOfColumnsToSkip.contains(colName.toLowerCase())) {
 					columnsToSkip.put(colIdx,colName);
 				}
 			}
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
+		} catch (Exception e) {
 			this.log.error(e.getMessage(),e);
 			throw e;
 		}
@@ -1054,6 +1090,10 @@ public class ExtractDBStep extends StepManager {
 		
 	}
 	
+	/**
+	 * Currently, ExtractDBStep only sends data, it doesn't receive it.  So
+	 * this just returns true.
+	 */
 	@Override
 	public boolean processPageOfData(List<Object> pageOfData) {
 		
@@ -1067,10 +1107,14 @@ public class ExtractDBStep extends StepManager {
 	}
 	
 	/**
-	 * Logging
+	 * LOGGING
+	 * --------
 	 * 
 	 */
 	
+	/**
+	 * Log the start of this step.
+	 */
 	private void logStart() {
 		if (!this.job_manager.db.getTransaction().isActive()) {
 			this.job_manager.db.getTransaction().begin();
@@ -1101,13 +1145,14 @@ public class ExtractDBStep extends StepManager {
 		
 		// Commit log entry
 		this.job_manager.db.persist(this.log_dtl);
-//		this.job_manager.db.getTransaction().commit();
+		// Note:  we don't commit this now.  The main data processing loop handles that.
 		
 		
 	}
 	
 	/**
 	 * Perform a JDBC query, using this step's JDBC connection;
+	 * 
 	 * @param sql
 	 * @param maxRecords
 	 * @throws SQLException
@@ -1165,7 +1210,8 @@ public class ExtractDBStep extends StepManager {
 	
 	/**
 	 * Get a list of the max pk1/ok1 values from the last successful run 
-	 * of this job, so we can skip those records in this run.
+	 * of this job, which will be used to determine whether to skip 
+	 * exporting each row.
 	 * 
 	 * @param previousRunBatchLogId
 	 */
@@ -1179,7 +1225,25 @@ public class ExtractDBStep extends StepManager {
 		}
 	}
 	
+	/**  
+	 * An exception has been thrown.  Rather than just aborting the step, we need to gracefully
+	 * end it by:
+	 * - logging the exception
+	 * - rolling back any logging that would have happened for the failed page of data
+	 * - properly logging the final status of this step
+	 * - re-throwing the exception so the JobManager can gracefully abort the job
+	 * 
+	 * @param e
+	 * @throws Exception
+	 */
 	private void logFailed(Exception e) throws Exception {
+		/**
+		 * In order to avoid the Step and the Job duplicating the same Exception
+		 * details in the log files for this job,
+		 * we mark the exception as being logged, so that when we re-throw this
+		 * exception to allow the JobManager to gracefully abort the job, the 
+		 * JobManager won't repeat the exception details in the logs.
+		 */
 		if (e instanceof VBatchException && ((VBatchException) e).logged==true) {
 			
 		}
@@ -1192,8 +1256,10 @@ public class ExtractDBStep extends StepManager {
 			}
 		}	
 			
-		// rollback any uncomitted logs, so we don't mistakenly make
-		// it look like this step completed successfully
+		/** Since the step has failed, we need to make sure that we don't
+		 *  commit the any of the logs.  Here we roll back the transaction,
+		 *  to allow us to create new log entries describing the failed job.
+		 */
 		if (this.job_manager.db.getTransaction().isActive()) {
 			this.job_manager.db.getTransaction().rollback();
 			if (!(this.job_manager.db.getTransaction().isActive())) {
@@ -1212,7 +1278,7 @@ public class ExtractDBStep extends StepManager {
 		this.log_dtl.setBatchLog(this.job_manager.batch_log);
 		this.log_dtl.setStartDt(new Date());
 		this.log_dtl.setStatus(BatchLog.statusError);
-//		this.log_dtl.setErrorMsg(e.getMessage());
+
 		// required fields to be able to save this log_dtl
 		this.log_dtl.setJobStepsXrefJobStepSeq(this.jobStepXref.getJobStepSeq());
 		this.log_dtl.setStepsId(this.jobStepXref.getId());

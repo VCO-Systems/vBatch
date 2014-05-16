@@ -64,13 +64,14 @@ public class GenerateTRGStep extends StepManager {
 	/**
 	 * Some other step has passed in a list of .csv files, 
 	 * via the job manager, and we will generate matching
-	 * .trg files.
+	 * .trg files.  As of v1, only one csv filename gets 
+	 * passed in for each call of this method.
 	 * 
 	 */
 	@Override
 	public boolean processPageOfData(List<Object> pageOfData) {
 		// If this is the first page of data we've received,
-		// and log the start of the job
+		// log the start of the job
 		if (!this.running) {
 			// Set this.running = true so we know this step has been
 			// started, even if start() has not been called yet.
@@ -89,12 +90,13 @@ public class GenerateTRGStep extends StepManager {
 	}
 
 	/**
+	 * Based on the provided csvFilename, generate a matching .trg file.
 	 * @param csvFilename
 	 * @return
 	 */
 	private String generateTRGFile(String csvFilename) {
-		// If this is the first time this step has processed data,
-		// mark the step as started
+		// If this step was not already started at this point,
+		// mark and log the step as being started.
 		if (!this.running){
 			this.running=true;
 			this.logStart();
@@ -129,8 +131,10 @@ public class GenerateTRGStep extends StepManager {
 		return csvFilename;
 	}
 	
+	/**
+	 * Log the start of this step.
+	 */
 	private void logStart() {
-//		this.job_manager.db.getTransaction().begin();
 		// Create entry in batch_log_dtl
 		this.log_dtl = new BatchLogDtl();
 		this.log_dtl.setBatchLog(this.job_manager.batch_log);
@@ -151,15 +155,14 @@ public class GenerateTRGStep extends StepManager {
 		
 		// Commit log entry
 		this.job_manager.db.persist(this.log_dtl);
-//		this.job_manager.db.getTransaction().commit();
 		
 	}
 	
 	
-	
+	/**
+	 * Log the completion of this step.
+	 */
 	private void logComplete() {
-//		this.job_manager.db.getTransaction().begin();
-		
 		String msg = "Step [" + this.jobStepXref.getStep().getType() 
 				+ " : " + this.jobStepXref.getStep().getShortDesc()
 				+ "]";
@@ -168,7 +171,6 @@ public class GenerateTRGStep extends StepManager {
 		
 		// Commit log entry
 		this.job_manager.db.persist(this.log_dtl);
-		
 		this.job_manager.log.info("Step completed.");
 	}
 }
