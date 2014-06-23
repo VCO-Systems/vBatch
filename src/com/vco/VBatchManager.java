@@ -10,8 +10,10 @@ import java.io.InputStream;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Properties;
 
 import javax.persistence.EntityManager;
@@ -35,27 +37,37 @@ import org.apache.log4j.BasicConfigurator;
 import java.text.MessageFormat;
 
 import model.JobDefinition;
+import model.Step;
 
 public class VBatchManager {
-	
+	// version string used in logging
 	public static final String vbatch_version = "vBatch v1.1";
-
+    
+	// JPA entity manager
 	private static final String PERSISTENCE_UNIT_NAME = "vbatch";
 	private static EntityManagerFactory factory;
 	protected EntityManager em;
 	
+	// JDBC settings
 	public static HashMap<String, String> source_db_connection = new HashMap<String,String>(1);
 
 	// Is this a new job, a re-run of an existing batch?
+	public String batchMode = BatchMode_New;
 	public static String BatchMode_New = "BatchModeNew";  // Start a new job
 	public static String BatchMode_Repeat = "BatchModeRepeat";  // Repeat an existing job (by batch_num)
-	public String batchMode = BatchMode_New;
+	// Set effective date for one or more job(s)
+	public static String BatchMode_SetEffectiveDate = "BatchModeSetEffectiveDate";  
+	
 	
 	// file logging
 	private String log4jPropertiesFilePath = "";
 	private Properties vBatchProperties=null;
 	public static Logger log = null;
 	private String defaultLogFile = "";
+	
+	// settings passed in from command line
+	private String requested_effective_date = new String();
+	private List requested_job_ids_str = new ArrayList<String>();
 	
 	public VBatchManager() {
 		// Set up db connection
@@ -94,15 +106,24 @@ public class VBatchManager {
 	 * @param job_ids
 	 * @throws Exception 
 	 */
-	public void init(ArrayList<Integer> job_ids) throws Exception {
+	public void init(ArrayList<String> job_ids) throws Exception {
 		// Make sure we have all necessary configuration information for each job,
 		// 
-		for (Integer job_id : job_ids) {
-			setLogging(job_id);
-			JobManager job_manager = new JobManager(this, job_id);
-			// Tell the job manager whether new or existing job is being run
-			job_manager.batchMode = this.batchMode;  
-			job_manager.init();
+		if (this.batchMode.equals(VBatchManager.BatchMode_SetEffectiveDate)) {  // -set_job_date run
+			VBatchUtilities vutil = new VBatchUtilities();
+			vutil.job_ids=job_ids;
+			vutil.requested_job_date = this.requested_effective_date;
+			vutil.setJobDates();
+		}
+		else {  // -j or -b run
+			for (String job_id_str : job_ids) {
+				Integer job_id = Integer.parseInt(job_id_str);
+				setLogging(job_id);
+				JobManager job_manager = new JobManager(this, job_id);
+				// Tell the job manager whether new or existing job is being run
+				job_manager.batchMode = this.batchMode;  
+				job_manager.init();
+			}
 		}
 	}
 
@@ -196,7 +217,7 @@ public class VBatchManager {
 	}
 	
 	public static void main(String[] args) {
-		
+		String requested_job_date;
 		// If required directories don't exist, create them
 		File outputDir = new File("output");
 		outputDir.mkdir();
@@ -209,6 +230,7 @@ public class VBatchManager {
 		//options.addOption("test_create", false, "Create a sample WMOS source database.");
 		options.addOption("j", true, "Specify one or more jobs to start.");
 		options.addOption("b", true, "Re-run an earlier batch.");
+		options.addOption("set_job_date",true,"Set effective date for one or more jobs");
 		
 
 		CommandLineParser parser = new BasicParser();
@@ -218,17 +240,9 @@ public class VBatchManager {
 			// main vBatch variable
 			VBatchManager man = null;
 			
-			// Read config options from vbatch.config file
-//			config_file_input = new FileInputStream("vbatch.properties");
-//	    	
-//	    	config_properties.load(config_file_input);
-//	    	testing_db_name = config_properties.getProperty("testing_db_name");
-//	    	System.out.println(testing_db_name);
-	    	
 			CommandLine cmd = parser.parse(options, args);
 			HelpFormatter help = new HelpFormatter();
 			if (cmd.hasOption("h")) {
-			    
 			    help.printHelp(vbatch_version, options );
 			}
 			
@@ -296,28 +310,46 @@ public class VBatchManager {
 				if (cmd.hasOption("j")) {
 					System.out.println(VBatchManager.vbatch_version);
 					String[] requested_jobs_ids = cmd.getOptionValue("j").split(",");
-					ArrayList<Integer> job_ids = new ArrayList<Integer>();
-					
-					// For each requested job, create and start a batch manager
+					ArrayList<String> job_ids = new ArrayList<String>();
 					for (String job_id_str : requested_jobs_ids) {
 						// Cast the job_id as int
-						job_ids.add(Integer.parseInt(job_id_str));
+						job_ids.add(job_id_str);
 					}
 					
-					// If no jobs are specified, exit with a polite error msg
-					if (job_ids.size() == 0) {
-						throw new Exception("ERROR: must specify at least one job id (example: vbatch -j 12)");
+					// -set_job_date is a special case, which uses -j to pass
+					// in job numbers, but bypasses the normal JobManager logic
+					if (cmd.hasOption("set_job_date")) {
+//						requested_job_date = cmd.getOptionValue("set_job_date");
+						// We have a valid job number(s) and job_date, so run the
+						// -set_job_date logic
+						if (man==null) {
+							man = new VBatchManager();
+							man.batchMode = VBatchManager.BatchMode_SetEffectiveDate;
+							man.requested_effective_date = cmd.getOptionValue("set_job_date");
+							man.init(job_ids);
+						}
+						
+						
 					}
+					else {  // regular -j run
 					
-					// TODO: Verify that each requested job_id exists
-					// TODO: If any do not exist, report it
-					
-					// Start a new VBatchManger
-					if (man == null) 
-						man = new VBatchManager();
-				    man.batchMode = VBatchManager.BatchMode_New;
-					man.init(job_ids);
-					
+						// For each requested job, create and start a batch manager
+						
+						
+						// If no jobs are specified, exit with a polite error msg
+						if (job_ids.size() == 0) {
+							throw new Exception("ERROR: must specify at least one job id (example: vbatch -j 12)");
+						}
+						
+						// TODO: Verify that each requested job_id exists
+						// TODO: If any do not exist, report it
+						
+						// Start a new VBatchManger
+						if (man == null) 
+							man = new VBatchManager();
+					    man.batchMode = VBatchManager.BatchMode_New;
+						man.init(job_ids);
+					}
 				}
 				
 				// Handle -b (re-run existing batch)
@@ -325,12 +357,12 @@ public class VBatchManager {
 					System.out.println(VBatchManager.vbatch_version);
 					// TODO:  Get ready to run the -b job
 					String[] requested_jobs_ids = cmd.getOptionValue("b").split(",");
-					ArrayList<Integer> job_ids = new ArrayList<Integer>();
+					ArrayList<String> job_ids = new ArrayList<String>();
 					
 					// For each requested job, create and start a batch manager
 					for (String job_id_str : requested_jobs_ids) {
 						// Cast the job_id as int
-						job_ids.add(Integer.parseInt(job_id_str));
+						job_ids.add(job_id_str);
 					}
 					
 					// If no jobs are specified, exit with a polite error msg
@@ -342,11 +374,8 @@ public class VBatchManager {
 						man = new VBatchManager();
 				    man.batchMode = VBatchManager.BatchMode_Repeat;
 					man.init(job_ids);
-					
 				}
 			}
-				
-			
 		} // end: outer try/catch
 		catch (ParseException e) {
 		    System.err.println(e);

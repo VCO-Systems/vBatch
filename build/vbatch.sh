@@ -44,6 +44,9 @@ for eachArgument in $allParameters; do
         IFS=$OIFS
         exit
         ;;
+    set_job_date)
+        job_date=${allParameters/*-set_job_date/}
+        ;;
     esac
 done
 
@@ -58,6 +61,14 @@ if [ "$dbConfig" == "" ]; then
 fi
 
 currJobIDs=$jobs
+
+# If we're setting effective date, skip the
+# concurrent-job checks, and just fire up vbatch
+if [[ ! -z $job_date ]]; then
+    java -jar vbatch.jar $@
+    IFS=$OIFS
+    exit
+fi
 
 #Get list of currently running jobs
 psCommandOutput=`ps -eo cmd | grep vbatch.jar | grep -v grep`

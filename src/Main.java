@@ -73,7 +73,7 @@ public class Main {
 				
 				// Start a new VBatchManger
 				VBatchManager man = new VBatchManager();
-				man.init(job_ids);
+//				man.init(job_ids);
 			}
 		}
 		catch (ParseException e) {
